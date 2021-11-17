@@ -2,7 +2,11 @@
   "name": "react",
   "version": "1.0.0",
   "description": "React example starter project",
-  "keywords": ["react", "starter"],
+  "proxy": "http://localhost:5000/",
+  "keywords": [
+    "react",
+    "starter"
+  ],
   "main": "src/index.js",
   "dependencies": {
     "@emotion/react": "11.5.0",
@@ -13,21 +17,31 @@
     "@fortawesome/react-fontawesome": "0.1.16",
     "@material-ui/core": "4.12.3",
     "@mui/material": "5.1.0",
+    "@progress/kendo-react-charts": "^4.10.0",
+    "@progress/kendo-theme-material": "^4.42.0",
+    "axios": "^0.24.0",
+    "chart.js": "^3.6.0",
+    "hammerjs": "^2.0.8",
     "react": "17.0.2",
+    "react-chartjs-2": "^3.3.0",
     "react-dom": "17.0.2",
     "react-router-dom": "6.0.0",
     "react-scripts": "4.0.0",
     "webfontloader": "1.6.28"
   },
   "devDependencies": {
-    "@babel/runtime": "7.13.8",
-    "typescript": "4.1.3"
+    "@babel/runtime": "7.13.8"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "start": "react-scripts --openssl-legacy-provider start",
+    "build": "react-scripts --openssl-legacy-provider build",
+    "test": "react-scripts --openssl-legacy-provider test --env=jsdom",
+    "eject": "react-scripts --openssl-legacy-provider eject"
   },
-  "browserslist": [">0.2%", "not dead", "not ie <= 11", "not op_mini all"]
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
 }
