@@ -190,7 +190,7 @@ const Indicadores = (props) => {
     useEffect(setarServicosTodos, [tabelaTodos])
 
     return (    
-    <Card elevation="3" xs={{padding: 0}} md={{ padding: 5}}>
+    <Card elevation={3} xs={{padding: 0}} md={{ padding: 5}}>
         <Typography variant="h2" sx={{placeSelf: 'center', alignSelf: 'center', justifySelf: 'center'}}>Indicadores</Typography>
         {tabelaTodos ? tabelaTodos : <Skeleton variant="rectangular" width="100%" height="100%" />}
         <Grid container direction={{ xs: "column", md: "row" }} spacing={5}>

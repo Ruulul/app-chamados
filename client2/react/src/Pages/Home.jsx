@@ -10,30 +10,11 @@ const Home = ({user}) => {
     axios.get('http://10.0.0.83:5000/api/servicos/pendente')
       .then(({data})=>setServicos(data))
       .catch(err=>console.error("Erro obtendo serviços.\n"+err));
-  },[servicos])  
-  useEffect(async ()=>{
-    let servico = undefined
-    let hoje = new Date()
-    let tres_dias = new Date()
-    tres_dias.setDate(hoje.getDate() - 3)
-    let novaContagem = {pendentes: 0, novos: 0, atendimento: 0, parados: 0}
-    await servicos ? servicos.forEach(async(servico)=>{
-        let chat=undefined
-        await axios.get('http://10.0.0.83:5000/api/servico/' + servico.id)
-                  .then(({data})=>chat=data.chat)
-                  .catch((err)=>console.log("Erro obtendo o chat do serviço.\n" + err))
-        novaContagem.pendentes += 1
-        if (new Date(servico.createdAt).getDate === hoje.getDate)
-          novaContagem.novos += 1
-        if (new Date(servico.updatedAt) < tres_dias)
-          novaContagem.parados += 1
-          novaContagem.atendimento = chat
-    }) : undefined
-    setContagem(novaContagem)
-  },[servicos])
+    return ()=>{setServicos(undefined)}
+  },[])
   return (
     <Grid container direction={{xs: "column", md: "row"}} width="100%">
-      <Grid item xs={12} md={6} minHeight={{xs:1/2, md: 1}} >
+      <Grid item xs={12} md={10} minHeight={{xs:1/2, md: 1}} >
         <Card elevation={3} sx={{ padding: 0, height:"100%", width: 1}} >
             <Grid item container xs={12} md={10} lg={4} sx={{padding: {xs: 1, md: 3}, minHeight: 1/2}}>
               <Grid item xs={10} md={12} >
@@ -56,6 +37,9 @@ const Home = ({user}) => {
                 </Card>
               </Grid>
             </Grid>
+                <Grid item xs={12} sx={{display: "flex", placeContent:"center"}}>
+                  <Divider width="95%" sx={{borderWidth: 2, borderColor: "secondary"}} />
+                </Grid>
         </Card>
       </Grid>
       <Grid item xs={12} md={6} height="80vh">

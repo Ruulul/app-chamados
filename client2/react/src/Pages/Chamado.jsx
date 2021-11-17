@@ -33,7 +33,7 @@ export default function Chamado() {
     axios.get('http://10.0.0.83:5000/api/servico/'+ infos.id)
       .then(({data})=>{setInfos(data);console.log(data)})
       .catch(err=>{console.error("Erro obtendo serviço. \n" + err)})
-  },[]);
+  },[infos]);
 
     return (
       <Grid container direction={{ xs: "column", sm: "row" }} spacing={3}>
