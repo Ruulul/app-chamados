@@ -19,12 +19,13 @@ export default function Requisicao () {
     prioridade: 1,
     anexo: undefined,
     assunto: "",
-    autor: "",
-    chat: [{ autor: "", mensagem: "" }],
+    autorId: undefined,
+    chat: [{ autorId: undefined, mensagem: "" }],
     id: undefined,
     status: "pendente",
   });
   const [, forceUpdate] = useState({})
+  const [nome, setNome] = useState(undefined)
   const navigate = useNavigate()
 
   useEffect(async ()=>{
@@ -46,8 +47,8 @@ export default function Requisicao () {
     } else if (event.target.name === "mensagem")
       novas_infos.chat[0].mensagem = event.target.value;
     else if (event.target.name === "autor") {
-      novas_infos.chat[0].autor = event.target.value;
-      novas_infos[event.target.name] = event.target.value;
+    //  novas_infos.chat[0].autor = event.target.value;
+    //  novas_infos[event.target.name] = event.target.value;
     }
     else novas_infos[event.target.name] = [event.target.value][0];
     console.log(novas_infos)
@@ -57,11 +58,26 @@ export default function Requisicao () {
     event.preventDefault();
     let requisicao = infos
     requisicao.status = "pendente"
-    axios.post('http://localhost:5000/api/novo/servico', requisicao)
+    axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao)
       .then(res=>navigate('/servicos'))
       .catch(err=>console.log("Erro em salvar o chamado." + err))
   }
-  let prioridades = ["Baixa", "Padrão", "Alta", "Urgente"];
+
+  function handleUser(event) {
+    axios.get('http://10.0.0.83:5000/api/usuario/email/' + event.target.value)
+      .then(({data})=>{
+        let novasInfos = infos
+        novasInfos.autorId = data.id
+        novasInfos.chat[0].autorId = data.id
+        console.log("Usuário: " + JSON.stringify(data))
+        setNome(data.nome)
+        setInfos(novasInfos)
+        forceUpdate({})
+      }).catch(()=>{
+        setNome("Email não encontrado")
+        forceUpdate({})
+      })
+  }
   return (
     <Box sx={{ mt: "1em" }} component="form" onSubmit={handleSubmit}>
       <Grid
@@ -74,11 +90,18 @@ export default function Requisicao () {
           <Grid item xs={3}>
             <Stack spacing={2}>
               <Typography>{infos.id === undefined ?  "Carregando..." : ("Ticket nº " + infos.id)}</Typography>
+              <Typography>
+                {(()=>{
+                  if (nome === undefined) return;
+                  else if (nome === "Usuário não encontrado") return "Email inválido";
+                  else return "Olá, " + nome
+                })()}
+              </Typography>
               <TextField
-                label="Usuário"
-                name="autor"
+                label="Email"
+                name="email"
                 size="small"
-                onChange={handleChange}
+                onBlur={handleUser}
                 required
               />
               <InputLabel>Departamento: </InputLabel>

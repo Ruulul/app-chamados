@@ -87,7 +87,7 @@ const Mensagens = (props) => {
   
               <Stack alignItems="stretch" justifyContent="flex-start" direction="column-reverse" spacing={6}>
                 {props.infos.chat ? props.infos.chat.map((mensagem)=>{
-                    return <Mensagem key={mensagem.id} autor={mensagem.autor} mensagem={mensagem.mensagem} />
+                    return <Mensagem key={mensagem.id} autorId={mensagem.autorId} mensagem={mensagem.mensagem} />
                 }) : undefined}
               </Stack>
             </Grid>
@@ -148,30 +148,45 @@ const Mensagens = (props) => {
   
 const AddMensagem = (props) => {
     const [mensagem, setNovaMensagem] = useState("");
-    const [autor, setAutor] = useState("");
+    const [autorId, setAutor] = useState(undefined);
+    const [nome, setNome] = useState(undefined);
     function handleChange(event) {
-      if (event.target.name === "mensagem") setNovaMensagem(event.target.value);
-      else if (event.target.name === "autor") setAutor(event.target.value);
+      setNovaMensagem(event.target.value);
     }
     function handleSubmit(event) {
       event.preventDefault();
       let novasInfos = props.infos;
-      novasInfos.chat.push({ autor, mensagem });
+      novasInfos.chat.push({ autorId: autorId, mensagem });
       axios.post('http://10.0.0.83:5000/api/update/servico/' + novasInfos.id, novasInfos)
         .then(res=>props.setMensagem(false))
         .catch(err=>console.error("Erro em adicionar mensagem. \n" + err))
     }
   
+    function handleUser(event) {
+      axios.get('http://10.0.0.83:5000/api/usuario/email/' + event.target.value)
+        .then(({data})=>{
+          console.log("Usuário: " + JSON.stringify(data))
+          setAutor(data.id)
+          setNome(data.nome)
+        }).catch(()=>{
+          setNome("Email não encontrado")
+        })
+    }
     return (
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
+          {(()=>{
+                  if (nome === undefined) return;
+                  else if (nome === "Usuário não encontrado") return "Email inválido";
+                  else return "Olá, " + nome
+                })()}
           <TextField
             sx={{ mt: 1 }}
-            label="Usuário"
-            name="autor"
+            label="Email"
+            name="email"
             type="text"
             required
-            onChange={handleChange}
+            onBlur={handleUser}
           />
           <TextField
             label="Mensagem"
@@ -196,10 +211,16 @@ const AddMensagem = (props) => {
   
 
 const Mensagem = (props) => {
+  const [autor, setAutor] = useState(undefined);
+  useEffect(()=>{
+    axios.get('http://10.0.0.83:5000/api/usuario/' + props.autorId)
+      .then(({data})=>setAutor(data))
+      .catch(({erro})=>setAutor(erro))
+  },[])
     return (
       <Card>
         <Typography variant="h5" m={2}>
-          {props.autor ? props.autor : "Teste"}
+          {autor ? autor.nome : "Carregando..."}
         </Typography>
         <Typography m={2}>{props.mensagem} </Typography>
       </Card>

@@ -10,13 +10,17 @@ import Servicos from "./Pages/Servicos";
 import Requisicao from "./Pages/Requisicao";
 import Indicadores from "./Pages/Indicadores";
 import Chamado from "./Pages/Chamado";
+import Registro from "./Pages/Registro";
+import Login from "./Pages/Login";
 
 ReactDOM.render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />}>
+        <Route path="/" element={<App />} >
           <Route index element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Registro />} />
           <Route path="/servicos" element={<Servicos />} />
           <Route path="/nova_requisicao" element={<Requisicao />} />
           <Route path="/indicadores" element={<Indicadores />} />

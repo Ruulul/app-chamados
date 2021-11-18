@@ -1,5 +1,20 @@
 const { PrismaClient } = require('@prisma/client');
 
+const cookieParser = require('cookie-parser');
+
+const bcrypt = require('bcrypt')
+const session = require('express-session')
+const _ = require('lodash')
+
+const { PrismaSessionStore } = require('@quixo3/prisma-session-store')
+
+const fs = require('fs')
+const SECRET = fs.readFileSync('./key', 'utf-8');
+//fs.readFile('./key',(err, data)=>{if(!err) SECRET=data; else throw Error("Falha em obter segredo")})
+//const PUBLIC_KEY;
+//fs.readFile('./key.pub',(err, data)=>{if(!err) PUBLIC_KEY=data; else throw Error("Falha em ler chave pública")})
+
+
 const prisma = new PrismaClient()
 const express = require('express');
 const app = express();
@@ -13,13 +28,28 @@ const port = process.env.PORT || 5000;
 .finally(async()=>{await prisma.$disconnect()});
 
 app.use(express.json())
-
+app.use(cookieParser())
+app.use(session({
+  secret: SECRET,
+  store: new PrismaSessionStore(
+    prisma, {
+      checkPeriod: 2 * 60 * 1000,
+      dbRecordIdIsSessionId: true,
+      dbRecordIdFunction: undefined,
+    }
+  ),
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    secure: false
+  }
+}))
 app.use(express.static('./public/'))
 
 app.use(function (req, res, next) {
 
   // Website you wish to allow to connect
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', 'http://10.0.0.83:3000');
 
   // Request methods you wish to allow
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
@@ -32,6 +62,7 @@ app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Credentials', true);
 
   // Pass to next layer of middleware
+
   next();
 });
 
@@ -40,10 +71,12 @@ app.get('/api/mensagem', (req, res) => {
 });
 
 app.post('/api/novo/servico', async (req, res) => {
-  console.log("Salvando novo serviço")
   let servico = req.body
-  await prisma.chamado.create({data: {
-    autor: servico.autor,
+  let autorId = servico.autorId
+  req.session.valid ? 
+  ((console.log("Salvando novo serviço")),
+  (await prisma.chamado.create({data: {
+    autorId,
     chat: {
       create: servico.chat
     },
@@ -51,16 +84,17 @@ app.post('/api/novo/servico', async (req, res) => {
     departamento: servico.departamento,
     status: servico.status,
     prioridade: servico.prioridade
-  }})
+  }})),
 
-  res.status(200).send(req.body)
+  res.status(200).send(req.body)) : res.send("Não autorizado")
 });
 
 app.post('/api/update/servico/:id', async (req, res) => {
-  console.log("Salvando novo serviço")
-  novo_servico = req.body
-  novo_servico.chat.forEach((element)=>delete element.chamadoId)
-  await prisma.chamado.update({
+  let novo_servico = req.body
+  req.session.valid ? (
+  (console.log("Salvando novo serviço")),
+  (novo_servico.chat.forEach((element)=>delete element.chamadoId)),
+  (await prisma.chamado.update({
     where:{
       id: parseInt(req.params.id)
     },
@@ -75,45 +109,118 @@ app.post('/api/update/servico/:id', async (req, res) => {
       assunto: novo_servico.assunto,
       departamento: novo_servico.departamento,
       status: novo_servico.status,
-      prioridade: novo_servico.prioridade
+      prioridade: novo_servico.prioridade,
+      atendimento: true
     }
-  });
-
-  res.status(200).send(req.body)
+  })),
+  (res.status(200).send(req.body)) ) : res.send("Não autorizado")
 });
 
-app.get('/api/servicos', async (req, res) => {
-  console.log('Sending services')
-  let servicos = await prisma.chamado.findMany()
-  res.send(servicos)
+app.get('/api/servicos', (req, res) => {
+  req.session.valid ? prisma.chamado.findMany().then(res.send) : res.send("Não autorizado")
 });
 
-app.get('/api/servicos/:filtro', async (req, res) => {
-  console.log('Sending "' + req.params.filtro + '" services')
-  let servicos = await prisma.chamado.findMany(
+app.get('/api/servicos/:filtro', (req, res) => {
+  req.session.valid ? prisma.chamado.findMany(
     {
       where:{
       status: req.params.filtro
       }
     }
-  )
-  res.send(servicos)
+  ).then(res.send) : res.send("Não autorizado")
 });
 
-app.get('/api/servico/:id', async (req, res)=> {
-  console.log("Buscando serviço " + req.params.id)
-  let servico = await prisma.chamado.findUnique({
+app.get('/api/servico/:id', (req, res)=> {
+  req.session.valid ? prisma.chamado.findUnique({
     where: {
       id: parseInt(req.params.id)
     }
-  }).catch((e)=>console.log("Erro recuperando serviço"))
-  servico.chat = await prisma.mensagem.findMany({
-    where: {
-      chamadoId: parseInt(req.params.id)
-    }
-  })
-  console.log("Encontrado")
-  res.send(servico)
+  }).then(async (servico)=>{
+    servico.chat = await prisma.mensagem.findMany({
+      where: {
+        chamadoId: parseInt(req.params.id)
+      }
+    })
+    res.send(servico)})
+  .catch((e)=>res.status(500).send({erro: "Falha em encontrar serviço " + req.params.id}))
+  : res.send("Não autorizado")
 })
 
+app.post('/api/novo/usuario', async (req, res) => {
+  return await prisma.usuario.findMany({
+    where: {
+      email: req.body.email
+    }
+  }).then( async (usuario)=>{
+      if(usuario.length !== 0) {
+        res.status(302).send("Email já registrado")
+        return
+      }
+      console.log(JSON.stringify(req.body))
+      req.body.senha = await bcrypt.hash(req.body.senha, 12)
+      return req.body
+  }, (err)=>{res.status(500).send("Erro acessando o banco de dados")})
+    .then(async (data) => {
+      await prisma.usuario.create({
+        data: {
+          email: data.email,
+          senha: data.senha,
+          nome: data.nome,
+          sobrenome: data.sobrenome
+        }
+      })
+      res.status(200).send("Usuário criado com sucesso")
+      return
+    }, (err)=>{res.status(500).send("Erro criando o usuário. \n" + err)})
+})
+
+app.get('/api/usuario/:id', (req, res) => {
+  req.session.id ? prisma.usuario.findUnique({
+    where: {
+      id: parseInt(req.params.id)
+    }
+  }).then((usuario)=>{
+    res.send(usuario)
+  }).catch((err)=>{
+    res.status(500).send({erro: "Falha em obter usuário "})
+  }) : res.send("Não autorizado")
+})
+
+app.get('/api/usuario/email/:email', (req, res) => {
+  req.session.valid ? prisma.usuario.findUnique({
+    where: {
+      email: req.params.email
+    }
+  }).then((usuario)=>{
+    usuario !== "" ? res.send(usuario) : res.send("Usuário não encontrado")
+  }).catch((err)=>{
+    res.status(500).send({erro: "Falha em obter usuário "})
+  }) : res.send("Não autorizado")
+})
+
+app.post('/api/login', async (req, res) => {
+  await prisma.usuario.findMany({
+    where: {
+      email: req.body.email
+    }
+  }).then( async (usuario)=>{
+    if (usuario.length === 0) {
+      res.send(JSON.stringify({"status": 404, "error": "Usuário com esse email não encontrado", token: null}))
+      return
+    }
+    req.session.valid = false
+    req.session.valid = await bcrypt.compare(req.body.senha, usuario[0].senha)
+    if (req.session.valid) req.session.usuarioId = usuario[0].id
+    if (!req.session.valid) {
+      res.send(JSON.stringify({"status": 404, "error": "Senha incorreta", "token": null}))
+      return
+    }
+    console.log(req.session)
+    res.send(JSON.stringify({"status": 200, "error": null}))
+  }).catch((err)=>{
+    console.log(err)
+    res.status(500).send("")
+    return false
+  })
+})
 app.listen(port, () => console.log(`Listening on port ${port}`));

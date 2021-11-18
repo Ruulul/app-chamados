@@ -1,14 +1,29 @@
 import {Grid, Card, Typography, Box, Fade, Divider, Stack} from "@mui/material";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import { read_cookie } from "sfcookies";
 
 const Home = ({user}) => {
   const [servicos, setServicos] = useState(undefined)
   const [contagem, setContagem] = useState({pendentes: 0, novos: 0, atendimento: 0, parados: 0})
 
+  const token = read_cookie("token")
+
   useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/servicos/pendente')
-      .then(({data})=>setServicos(data))
+    axios.get('http://10.0.0.83:5000/api/servicos/pendente', {withCredentials: true})
+      .then(({data})=>{
+        setServicos(data)
+        let novaContagem = {pendentes: data.length, novos: 0, atendimento: 0, parados: 0}
+        let hoje = new Date()
+        data ? data.forEach((servico) => {
+          if (servico.createdAt.split('T')[0] === hoje.toISOString().split('T')[0])
+            novaContagem.novos += 1
+          if (servico.atendimento)
+            novaContagem.atendimento += 1
+        }) : undefined
+        novaContagem.parados = novaContagem.pendentes - novaContagem.atendimento
+        setContagem(novaContagem)
+      })
       .catch(err=>console.error("Erro obtendo serviços.\n"+err));
     return ()=>{setServicos(undefined)}
   },[])

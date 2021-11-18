@@ -12,9 +12,9 @@ datasource db {
 
 model Chamado {
   id           Int        @id @default(autoincrement())
-//  autor        Usuario    @relation(fields: [autorId], references: [id])
-  autor        String
-//  autorId      Int        @unique
+  autor        Usuario?    @relation(fields: [autorId], references: [id])
+  //autor        String
+  autorId      Int        
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   assunto      String     @db.VarChar(255)
@@ -23,23 +23,35 @@ model Chamado {
   departamento String
   status       String
   prioridade   Int
+  atendimento  Boolean       @default(false)
 }
 
 model Mensagem {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
-//  autor     Usuario  @relation(fields: [autorId], references: [id])
-//  autorId   Int      @unique
-  autor     String   
+  //autor     String
+  autor     Usuario?  @relation(fields: [autorId], references: [id])
+  autorId   Int      
   mensagem  String   @db.VarChar(255)
   chamado   Chamado  @relation(fields: [chamadoId], references: [id])
   chamadoId Int
 }
 
 model Usuario {
-  id       Int        @id @default(autoincrement())
-  usuario  String
-  senha    String
-//  chamado  Chamado[]
-//  Mensagem Mensagem[]
+  id           Int        @id @default(autoincrement())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  email        String     @unique
+  senha        String
+  nome         String?
+  sobrenome    String?
+  chamados     Chamado[]
+  mensagems    Mensagem[]
+}
+
+model Session {
+  id        String   @id
+  sid       String   @unique
+  data      String
+  expiresAt   DateTime
 }
