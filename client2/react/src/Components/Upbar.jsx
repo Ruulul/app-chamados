@@ -1,25 +1,46 @@
-import React from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faPlusCircle
+  faPlusCircle,
+  faSignOutAlt
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom"
 
-import { Button, Chip } from "@mui/material";
+import { Grid, Button } from "@mui/material";
 import Stack from "@mui/material/Stack";
+import axios from "axios";
+import { useNavigate } from "react-router-dom"
 
 const UpBar = (props) => {
+    const redirect = useNavigate()
+    const [variant, setVariant] = useState("secondary")
     return (
-      <Stack spacing={2} direction="row">
-        <Button
-          variant="contained"
-          color="primary"
-          component={Link}
-          to="/nova_requisicao"
-        >
-          <FontAwesomeIcon icon={faPlusCircle} />
-        </Button>
-      </Stack>
+      <Grid container>
+        <Grid item xs={5} />
+        <Grid item xs={7}>
+          <Stack spacing={2} direction="row" pt={1} pr={4} justifyContent="space-between">
+            <Button
+              variant="contained"
+              color="primary"
+              component={Link}
+              to="/nova_requisicao"
+            >
+              <FontAwesomeIcon icon={faPlusCircle} />
+            </Button>
+            <Button
+              variant="contained"
+              color={variant}
+              onClick={async ()=>{
+                await axios.post('http://10.0.0.83:5000/api/logout', {}, { withCredentials: true })
+                  .then(()=>redirect("/login"))
+                  .catch(()=>setVariant("error"))
+              }}
+            >
+              <FontAwesomeIcon icon={faSignOutAlt} />
+            </Button>
+          </Stack>
+        </Grid>
+      </Grid>
     );
   }
 

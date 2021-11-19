@@ -9,16 +9,22 @@ import {
     Typography
 } from "@mui/material";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export default function Servicos() {
     const [filtro, setFiltro] = useState("pendente")
     const [servicos, setServicos] = useState([])
+    const redirect = useNavigate()
     useEffect(()=>filtro === "todos" ?
-      axios.get('http://10.0.0.83:5000/api/servicos')
-        .then(res => setServicos(res.data))
+      axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
+        .then(res => {
+          if (res.data === "Não autorizado") redirect("/login")
+          setServicos(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
-    : axios.get('http://10.0.0.83:5000/api/servicos/' + filtro)
-        .then(res => setServicos(res.data))
+    : axios.get('http://10.0.0.83:5000/api/servicos/' + filtro, { withCredentials: true })
+        .then(res => {
+          if (res.data === "Não autorizado") redirect("/login")
+          setServicos(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err)), [filtro])
     return (
         <Grid container direction={{ xs: "column", md: "row" }}>

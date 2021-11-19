@@ -16,15 +16,15 @@ const SideBar = function (props) {
       sx={{ placeContent: "center" }}
     >
       <Button
-        variant="outlined"
+        variant="contained"
+        color="secondary"
         component={Link}
         to="/"
       >
         <FontAwesomeIcon icon={faHome} />
       </Button>
       <Button
-        variant="contained"
-        color="secondary"
+        variant="outlined"
         component={Link}
         to="/servicos"
       >

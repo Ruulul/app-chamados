@@ -30,8 +30,11 @@ export default function Chamado() {
   })
 
   useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/servico/'+ infos.id)
-      .then(({data})=>{setInfos(data);console.log(data)})
+    axios.get('http://10.0.0.83:5000/api/servico/'+ infos.id, { withCredentials: true })
+      .then(({data})=>{
+        if (data === "Não autorizado") redirect("/login")
+        setInfos(data)
+      })
       .catch(err=>{console.error("Erro obtendo serviço. \n" + err)})
   },[infos]);
 
@@ -128,7 +131,7 @@ const Mensagens = (props) => {
                       alert("Isso definitivamente não devia aparecer");
                   }
                   if (servico) 
-                  axios.post('http://10.0.0.83:5000/api/update/servico/' + servico.id, servico)
+                  axios.post('http://10.0.0.83:5000/api/update/servico/' + servico.id, servico, { withCredentials: true })
                     .then(res=>props.mudastatus(servico))
                     .catch(err=>console.error('Falha em salvar o serviço \n' + err));;
                 }
@@ -150,6 +153,16 @@ const AddMensagem = (props) => {
     const [mensagem, setNovaMensagem] = useState("");
     const [autorId, setAutor] = useState(undefined);
     const [nome, setNome] = useState(undefined);
+
+    useEffect(async ()=>{
+      await axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
+        .then(({data})=>{
+          setNome(data.nome)
+          setAutor(data.id)
+        })
+        .catch(err=>{console.log("Erro obtendo nome\n"+err);setNome("Falha obtendo nome")})
+    },[])
+
     function handleChange(event) {
       setNovaMensagem(event.target.value);
     }
@@ -157,37 +170,20 @@ const AddMensagem = (props) => {
       event.preventDefault();
       let novasInfos = props.infos;
       novasInfos.chat.push({ autorId: autorId, mensagem });
-      axios.post('http://10.0.0.83:5000/api/update/servico/' + novasInfos.id, novasInfos)
+      axios.post('http://10.0.0.83:5000/api/update/servico/' + novasInfos.id, novasInfos, { withCredentials: true })
         .then(res=>props.setMensagem(false))
         .catch(err=>console.error("Erro em adicionar mensagem. \n" + err))
     }
-  
-    function handleUser(event) {
-      axios.get('http://10.0.0.83:5000/api/usuario/email/' + event.target.value)
-        .then(({data})=>{
-          console.log("Usuário: " + JSON.stringify(data))
-          setAutor(data.id)
-          setNome(data.nome)
-        }).catch(()=>{
-          setNome("Email não encontrado")
-        })
-    }
+    
     return (
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={2}>
-          {(()=>{
+          <Typography pt={3}>{(()=>{
                   if (nome === undefined) return;
                   else if (nome === "Usuário não encontrado") return "Email inválido";
-                  else return "Olá, " + nome
+                  else return nome
                 })()}
-          <TextField
-            sx={{ mt: 1 }}
-            label="Email"
-            name="email"
-            type="text"
-            required
-            onBlur={handleUser}
-          />
+          </Typography>
           <TextField
             label="Mensagem"
             multiline
@@ -213,7 +209,7 @@ const AddMensagem = (props) => {
 const Mensagem = (props) => {
   const [autor, setAutor] = useState(undefined);
   useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/usuario/' + props.autorId)
+    axios.get('http://10.0.0.83:5000/api/usuario/' + props.autorId, { withCredentials: true })
       .then(({data})=>setAutor(data))
       .catch(({erro})=>setAutor(erro))
   },[])

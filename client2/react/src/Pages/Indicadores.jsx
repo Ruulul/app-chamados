@@ -5,7 +5,11 @@ import {Card, Typography, Grid, Table, TableHead,TableRow, TableBody, TableCell,
 import IndicadorGrafico from "../components/IndicadoresGraficos";
 import { PrioridadeTodos } from "../components/IndicadoresGraficos";
 
+import { useNavigate } from "react-router-dom";
+
+
 const Indicadores = (props) => {
+    const redirect = useNavigate()
     const [servicos_abertos, setServicosAbertos] = useState([])
     const [tabelaAbertos, setTabelaAbertos] = useState(undefined)
     const [servicos_pendentes, setServicosPendentes] = useState([])
@@ -16,6 +20,7 @@ const Indicadores = (props) => {
 
     async function setarServicosAbertos() {
         let servicos = await Servicos("abertos");
+        if (servicos === "Não autorizado") redirect("/login")
         setServicosAbertos(servicos)
 
         setTabelaAbertos(
@@ -71,6 +76,7 @@ const Indicadores = (props) => {
     }
     async function setarServicosPendentes() {
         let servicos = await Servicos("pendentes");
+        if (servicos === "Não autorizado") redirect("/login")
     setServicosPendentes(servicos);
 
     setTabelaPendentes(
@@ -126,6 +132,7 @@ const Indicadores = (props) => {
 }
     async function setarServicosResolvidos() {
         let servicos = await Servicos("abertos");
+        if (servicos === "Não autorizado") redirect("/login")
     setServicosResolvidos(servicos)
 
     setTabelaResolvidos(
@@ -181,6 +188,7 @@ const Indicadores = (props) => {
 }
     async function setarServicosTodos() {
         let servicos = await Servicos("");
+        if (servicos === "Não autorizado") redirect("/login")
         setTabelaTodos(<PrioridadeTodos servicos={servicos}/>)
     }
 
@@ -215,13 +223,14 @@ const Indicadores = (props) => {
 };
 
 async function Servicos(filtro) {
-    let Tabela = undefined;
-    await axios.get('http://10.0.0.83:5000/api/servicos')
-        .then( (res)=>{
+    let Tabela = "Não autorizado";
+    await axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
+        .then( ({data})=>{
+            if (data === "Não autorizado") return "Não autorizado"
             switch(filtro) {
                 case "abertos":
                     let servicos_abertos = []
-                    res.data.forEach((servico)=>{
+                    data.forEach((servico)=>{
                         if (servico.status === "pendente" || servico.status === "resolvido")
                             servicos_abertos = [
                                 ...servicos_abertos, 
@@ -232,7 +241,7 @@ async function Servicos(filtro) {
                     break;
                 case "pendentes":
                     let servicos_pendentes = []
-                    res.data.forEach((servico)=>{
+                    data.forEach((servico)=>{
                         if (servico.status === "pendente")
                             servicos_pendentes = [
                                 ...servicos_pendentes, 
@@ -243,7 +252,7 @@ async function Servicos(filtro) {
                     break;
                 case "resolvidos":
                     let servicos_resolvidos = []
-                    res.data.forEach((servico)=>{
+                    data.forEach((servico)=>{
                         if (servico.status === "resolvido")
                             servicos_resolvidos = [
                                 ...servicos_resolvidos, 
@@ -252,7 +261,7 @@ async function Servicos(filtro) {
                 
                     Tabela = servicos_resolvidos;
                 default:
-                    Tabela = res.data;
+                    Tabela = data;
             }
         })
         .catch((err)=>{Tabela = <Typography>Ocorreu um erro ao carregar a tabela de {filtro}</Typography>});

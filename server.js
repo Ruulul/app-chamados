@@ -20,30 +20,27 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 5000;
 
-(async () => {
-  let servicos = await prisma.chamado.findMany()
-  console.log("Serviços vindo do servidor: " + servicos)
-})()
-.catch((e)=>{throw e})
-.finally(async()=>{await prisma.$disconnect()});
+const store = new PrismaSessionStore(
+  prisma, {
+    checkPeriod: 10 * 60 * 1000,
+    dbRecordIdIsSessionId: true,
+    dbRecordIdFunction: undefined,
+  }
+);
+
+(async()=>{await prisma.$disconnect()})();
 
 app.use(express.json())
 app.use(cookieParser())
 app.use(session({
   secret: SECRET,
-  store: new PrismaSessionStore(
-    prisma, {
-      checkPeriod: 2 * 60 * 1000,
-      dbRecordIdIsSessionId: true,
-      dbRecordIdFunction: undefined,
-    }
-  ),
-  resave: false,
+  store,
+  resave: true,
   saveUninitialized: true,
   cookie: {
-    secure: false
+    secure: false,
   }
-}))
+}));
 app.use(express.static('./public/'))
 
 app.use(function (req, res, next) {
@@ -62,7 +59,7 @@ app.use(function (req, res, next) {
   res.setHeader('Access-Control-Allow-Credentials', true);
 
   // Pass to next layer of middleware
-
+  
   next();
 });
 
@@ -117,17 +114,21 @@ app.post('/api/update/servico/:id', async (req, res) => {
 });
 
 app.get('/api/servicos', (req, res) => {
-  req.session.valid ? prisma.chamado.findMany().then(res.send) : res.send("Não autorizado")
+  console.log(req.session)
+  req.session.valid ? prisma.chamado.findMany().then(data=>res.send(data)) : res.send("Não autorizado")
 });
 
-app.get('/api/servicos/:filtro', (req, res) => {
-  req.session.valid ? prisma.chamado.findMany(
+app.get('/api/servicos/:filtro', async (req, res) => {
+  console.log(req.session)
+  req.session.valid ? 
+  prisma.chamado.findMany(
     {
       where:{
       status: req.params.filtro
       }
     }
-  ).then(res.send) : res.send("Não autorizado")
+  ).then((chamado)=>res.send(chamado)) 
+  : res.send("Não autorizado")
 });
 
 app.get('/api/servico/:id', (req, res)=> {
@@ -146,8 +147,8 @@ app.get('/api/servico/:id', (req, res)=> {
   : res.send("Não autorizado")
 })
 
-app.post('/api/novo/usuario', async (req, res) => {
-  return await prisma.usuario.findMany({
+app.post('/api/novo/usuario', (req, res) => {
+  req.session.valid ? prisma.usuario.findMany({
     where: {
       email: req.body.email
     }
@@ -172,10 +173,11 @@ app.post('/api/novo/usuario', async (req, res) => {
       res.status(200).send("Usuário criado com sucesso")
       return
     }, (err)=>{res.status(500).send("Erro criando o usuário. \n" + err)})
+  : res.send("Não autorizado")
 })
 
 app.get('/api/usuario/:id', (req, res) => {
-  req.session.id ? prisma.usuario.findUnique({
+  req.session.valid ? prisma.usuario.findUnique({
     where: {
       id: parseInt(req.params.id)
     }
@@ -198,29 +200,55 @@ app.get('/api/usuario/email/:email', (req, res) => {
   }) : res.send("Não autorizado")
 })
 
+app.get('/api/perfil', async (req, res)=> {
+  await prisma.usuario.findUnique({where:{id: req.session.usuarioId}})
+    .then(usuario=>{
+      delete usuario.senha
+      res.send(usuario)
+    })
+    .catch(err=>{
+      res.send("Não autorizado")
+    })
+})
+
 app.post('/api/login', async (req, res) => {
+  console.log(req.sessionID)
   await prisma.usuario.findMany({
     where: {
       email: req.body.email
     }
   }).then( async (usuario)=>{
     if (usuario.length === 0) {
-      res.send(JSON.stringify({"status": 404, "error": "Usuário com esse email não encontrado", token: null}))
+      res.send(JSON.stringify({"status": 404, "error": "Usuário com esse email não encontrado"}))
       return
     }
     req.session.valid = false
     req.session.valid = await bcrypt.compare(req.body.senha, usuario[0].senha)
     if (req.session.valid) req.session.usuarioId = usuario[0].id
     if (!req.session.valid) {
-      res.send(JSON.stringify({"status": 404, "error": "Senha incorreta", "token": null}))
+      res.send(JSON.stringify({"status": 404, "error": "Senha incorreta"}))
       return
     }
+    console.log(req.sessionID)
+    req.session.save(err=>console.log)
     console.log(req.session)
     res.send(JSON.stringify({"status": 200, "error": null}))
   }).catch((err)=>{
     console.log(err)
-    res.status(500).send("")
+    res.status(500).send("Erro no login")
     return false
   })
+})
+
+app.post('/api/logout', async (req, res) => {
+  req.session.destroy((err)=>{if(!err) {res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso")} else {res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.")}})
+  //try {
+  //req.session.valid = false
+  //req.session.save()
+  //res.status(200).send("OK")
+  //}  catch (e) {
+  //  console.log("Falha em logout. \n" + e)
+  //  res.status(500).send("Error")
+  //}
 })
 app.listen(port, () => console.log(`Listening on port ${port}`));

@@ -2,20 +2,24 @@ import {Grid, Card, Typography, Box, Fade, Divider, Stack} from "@mui/material";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { read_cookie } from "sfcookies";
+import { useNavigate } from "react-router-dom";
 
-const Home = ({user}) => {
+const Home = () => {
   const [servicos, setServicos] = useState(undefined)
   const [contagem, setContagem] = useState({pendentes: 0, novos: 0, atendimento: 0, parados: 0})
+  const [nome, setNome] = useState("Carregando...")
 
-  const token = read_cookie("token")
+  const redirect = useNavigate()
 
   useEffect(()=>{
     axios.get('http://10.0.0.83:5000/api/servicos/pendente', {withCredentials: true})
       .then(({data})=>{
+        if (data === "Não autorizado") redirect("/login")
+        console.log(data)
         setServicos(data)
         let novaContagem = {pendentes: data.length, novos: 0, atendimento: 0, parados: 0}
         let hoje = new Date()
-        data ? data.forEach((servico) => {
+        data !== "Não autorizado" ? data.forEach((servico) => {
           if (servico.createdAt.split('T')[0] === hoje.toISOString().split('T')[0])
             novaContagem.novos += 1
           if (servico.atendimento)
@@ -27,6 +31,13 @@ const Home = ({user}) => {
       .catch(err=>console.error("Erro obtendo serviços.\n"+err));
     return ()=>{setServicos(undefined)}
   },[])
+  useEffect(()=>{
+    axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
+      .then(({data})=>{
+        setNome(data.nome)
+      })
+      .catch(err=>{console.log("Erro obtendo nome");setNome("Falha obtendo nome")})
+  },[])
   return (
     <Grid container direction={{xs: "column", md: "row"}} width="100%">
       <Grid item xs={12} md={10} lg={6} minHeight={{xs:1/2, md: 1}} >
@@ -37,17 +48,17 @@ const Home = ({user}) => {
                   <Stack spacing={2} pb={2}>
                     <Grid container alignItems="flex-end" justifyContent="space-between">
                       <Grid item xs={10} md={5} lg={3}>
-                        <Typography variant="h4" component="h4" sx={{fontWeight: 500}}>Olá, </Typography>
+                        <Typography variant="h4" component="h4" sx={{fontWeight: 500}}>{nome !== "Carregando..." && nome !== "Falha obtendo nome" ? "Olá," : undefined }</Typography>
                       </Grid>
                       <Grid item xs={5} alignItems="flex-start">
-                        <Typography component="h5" variant="h5" color="secondary" sx={{fontWeight: 500}}>{user ? " " + user : " Mundo"}</Typography>
+                        <Typography component="h5" variant="h5" color="secondary" sx={{fontWeight: 500}}>{nome}</Typography>
                       </Grid>
                     </Grid>
                     <Divider />
                     <Typography variant="h5">Serviços pendentes: {contagem.pendentes}</Typography>
                     <Typography variant="h6">Serviços novos: {contagem.novos} </Typography>
-                    <Typography variant="h6">Serviços em atendimento: {contagem.atendimento} </Typography>
                     <Typography variant="h6">Serviços parados: {contagem.parados} </Typography>
+                    <Typography variant="h6">Serviços em atendimento: {contagem.atendimento} </Typography>
                   </Stack>
                 </Card>
               </Grid>

@@ -14,6 +14,7 @@ import {
 import axios from "axios";
 
 export default function Requisicao () {
+  const redirect = useNavigate()
   const [infos, setInfos] = useState({
     departamento: "Contábil",
     prioridade: 1,
@@ -29,15 +30,30 @@ export default function Requisicao () {
   const navigate = useNavigate()
 
   useEffect(async ()=>{
-    axios.get('http://10.0.0.83:5000/api/servicos')
+    axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
       .then(({data})=>{
+        if (data === "Não autorizado") redirect("/login")
         let novasInfos = infos;
         novasInfos.id = data.length;
-        console.log("Serviços contatos. \ninfos:" + JSON.stringify(infos))
+        console.log("Dados do servidor: " + JSON.stringify(data))
+        console.log("Serviços contados. \ninfos:" + JSON.stringify(infos))
         setInfos(novasInfos)
-        forceUpdate({})})
+        forceUpdate({})
+      })
       .catch((err)=>{console.log('Erro obtendo serviços. ' + err)})
   }, [])
+
+  useEffect(()=>{
+    axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
+      .then(({data})=>{
+        setNome(data.nome)
+        let novasInfos = infos
+        novasInfos.autorId = data.id
+        novasInfos.chat[0].autorId = data.id
+        setInfos(novasInfos)
+      })
+      .catch(err=>{console.log("Erro obtendo nome");setNome("Falha obtendo nome")})
+  },[])
 
   function handleChange(event) {
     let novas_infos = infos
@@ -51,32 +67,15 @@ export default function Requisicao () {
     //  novas_infos[event.target.name] = event.target.value;
     }
     else novas_infos[event.target.name] = [event.target.value][0];
-    console.log(novas_infos)
     setInfos(novas_infos)
   }
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     let requisicao = infos
     requisicao.status = "pendente"
-    axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao)
+    await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
       .then(res=>navigate('/servicos'))
       .catch(err=>console.log("Erro em salvar o chamado." + err))
-  }
-
-  function handleUser(event) {
-    axios.get('http://10.0.0.83:5000/api/usuario/email/' + event.target.value)
-      .then(({data})=>{
-        let novasInfos = infos
-        novasInfos.autorId = data.id
-        novasInfos.chat[0].autorId = data.id
-        console.log("Usuário: " + JSON.stringify(data))
-        setNome(data.nome)
-        setInfos(novasInfos)
-        forceUpdate({})
-      }).catch(()=>{
-        setNome("Email não encontrado")
-        forceUpdate({})
-      })
   }
   return (
     <Box sx={{ mt: "1em" }} component="form" onSubmit={handleSubmit}>
@@ -91,19 +90,8 @@ export default function Requisicao () {
             <Stack spacing={2}>
               <Typography>{infos.id === undefined ?  "Carregando..." : ("Ticket nº " + infos.id)}</Typography>
               <Typography>
-                {(()=>{
-                  if (nome === undefined) return;
-                  else if (nome === "Usuário não encontrado") return "Email inválido";
-                  else return "Olá, " + nome
-                })()}
+                {nome === undefined ? "Carregando..." : ("Olá, " + nome)}
               </Typography>
-              <TextField
-                label="Email"
-                name="email"
-                size="small"
-                onBlur={handleUser}
-                required
-              />
               <InputLabel>Departamento: </InputLabel>
               <NativeSelect
                 name="departamento"

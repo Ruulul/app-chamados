@@ -27,7 +27,7 @@ const TabelaServicos = (props) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {props.servicos.map((s) => {
+          {typeof(props.servicos) === "object" ? props.servicos.map((s) => {
             return (<TableRow key={s.id}>
                       <TableCell>
                         <Button
@@ -46,7 +46,7 @@ const TabelaServicos = (props) => {
                       <TableCell>{s.status}</TableCell>
                     </TableRow>);
               }
-            )
+            ) : props.servicos
           }
         </TableBody>
       </Table>

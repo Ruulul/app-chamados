@@ -1,12 +1,14 @@
 import { Button, Grid, TextField, Stack } from "@mui/material";
 import axios from "axios";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Registro() {
     const [nome, setNome] = useState(null)
     const [sobrenome, setSobrenome] = useState(null)
     const [email, setEmail] = useState("")
     const [senha, setSenha] = useState("")
+    const redirect = useNavigate()
     function onChangeNome({target}) {
         setNome(target.value)
     }
@@ -23,10 +25,22 @@ export default function Registro() {
         event.preventDefault();
         const cadastro = {nome, sobrenome, email, senha};
         console.log({cadastro})
-        axios.post("http://10.0.0.83:5000/api/novo/usuario", cadastro)
-            .then(console.log)
+        axios.post("http://10.0.0.83:5000/api/novo/usuario", cadastro, { withCredentials: true })
+            .then(({data})=>{
+                if (data === "Não autorizado")
+                    redirect("/")
+            })
             .catch(console.error)
+        redirect("/")
     }
+    useEffect(()=>{
+      axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
+        .then(({data})=>{
+            if (data === "Não autorizado")
+                redirect("/")
+        })
+        .catch(err=>console.log)
+    },[])
     return (
         <Grid item container component="form" direction="column" xs={10} md={6} lg={4} onSubmit={onSubmit} padding={5}>
             <Stack spacing={3}>

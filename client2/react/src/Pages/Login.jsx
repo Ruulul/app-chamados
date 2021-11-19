@@ -1,10 +1,10 @@
-import { Button, Grid, TextField, Stack } from "@mui/material";
+import { Button, Grid, TextField, Stack, CircularProgress } from "@mui/material";
 import axios from "axios";
-import { bake_cookie } from "sfcookies";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+    const [enviando, setEnviando] = useState(false)
     const [email, setEmail] = useState("")
     const [senha, setSenha] = useState("")
     const redirect = useNavigate()
@@ -14,13 +14,15 @@ export default function Login() {
     function onChangeSenha({target}) {
         setSenha(target.value)
     }
-    function onSubmit(event) {
+    async function onSubmit(event) {
         event.preventDefault();
         const login = {email, senha};
-        axios.post("http://10.0.0.83:5000/api/login", login)
-            .then(({data})=>{bake_cookie("token", data.token);
+        setEnviando(true)
+        await axios.post("http://10.0.0.83:5000/api/login", login, { withCredentials: true })
+            .then(({data})=>{
             console.log(data)
-            redirect("/")})
+            redirect("/")}
+            )
             .catch(console.error)
     }
     return (
@@ -28,9 +30,9 @@ export default function Login() {
             <Stack spacing={3}>
                 <TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
                 <TextField label="senha" name="senha" type="password"onChange={onChangeSenha} required/>
-                <Button type="submit">
+                {!enviando ? <Button type="submit">
                     Enviar
-                </Button>
+                </Button> : <CircularProgress />}
             </Stack>
         </Grid>
     );
