@@ -70,6 +70,7 @@ app.get('/api/mensagem', (req, res) => {
 app.post('/api/novo/servico', async (req, res) => {
   let servico = req.body
   let autorId = servico.autorId
+  console.log(servico)
   req.session.valid ? 
   ((console.log("Salvando novo serviço")),
   (await prisma.chamado.create({data: {
@@ -80,7 +81,8 @@ app.post('/api/novo/servico', async (req, res) => {
     assunto: servico.assunto,
     departamento: servico.departamento,
     status: servico.status,
-    prioridade: servico.prioridade
+    prioridade: servico.prioridade,
+    prazo: servico.prazo
   }})),
 
   res.status(200).send(req.body)) : res.send("Não autorizado")

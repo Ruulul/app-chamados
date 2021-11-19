@@ -69,10 +69,32 @@ export default function Requisicao () {
     else novas_infos[event.target.name] = [event.target.value][0];
     setInfos(novas_infos)
   }
+
+  async function getPrazo() {
+    let data = new Date()
+    switch (infos.prioridade) {
+      case 1:
+        data.setDate(data.getDate()+3)
+        return data;
+      case 2:
+        data.setDate(data.getDate()+2)
+        return data;
+      case 3:
+        data.setDate(data.getDate()+1)
+        return data;
+      case 4:
+        data = new Date(data.getTime()+(8 * 60 * 60 * 1000))
+        return data;
+      
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     let requisicao = infos
     requisicao.status = "pendente"
+    requisicao.prazo = await (await getPrazo()).toISOString()
+    console.log("Requisição: " + JSON.stringify(requisicao))
     await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
       .then(res=>navigate('/servicos'))
       .catch(err=>console.log("Erro em salvar o chamado." + err))

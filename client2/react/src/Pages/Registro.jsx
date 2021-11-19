@@ -21,11 +21,11 @@ export default function Registro() {
     function onChangeSenha({target}) {
         setSenha(target.value)
     }
-    function onSubmit(event) {
+    async function onSubmit(event) {
         event.preventDefault();
         const cadastro = {nome, sobrenome, email, senha};
         console.log({cadastro})
-        axios.post("http://10.0.0.83:5000/api/novo/usuario", cadastro, { withCredentials: true })
+        await axios.post("http://10.0.0.83:5000/api/novo/usuario", cadastro, { withCredentials: true })
             .then(({data})=>{
                 if (data === "Não autorizado")
                     redirect("/")

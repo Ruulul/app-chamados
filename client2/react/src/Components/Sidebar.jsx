@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -6,10 +7,17 @@ import {
   faBell
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom";
-
-import { Button, Stack } from "@mui/material";
+import axios from "axios";
+import { Button, Stack, Badge } from "@mui/material";
 
 const SideBar = function (props) {
+  const [pendentes, setPendentes] = useState(0)
+  useEffect(async()=>{
+    await axios.get("http://10.0.0.83:5000/api/servicos", { withCredentials: true })
+      .then(({data})=>{
+        setPendentes(data.length)
+      }).catch((err)=>{throw new Error(err)})
+  },[])
   return (
     <Stack
       direction={{ xs: "row", md: "column" }}
@@ -37,8 +45,14 @@ const SideBar = function (props) {
       >
         <FontAwesomeIcon icon={faChartBar} />
       </Button>
-      <Button color="warning" variant="outlined" disabled>
-        <FontAwesomeIcon icon={faBell} />
+      <Button 
+        color="warning" 
+        variant="outlined"
+        component={Link}
+        to="/avisos">
+        <Badge badgeContent={pendentes} variant="contained" color="error">
+          <FontAwesomeIcon icon={faBell} />
+        </Badge>
       </Button>
     </Stack>
   );

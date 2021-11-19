@@ -17,6 +17,7 @@ model Chamado {
   autorId      Int        
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  prazo        DateTime   
   assunto      String     @db.VarChar(255)
   chat         Mensagem[]
   anexo        Int?

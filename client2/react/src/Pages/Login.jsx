@@ -31,7 +31,7 @@ export default function Login() {
                 <TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
                 <TextField label="senha" name="senha" type="password"onChange={onChangeSenha} required/>
                 {!enviando ? <Button type="submit">
-                    Enviar
+                    Acessar
                 </Button> : <CircularProgress />}
             </Stack>
         </Grid>

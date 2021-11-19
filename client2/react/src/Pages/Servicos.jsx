@@ -24,7 +24,8 @@ export default function Servicos() {
     : axios.get('http://10.0.0.83:5000/api/servicos/' + filtro, { withCredentials: true })
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
-          setServicos(res.data)})
+          setServicos(res.data)
+        })
         .catch(err => console.log("Erro obtendo serviços. \n" + err)), [filtro])
     return (
         <Grid container direction={{ xs: "column", md: "row" }}>
