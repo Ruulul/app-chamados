@@ -28,7 +28,6 @@ export default function Requisicao () {
   });
   const [, forceUpdate] = useState({})
   const [nome, setNome] = useState(undefined)
-  const [color, setColor] = useState("green")
   const navigate = useNavigate()
 
   useEffect(async ()=>{
@@ -58,7 +57,6 @@ export default function Requisicao () {
   },[])
 
   function handleChange(event) {
-    let colors = ["green","orange","#FA4528","black"]
     let novas_infos = infos
     if (event.target.name === "prioridade") {
       let prioridades = ["Baixa", "Padrão", "Alta", "Urgente"];
@@ -70,7 +68,6 @@ export default function Requisicao () {
     //  novas_infos[event.target.name] = event.target.value;
     }
     else novas_infos[event.target.name] = [event.target.value][0];
-    setColor(colors[infos.prioridade-1]);
     setInfos(novas_infos)
   }
 
@@ -87,9 +84,8 @@ export default function Requisicao () {
         data.setDate(data.getDate()+1)
         return data;
       case 4:
-        data = new Date(data.getTime()+(8 * 60 * 60 * 1000))
+        data = await new Date((new Date()).getTime()+(8 * 60 * 60 * 1000))
         return data;
-      
     }
   }
 
@@ -97,7 +93,7 @@ export default function Requisicao () {
     event.preventDefault();
     let requisicao = infos
     requisicao.status = "pendente"
-    requisicao.prazo = await (await getPrazo()).toISOString()
+    await getPrazo().then((prazo)=>{requisicao.prazo=prazo.toISOString()}).catch(console.log)
     console.log("Requisição: " + JSON.stringify(requisicao))
     await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
       .then(res=>navigate('/servicos'))
@@ -157,12 +153,11 @@ export default function Requisicao () {
                 type="dropdown"
                 label="Prioridade: "
                 onChange={handleChange}
-                sx={{ fontWeight: 700,color}}
               >
-                <option name="1" style={{ fontWeight: 700, color:"green"}}>Baixa: Não impede operação.</option>
-                <option name="2" style={{ fontWeight: 700, color:"orange"}}>Média: Operação com saída de contorno.</option>
-                <option name="3" style={{ fontWeight: 700, color:"#FA4528"}}>Alta: Operação sem saída de contorno.</option>
-                <option name="4" style={{ fontWeight: 700, color:"black"}}>Urgente: Sem SLA</option>
+                <option name="1" style={{}}>🟩Baixa</option>
+                <option name="2" style={{}}>🟧Média</option>
+                <option name="3" style={{}}>🟥Alta</option>
+                <option name="4" style={{}}>⬛Urgente</option>
               </NativeSelect>
               <InputLabel htmlFor="anexo">Anexo: </InputLabel>
               <Input
@@ -209,7 +204,7 @@ export default function Requisicao () {
         <Grid item sm={1} xs={12}>
           <Button
             variant="contained"
-            color="secondary"
+            color="warning"
             component={Link}
             to="/"
           >

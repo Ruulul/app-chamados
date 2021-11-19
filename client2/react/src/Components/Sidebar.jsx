@@ -8,21 +8,22 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom";
 import axios from "axios";
-import { Button, Stack, Badge } from "@mui/material";
+import { Button, Stack, Badge, Tooltip } from "@mui/material";
 
 const SideBar = function (props) {
   const [pendentes, setPendentes] = useState(0)
-  useEffect(async()=>{
-    await axios.get("http://10.0.0.83:5000/api/servicos", { withCredentials: true })
+  useEffect(()=>{
+    axios.get("http://10.0.0.83:5000/api/servicos", { withCredentials: true })
       .then(({data})=>{
         setPendentes(data.length)
       }).catch((err)=>{setPendentes(0)})
-  },[])
+  })
   return (
     <Stack
       direction={{ xs: "row", md: "column" }}
-      sx={{ placeContent: "center" }}
+      sx={{ placeContent: "center",  }}
     >
+      <Tooltip title="Home">
       <Button
         variant="contained"
         color="secondary"
@@ -31,6 +32,8 @@ const SideBar = function (props) {
       >
         <FontAwesomeIcon icon={faHome} />
       </Button>
+      </Tooltip>
+      <Tooltip title="Serviços">
       <Button
         variant="outlined"
         component={Link}
@@ -38,6 +41,8 @@ const SideBar = function (props) {
       >
         <FontAwesomeIcon icon={faTasks} />
       </Button>
+      </Tooltip>
+      <Tooltip title="Indicadores">
       <Button 
         variant="outlined" 
         component={Link}
@@ -45,6 +50,8 @@ const SideBar = function (props) {
       >
         <FontAwesomeIcon icon={faChartBar} />
       </Button>
+      </Tooltip>
+      <Tooltip title="Avisos">
       <Button 
         color="warning" 
         variant="outlined"
@@ -58,6 +65,7 @@ const SideBar = function (props) {
           <FontAwesomeIcon icon={faBell} />
         </Badge>
       </Button>
+      </Tooltip>
     </Stack>
   );
 };

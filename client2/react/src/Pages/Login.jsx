@@ -33,7 +33,7 @@ export default function Login() {
         <Grid container direction={{xs: "column", md: "row"}} width="100%">
           <Grid item component="form" onSubmit={onSubmit} xs={12} md={10} lg={4} minHeight={{xs:1/2, md: 1}} >
             <Stack spacing={3} mr={15} mb={5} ml={5} sx={{placeContent: "center"}}>
-              <Typography variant="h4" component="h1" mt={5} sx={{placeSelf: "center", fontFamily: 'Road Rage'}}>Help Vase</Typography>
+              <Typography variant="h4" component="h1" mt={5} sx={{placeSelf: "center"}} fontFamily='Road Rage'>Help Vase</Typography>
               <Box component="img" src="http://10.0.0.83:5000/images/suporte.jpg" sx={{width: 1, height: 1, borderRadius: 4}} />
                 <TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
                 <TextField label="senha" name="senha" type="password"onChange={onChangeSenha} required/>
