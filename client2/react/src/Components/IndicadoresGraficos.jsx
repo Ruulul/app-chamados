@@ -234,6 +234,11 @@ const PrioridadeTodos = ({servicos}) => {
           },
           datasets: {
             fill: true
+          },
+          scales: {
+            r: {
+              min: 0
+            }
           }
         }}
       />

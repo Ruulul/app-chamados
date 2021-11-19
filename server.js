@@ -200,14 +200,14 @@ app.get('/api/usuario/email/:email', (req, res) => {
 })
 
 app.get('/api/perfil', async (req, res)=> {
-  await prisma.usuario.findUnique({where:{id: req.session.usuarioId}})
+  req.session.valid ? await prisma.usuario.findUnique({where:{id: req.session.usuarioId}})
     .then(usuario=>{
       delete usuario.senha
       res.send(usuario)
     })
     .catch(err=>{
       res.send("Não autorizado")
-    })
+    }) : res.send("Não autorizado")
 })
 
 app.post('/api/login', async (req, res) => {
@@ -237,14 +237,14 @@ app.post('/api/login', async (req, res) => {
 })
 
 app.post('/api/logout', async (req, res) => {
-  req.session.destroy((err)=>{if(!err) {res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso")} else {res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.")}})
-  //try {
-  //req.session.valid = false
-  //req.session.save()
-  //res.status(200).send("OK")
-  //}  catch (e) {
-  //  console.log("Falha em logout. \n" + e)
-  //  res.status(500).send("Error")
-  //}
+  //req.session.destroy((err)=>{if(!err) {res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso")} else {res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.")}})
+  try {
+  req.session.valid = false
+  req.session.save()
+  res.status(200).send("OK")
+  }  catch (e) {
+    console.log("Falha em logout. \n" + e)
+    res.status(500).send("Error")
+  }
 })
 app.listen(port, () => console.log(`Listening on port ${port}`));

@@ -34,6 +34,7 @@ const Home = () => {
   useEffect(()=>{
     axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
       .then(({data})=>{
+        if (data === "Não autorizado") redirect("/login")
         setNome(data.nome)
       })
       .catch(err=>{console.log("Erro obtendo nome");setNome("Falha obtendo nome")})
@@ -46,12 +47,12 @@ const Home = () => {
               <Grid item xs={10} md={12} >
                 <Card width={1} height={1/3} sx={{display: "flex",padding: 2, alignItems: "stretch"}}>
                   <Stack spacing={2} pb={2}>
-                    <Grid container alignItems="flex-end" justifyContent="space-between">
+                    <Grid container alignItems="flex-end" justifyContent="space-evenly">
                       <Grid item xs={10} md={5} lg={3}>
-                        <Typography variant="h4" component="h4" sx={{fontWeight: 500}}>{nome !== "Carregando..." && nome !== "Falha obtendo nome" ? "Olá," : undefined }</Typography>
+                        <Typography variant="h5" component="h5" sx={{fontWeight: 500}}>{nome !== "Carregando..." && nome !== "Falha obtendo nome" ? "Olá," : undefined }</Typography>
                       </Grid>
                       <Grid item xs={5} alignItems="flex-start">
-                        <Typography component="h5" variant="h5" color="secondary" sx={{fontWeight: 500}}>{nome}</Typography>
+                        <Typography component="h4" variant="h4" color="secondary" sx={{fontWeight: 500}}>{nome}</Typography>
                       </Grid>
                     </Grid>
                     <Divider />

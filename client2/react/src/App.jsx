@@ -46,7 +46,7 @@ function App() {
   useEffect(()=>{
     WebFont.load({
       google: {
-        families: ['Comfortaa']
+        families: [ 'Road Rage', 'Comfortaa',]
       }
     })
   },[])

@@ -36,6 +36,7 @@ export default function Registro() {
     useEffect(()=>{
       axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
         .then(({data})=>{
+            console.log(data)
             if (data === "Não autorizado")
                 redirect("/")
         })
