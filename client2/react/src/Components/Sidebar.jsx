@@ -16,7 +16,7 @@ const SideBar = function (props) {
     await axios.get("http://10.0.0.83:5000/api/servicos", { withCredentials: true })
       .then(({data})=>{
         setPendentes(data.length)
-      }).catch((err)=>{throw new Error(err)})
+      }).catch((err)=>{setPendentes(0)})
   },[])
   return (
     <Stack
@@ -50,7 +50,11 @@ const SideBar = function (props) {
         variant="outlined"
         component={Link}
         to="/avisos">
-        <Badge badgeContent={pendentes} variant="contained" color="error">
+        <Badge 
+          badgeContent={pendentes} 
+          variant="contained" 
+          color="error"
+          max={9}>
           <FontAwesomeIcon icon={faBell} />
         </Badge>
       </Button>

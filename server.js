@@ -70,7 +70,6 @@ app.get('/api/mensagem', (req, res) => {
 app.post('/api/novo/servico', async (req, res) => {
   let servico = req.body
   let autorId = servico.autorId
-  console.log(servico)
   req.session.valid ? 
   ((console.log("Salvando novo serviço")),
   (await prisma.chamado.create({data: {
@@ -116,12 +115,10 @@ app.post('/api/update/servico/:id', async (req, res) => {
 });
 
 app.get('/api/servicos', (req, res) => {
-  console.log(req.session)
   req.session.valid ? prisma.chamado.findMany().then(data=>res.send(data)) : res.send("Não autorizado")
 });
 
 app.get('/api/servicos/:filtro', async (req, res) => {
-  console.log(req.session)
   req.session.valid ? 
   prisma.chamado.findMany(
     {
@@ -214,7 +211,6 @@ app.get('/api/perfil', async (req, res)=> {
 })
 
 app.post('/api/login', async (req, res) => {
-  console.log(req.sessionID)
   await prisma.usuario.findMany({
     where: {
       email: req.body.email
@@ -231,13 +227,11 @@ app.post('/api/login', async (req, res) => {
       res.send(JSON.stringify({"status": 404, "error": "Senha incorreta"}))
       return
     }
-    console.log(req.sessionID)
-    req.session.save(err=>console.log)
-    console.log(req.session)
+    await req.session.save(err=>console.log)
     res.send(JSON.stringify({"status": 200, "error": null}))
   }).catch((err)=>{
     console.log(err)
-    res.status(500).send("Erro no login")
+    res.send(JSON.stringify({"status": 500, "error": "Erro no login"}))
     return false
   })
 })

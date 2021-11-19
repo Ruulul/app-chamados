@@ -68,11 +68,6 @@ const Home = () => {
                 </Grid>
         </Card>
       </Grid>
-      <Grid item xs={12} md={6} height="80vh">
-        <Fade in={true} timeout={2000}>
-          <Box component="img" src="http://10.0.0.83:5000/images/368A0660.jpg" sx={{width: 1, height: 1, borderRadius: 4}} />
-        </Fade>
-      </Grid>
     </Grid>
   );
 };

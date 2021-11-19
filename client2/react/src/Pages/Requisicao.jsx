@@ -7,7 +7,8 @@ import {
   Typography, 
   TextField, 
   InputLabel, 
-  NativeSelect, 
+  NativeSelect,
+  Select,
   Input, 
   Button 
 } from "@mui/material";
@@ -27,6 +28,7 @@ export default function Requisicao () {
   });
   const [, forceUpdate] = useState({})
   const [nome, setNome] = useState(undefined)
+  const [color, setColor] = useState("green")
   const navigate = useNavigate()
 
   useEffect(async ()=>{
@@ -56,6 +58,7 @@ export default function Requisicao () {
   },[])
 
   function handleChange(event) {
+    let colors = ["green","orange","#FA4528","black"]
     let novas_infos = infos
     if (event.target.name === "prioridade") {
       let prioridades = ["Baixa", "Padrão", "Alta", "Urgente"];
@@ -67,6 +70,7 @@ export default function Requisicao () {
     //  novas_infos[event.target.name] = event.target.value;
     }
     else novas_infos[event.target.name] = [event.target.value][0];
+    setColor(colors[infos.prioridade-1]);
     setInfos(novas_infos)
   }
 
@@ -147,17 +151,18 @@ export default function Requisicao () {
                 TI
               </option>
               </NativeSelect>
-              <InputLabel>Prioridade: </InputLabel>
+              <InputLabel>Urgência: </InputLabel>
               <NativeSelect
                 name="prioridade"
                 type="dropdown"
                 label="Prioridade: "
                 onChange={handleChange}
+                sx={{ fontWeight: 700,color}}
               >
-                <option name="1">Baixa</option>
-                <option name="2">Padrão</option>
-                <option name="3">Alta</option>
-                <option name="4">Urgente</option>
+                <option name="1" style={{ fontWeight: 700, color:"green"}}>Baixa: Não impede operação.</option>
+                <option name="2" style={{ fontWeight: 700, color:"orange"}}>Média: Operação com saída de contorno.</option>
+                <option name="3" style={{ fontWeight: 700, color:"#FA4528"}}>Alta: Operação sem saída de contorno.</option>
+                <option name="4" style={{ fontWeight: 700, color:"black"}}>Urgente: Sem SLA</option>
               </NativeSelect>
               <InputLabel htmlFor="anexo">Anexo: </InputLabel>
               <Input
