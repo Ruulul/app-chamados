@@ -59,7 +59,7 @@ export default function Requisicao () {
   function handleChange(event) {
     let novas_infos = infos
     if (event.target.name === "prioridade") {
-      let prioridades = ["Baixa", "Padrão", "Alta", "Urgente"];
+      let prioridades = ["🟩Baixa", "🟧Média", "🟥Alta", "⬛Urgente"];
       novas_infos[event.target.name] = prioridades.indexOf(event.target.value) + 1;
     } else if (event.target.name === "mensagem")
       novas_infos.chat[0].mensagem = event.target.value;
@@ -68,6 +68,7 @@ export default function Requisicao () {
     //  novas_infos[event.target.name] = event.target.value;
     }
     else novas_infos[event.target.name] = [event.target.value][0];
+    console.log(infos)
     setInfos(novas_infos)
   }
 
@@ -84,8 +85,10 @@ export default function Requisicao () {
         data.setDate(data.getDate()+1)
         return data;
       case 4:
-        data = await new Date((new Date()).getTime()+(8 * 60 * 60 * 1000))
+        data = new Date(data.getTime()+28800000)
         return data;
+      default:
+        return "Isso não devia acontecer"
     }
   }
 
@@ -93,11 +96,13 @@ export default function Requisicao () {
     event.preventDefault();
     let requisicao = infos
     requisicao.status = "pendente"
-    await getPrazo().then((prazo)=>{requisicao.prazo=prazo.toISOString()}).catch(console.log)
-    console.log("Requisição: " + JSON.stringify(requisicao))
-    await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
-      .then(res=>navigate('/servicos'))
-      .catch(err=>console.log("Erro em salvar o chamado." + err))
+    console.log(requisicao)
+    await getPrazo().then(async (prazo)=>{
+      requisicao.prazo=prazo.toISOString()
+      await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
+        .then(res=>navigate('/servicos'))
+        .catch(err=>console.log("Erro em salvar o chamado." + err))
+    }).catch(console.log)
   }
   return (
     <Box sx={{ mt: "1em" }} component="form" onSubmit={handleSubmit}>
@@ -110,7 +115,9 @@ export default function Requisicao () {
         <Grid item container xs={10} spacing={2} direction={{ xs: "column", sm: "row" }} justifyContent="space-between">
           <Grid item xs={3}>
             <Stack spacing={2}>
-              <Typography>{infos.id === undefined ?  "Carregando..." : ("Ticket nº " + infos.id)}</Typography>
+              <Typography>
+                {infos.id === undefined ?  "Carregando..." : ("Ticket nº " + infos.id)}
+              </Typography>
               <Typography>
                 {nome === undefined ? "Carregando..." : ("Olá, " + nome)}
               </Typography>

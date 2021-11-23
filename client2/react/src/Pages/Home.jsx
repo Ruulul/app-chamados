@@ -1,7 +1,6 @@
 import {Grid, Card, Typography, Box, Fade, Divider, Stack} from "@mui/material";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { read_cookie } from "sfcookies";
 import { useNavigate } from "react-router-dom";
 
 const Home = () => {
@@ -40,33 +39,31 @@ const Home = () => {
       .catch(err=>{console.log("Erro obtendo nome");setNome("Falha obtendo nome")})
   },[])
   return (
-    <Grid container direction={{xs: "column", md: "row"}} width="100%">
-      <Grid item xs={12} md={10} lg={6} minHeight={{xs:1/2, md: 1}} >
-        <Card elevation={3} sx={{ padding: 0, height:"100%", width: 1}} >
-            <Grid item container xs={12} md={10} lg={6} sx={{padding: {xs: 1, md: 3}, minHeight: 1/2}}>
-              <Grid item xs={10} md={12} >
-                <Card width={1} height={1/3} sx={{display: "flex",padding: 2, alignItems: "stretch"}}>
-                  <Stack spacing={2} pb={2}>
-                    <Grid container alignItems="flex-end" justifyContent="space-evenly">
-                      <Grid item xs={10} md={5} lg={3}>
-                        <Typography variant="h5" component="h5" sx={{fontWeight: 500}}>{nome !== "Carregando..." && nome !== "Falha obtendo nome" ? "Olá," : undefined }</Typography>
-                      </Grid>
-                      <Grid item xs={5} alignItems="flex-start">
-                        <Typography component="h4" variant="h4" color="secondary" sx={{fontWeight: 500}}>{nome}</Typography>
-                      </Grid>
-                    </Grid>
-                    <Divider />
-                    <Typography variant="h5">Serviços pendentes: {contagem.pendentes}</Typography>
-                    <Typography variant="h6">Serviços novos: {contagem.novos} </Typography>
-                    <Typography variant="h6">Serviços parados: {contagem.parados} </Typography>
-                    <Typography variant="h6">Serviços em atendimento: {contagem.atendimento} </Typography>
-                  </Stack>
-                </Card>
-              </Grid>
-            </Grid>
-                <Grid item xs={12} sx={{display: "flex", placeContent:"center"}}>
-                  <Divider width="95%" sx={{borderWidth: 2, borderColor: "secondary"}} />
-                </Grid>
+    <Grid container direction="row" width="100%" spacing={2}>
+      <Grid item xs={12} md={4} sx={{padding: {xs: 1, md: 3}, minHeight: 1/2}}>
+        <Card elevation={6} sx={{padding: {xs: 1, md: 3}, minHeight: 1/3, marginTop: 5}}>
+          <Stack spacing={2} pb={2}>
+            <Stack direction="row" alignItems="flex-end" justifyContent="space-evenly">
+                <Typography variant="h5" component="h5" sx={{fontWeight: 500}}>
+                  {nome !== "Carregando..." && nome !== "Falha obtendo nome" 
+                  ? "Olá," : undefined }
+                </Typography>
+                <Typography component="h5" variant="h6" color="secondary" sx={{fontWeight: 700}}>
+                  {nome}
+                </Typography>
+            </Stack>
+            <Divider />
+            <Typography variant="h5">Serviços pendentes: {contagem.pendentes}</Typography>
+            <Typography variant="h6">Serviços parados: {contagem.parados} </Typography>
+            <Typography variant="h6">Serviços em atendimento: {contagem.atendimento} </Typography>
+            <Divider width="95%"/>
+          </Stack>
+        </Card>
+      </Grid>
+      <Grid item xs={2} >
+        <Card elevation={6} sx={{padding: {xs: 1, md: 3}, minHeight: 1/3, marginTop: 10}}>
+              <Typography variant="h6">Serviço{contagem.novos !== 1 ? 's' : undefined} novo{contagem.novos !== 1 ? 's' : undefined} : </Typography> 
+              <Typography variant="h5"> {contagem.novos} </Typography>
         </Card>
       </Grid>
     </Grid>

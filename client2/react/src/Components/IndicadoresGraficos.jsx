@@ -123,7 +123,7 @@ const Indicador = ({servicos, tipo}) => {
 }
 
 const PrioridadeTodos = ({servicos}) => {
-  var [dados_prioridade_aberto, dados_prioridade_pendente, dados_prioridade_resolvido] = [[],[],[]]
+  var [dados_prioridade_aberto, dados_prioridade_pendente, dados_prioridade_resolvido, dados_prioridade_fechado] = [[],[],[], []]
 
   const [state, setState] = useState({datasets: []});
 
@@ -131,30 +131,29 @@ const PrioridadeTodos = ({servicos}) => {
     let tipo = "aberto"
     let prioridades = [0,0,0,0,0]
     servicos.forEach(element => {
-        if (tipo === "aberto")
         prioridades[element.prioridade - 1] += element.status === "resolvido" || element.status === "pendente" ?  1 : 0;
-        else
-        prioridades[element.prioridade - 1] += element.status === tipo ? 1 : 0;
     });
     dados_prioridade_aberto = prioridades
     tipo = "pendente"
     prioridades = [0,0,0,0,0]
     servicos.forEach(element => {
-        if (tipo === "aberto")
-        prioridades[element.prioridade - 1] += element.status === "resolvido" || element.status === "pendente" ?  1 : 0;
-        else
         prioridades[element.prioridade - 1] += element.status === tipo ? 1 : 0;
     });
     dados_prioridade_pendente = prioridades
     tipo = "resolvido"
     prioridades = [0,0,0,0,0]
     servicos.forEach(element => {
-        if (tipo === "aberto")
-        prioridades[element.prioridade - 1] += element.status === "resolvido" || element.status === "pendente" ?  1 : 0;
-        else
         prioridades[element.prioridade - 1] += element.status === tipo ? 1 : 0;
     });
     dados_prioridade_resolvido = prioridades
+    tipo = "fechado"
+    prioridades = [0,0,0,0,0]
+    servicos.forEach(element => {
+        prioridades[element.prioridade - 1] += element.status === tipo && (new Date(element.updatedAt)).toISOString().split('T')[0] === (new Date().toISOString()).split('T')[0] ? 1 : 0;
+        console.log("Hoje: " + new Date().toLocaleDateString())
+        console.log("Dia da última atualização: " + new Date(element.updatedAt).toLocaleDateString())
+    });
+    dados_prioridade_fechado = prioridades
     
     setState( {
       labels: ["Baixa", "Padrão", "Alta", "Urgente"],
@@ -182,6 +181,14 @@ const PrioridadeTodos = ({servicos}) => {
           borderWidth: 1,
           fill: true,
           data: dados_prioridade_resolvido
+        },
+        {
+          label: 'Fechados Hoje',
+          backgroundColor: '#893322',
+          borderColor: 'rgba(0,0,0,1)',
+          borderWidth: 1,
+          fill: true,
+          data: dados_prioridade_fechado
         },
       ], 
     })

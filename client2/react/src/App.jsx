@@ -47,9 +47,10 @@ function App() {
     WebFont.load({
       google: {
         families: [ 'Road Rage', 'Comfortaa',]
-      }
+      },
     })
-  },[])
+    console.log('teste')
+  })
   return (
     <ThemeProvider theme={theme}>
           <Main>

@@ -56,7 +56,7 @@ const Indicadores = (props) => {
                                         <Typography width="fit-content">{servico.id}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography width="fit-content">{servico.prioridade}</Typography>
+                                        <Typography width="fit-content">{(["Baixa", "Média", "Alta", "Urgente"])[servico.prioridade - 1]}</Typography>
                                     </TableCell>
                                     <TableCell>
                                         <Typography width="fit-content">{servico.departamento}</Typography>
@@ -112,7 +112,7 @@ const Indicadores = (props) => {
                                         <Typography width="fit-content">{servico.id}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography width="fit-content">{servico.prioridade}</Typography>
+                                        <Typography width="fit-content">{(["Baixa", "Média", "Alta", "Urgente"])[servico.prioridade - 1]}</Typography>
                                     </TableCell>
                                     <TableCell>
                                         <Typography width="fit-content">{servico.departamento}</Typography>
@@ -168,7 +168,7 @@ const Indicadores = (props) => {
                                         <Typography width="fit-content">{servico.id}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography width="fit-content">{servico.prioridade}</Typography>
+                                        <Typography width="fit-content">{(["Baixa", "Média", "Alta", "Urgente"])[servico.prioridade - 1]}</Typography>
                                     </TableCell>
                                     <TableCell>
                                         <Typography width="fit-content">{servico.departamento}</Typography>
@@ -201,7 +201,7 @@ const Indicadores = (props) => {
     <Card elevation={3} xs={{padding: 0}} md={{ padding: 5}}>
         <Typography variant="h2" sx={{placeSelf: 'center', alignSelf: 'center', justifySelf: 'center'}}>Indicadores</Typography>
         {tabelaTodos ? tabelaTodos : <Skeleton variant="rectangular" width="100%" height="100%" />}
-        <Grid container direction={{ xs: "column", md: "row" }} spacing={5}>
+        <Grid container direction={{ xs: "column", md: "row" }} spacing={2}>
             <Grid item xs={12} md={3}>
                 <Card elevation={5} sx={{padding: 3}}>
                     {tabelaAbertos ? tabelaAbertos : <Skeleton variant="text" width="100%" height="33%" animation="wave" />}

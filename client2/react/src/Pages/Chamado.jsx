@@ -72,12 +72,13 @@ export default function Chamado() {
 
   
 const Mensagens = (props) => {
-    const [scale, setScale] = useState(1);
+    const [zoom, setScale] = useState(1);
   
-    function scale_to_0() {
+    useEffect(()=>{
       if (props.infos.status === "fechado")
-        if (scale) setScale(0);
-    }
+        if (zoom) setScale(0);
+        else setScale(1);
+    }, [props.infos.status])
     return (
       <Card>
         <Stack spacing={3}>
@@ -103,7 +104,7 @@ const Mensagens = (props) => {
             <Button
               variant="contained"
               color="secondary"
-              sx={{ width: "fit-content",padding: "1em", scale }}
+              sx={{ width: 'fit-content',padding: '1em', transform:`scale(${zoom})`}}
               onClick={
                 props.addMensagem
               }
@@ -113,7 +114,7 @@ const Mensagens = (props) => {
   
             <Button
               variant="contained"
-              sx={{ width: "fit-content",padding: "1em", scale }}
+              sx={{ width: "fit-content",padding: "1em", transform:`scale(${zoom})`}}
               onClick={
                 (event)=>{
                   let servico = props.infos
@@ -141,7 +142,7 @@ const Mensagens = (props) => {
                 ? "Marcar como Resolvido"
                 : props.infos.status === "resolvido"
                 ? "Marcar como Fechado"
-                : scale_to_0()) : undefined}
+                : undefined) : undefined}
             </Button>
           </ButtonGroup>
         </Stack>

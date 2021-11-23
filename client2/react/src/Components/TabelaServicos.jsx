@@ -20,7 +20,7 @@ const TabelaServicos = (props) => {
           <TableRow>
             <TableCell>Navegar</TableCell>
             <TableCell>ID</TableCell>
-            <TableCell>Importância</TableCell>
+            <TableCell>Urgência</TableCell>
             <TableCell>Assunto</TableCell>
             <TableCell>Departamento</TableCell>
             <TableCell>Status</TableCell>
@@ -40,7 +40,7 @@ const TabelaServicos = (props) => {
                         </Button>
                       </TableCell>
                       <TableCell>{s.id}</TableCell>
-                      <TableCell>{s.prioridade}</TableCell>
+                      <TableCell>{(["Baixa", "Média", "Alta", "Urgente"])[s.prioridade - 1]}</TableCell>
                       <TableCell>{s.assunto}</TableCell>
                       <TableCell>{s.departamento}</TableCell>
                       <TableCell>{s.status}</TableCell>
