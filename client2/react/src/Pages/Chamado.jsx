@@ -76,8 +76,8 @@ const Mensagens = (props) => {
   
     useEffect(()=>{
       if (props.infos.status === "fechado")
-        if (zoom) setScale(0);
-        else setScale(1);
+        setScale(0);
+      else setScale(1);
     }, [props.infos.status])
     return (
       <Card>

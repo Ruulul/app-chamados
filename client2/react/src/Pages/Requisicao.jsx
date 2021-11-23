@@ -33,9 +33,10 @@ export default function Requisicao () {
   useEffect(async ()=>{
     axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
       .then(({data})=>{
+        console.log(data)
         if (data === "Não autorizado") redirect("/login")
         let novasInfos = infos;
-        novasInfos.id = data.length;
+        novasInfos.id = data.length !== 0 ? data[data.length-1].id + 1 : 0;
         console.log("Dados do servidor: " + JSON.stringify(data))
         console.log("Serviços contados. \ninfos:" + JSON.stringify(infos))
         setInfos(novasInfos)
@@ -126,11 +127,11 @@ export default function Requisicao () {
                 name="departamento"
                 onChange={handleChange}
               >
-              <option key={1} name="comercial">
-                Comercial
-              </option>,
-              <option key={2} name="contabil">
+              <option key={1} name="contabil">
                 Contábil
+              </option>,
+              <option key={2} name="comercial">
+                Comercial
               </option>,
               <option key={3} name="faturamento">
                 Faturamento

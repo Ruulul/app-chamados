@@ -13,18 +13,36 @@ datasource db {
 model Chamado {
   id           Int        @id @default(autoincrement())
   autor        Usuario?    @relation(fields: [autorId], references: [id])
-  //autor        String
   autorId      Int        
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   prazo        DateTime   
   assunto      String     @db.VarChar(255)
   chat         Mensagem[]
-  anexo        Int?
-  departamento String
-  status       String
-  prioridade   Int
-  atendimento  Boolean       @default(false)
+  metadados    MetadadoChamado[]
+
+}
+
+model MetadadoChamado {
+  id          Int      @id @default(autoincrement())      
+  chamado     Chamado  @relation(fields: [chamadoId], references: [id])
+  chamadoId   Int
+  nome        String   @db.VarChar(255)
+  valor       String   @db.VarChar(255)
+}
+model MetadadoUsuario {
+  id          Int      @id @default(autoincrement())
+  autor       Usuario    @relation(fields: [autorId], references: [id])
+  autorId     Int
+  nome        String   @db.VarChar(255)
+  valor       String   @db.VarChar(255)
+}
+model MetadadoMensagem {
+  id          Int      @id @default(autoincrement())
+  mensagem    Mensagem  @relation(fields: [mensagemId], references: [id])
+  mensagemId  Int
+  nome        String   @db.VarChar(255)
+  valor       String   @db.VarChar(255)
 }
 
 model Mensagem {
@@ -36,6 +54,7 @@ model Mensagem {
   mensagem  String   @db.VarChar(255)
   chamado   Chamado  @relation(fields: [chamadoId], references: [id])
   chamadoId Int
+  metadados MetadadoMensagem[]
 }
 
 model Usuario {
@@ -48,6 +67,7 @@ model Usuario {
   sobrenome    String?
   chamados     Chamado[]
   mensagems    Mensagem[]
+  metadados    MetadadoUsuario[]
 }
 
 model Session {

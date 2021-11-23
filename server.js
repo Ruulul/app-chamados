@@ -17,6 +17,7 @@ const SECRET = fs.readFileSync('./key', 'utf-8');
 
 const prisma = new PrismaClient()
 const express = require('express');
+const { ObjectFlags } = require('typescript');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -78,10 +79,16 @@ app.post('/api/novo/servico', async (req, res) => {
       create: servico.chat
     },
     assunto: servico.assunto,
-    departamento: servico.departamento,
-    status: servico.status,
-    prioridade: servico.prioridade,
-    prazo: servico.prazo
+    prazo: servico.prazo,
+    metadados: {
+    createMany: {
+        data: Object.entries({
+        departamento: servico.departamento,
+        status: servico.status,
+        prioridade: servico.prioridade,
+        atendimento: String(false)}).map((metadado)=>{return {"nome": metadado[0], "valor": String(metadado[1])}})        
+      }
+    }
   }})),
 
   res.status(200).send(req.body)) : res.send("Não autorizado")
@@ -104,45 +111,115 @@ app.post('/api/update/servico/:id', async (req, res) => {
           skipDuplicates: true
         }
       },
-      assunto: novo_servico.assunto,
-      departamento: novo_servico.departamento,
-      status: novo_servico.status,
-      prioridade: novo_servico.prioridade,
-      atendimento: true
+      metadados: {
+        deleteMany: {chamadoId: parseInt(req.params.id)},
+        createMany: {
+          data: Object.entries({
+          assunto: novo_servico.assunto,
+          departamento: novo_servico.departamento,
+          status: novo_servico.status,
+          prioridade: novo_servico.prioridade,
+          atendimento: true
+          }).map((metadado)=>{return {"nome": metadado[0], "valor": String(metadado[1])}}),
+          skipDuplicates: false
+        }
+      }
     }
   })),
   (res.status(200).send(req.body)) ) : res.send("Não autorizado")
 });
 
-app.get('/api/servicos', (req, res) => {
-  req.session.valid ? prisma.chamado.findMany().then(data=>res.send(data)) : res.send("Não autorizado")
-});
+app.get('/api/servicos', async(req, res) => {
+  req.session.valid ? 
+    prisma.chamado
+      .findMany()
+        .then(async (data)=>{
+            let Metas = [];
+            for (const [index, chamado] of data.entries())
+              await prisma.metadadoChamado.findMany({where:{chamado}})
+              .then(
+                (mds)=>{
+                  Metas[index] = 
+                  Object.fromEntries(
+                    mds.map(
+                      (md)=>{
+                        return [md.nome, md.valor]
+                      }
+                    )
+                  )
+                }
+              )
+            console.log(Metas)
+            res.send(data.map((chamado, index)=>{return {...chamado, ...Metas[index]}}))
+          }
+        ).catch("Ocorreu um erro no banco de dados")
+  : res.send("Não autorizado") });
 
 app.get('/api/servicos/:filtro', async (req, res) => {
   req.session.valid ? 
   prisma.chamado.findMany(
     {
       where:{
-      status: req.params.filtro
+        metadados: {
+          some: { 
+            nome: "status",
+            valor: req.params.filtro
+          },
+        }
       }
     }
-  ).then((chamado)=>res.send(chamado)) 
+  )
+  .then(
+    async (data)=>{
+      console.log(req.params)
+      let Metas = [];
+      for (const [index, chamado] of data.entries())
+        await prisma.metadadoChamado.findMany({where:{chamado}})
+        .then(
+          (mds)=>{
+            console.log(mds)
+            Metas[index] = 
+            Object.fromEntries(
+              mds.map(
+                (md)=>{
+                  return [md.nome, md.valor]
+                }
+              )
+            )
+          }
+        )
+      console.log(Metas)
+      res.send(
+        data.map(
+          (chamado, index)=>{
+            return {...chamado, ...Metas[index]}
+          }
+        )
+      )
+    }
+  ) 
   : res.send("Não autorizado")
 });
 
-app.get('/api/servico/:id', (req, res)=> {
+app.get('/api/servico/:id', async (req, res)=> {
   req.session.valid ? prisma.chamado.findUnique({
     where: {
       id: parseInt(req.params.id)
     }
-  }).then(async (servico)=>{
-    servico.chat = await prisma.mensagem.findMany({
-      where: {
-        chamadoId: parseInt(req.params.id)
-      }
-    })
-    res.send(servico)})
-  .catch((e)=>res.status(500).send({erro: "Falha em encontrar serviço " + req.params.id}))
+  }).then(
+    async (chamado)=>{
+      let meta = Object.fromEntries((await prisma.metadadoChamado.findMany({where: {chamado}})).map((md)=>{return [md.nome, md.valor]}))
+      chamado.chat = 
+        await prisma.mensagem
+          .findMany({
+              where: {
+                chamadoId: parseInt(req.params.id)
+              }
+            }
+          )
+      chamado = {...chamado, ...meta}
+      res.send(chamado)})
+  .catch((e)=>res.status(500).send({erro: "Falha em encontrar serviço " + req.params.id + `\n${e}`}))
   : res.send("Não autorizado")
 })
 

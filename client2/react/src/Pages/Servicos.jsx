@@ -19,11 +19,13 @@ export default function Servicos() {
       axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
+          console.log(res.data)
           setServicos(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
     : axios.get('http://10.0.0.83:5000/api/servicos/' + filtro, { withCredentials: true })
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
+          console.log(res.data)
           setServicos(res.data)
         })
         .catch(err => console.log("Erro obtendo serviços. \n" + err)), [filtro])
