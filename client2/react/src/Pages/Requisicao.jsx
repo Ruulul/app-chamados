@@ -22,6 +22,7 @@ export default function Requisicao () {
     anexo: undefined,
     assunto: "",
     autorId: undefined,
+    tipo: "Infraestrutura",
     chat: [{ autorId: undefined, mensagem: "" }],
     id: undefined,
     status: "pendente",
@@ -122,6 +123,18 @@ export default function Requisicao () {
               <Typography>
                 {nome === undefined ? "Carregando..." : ("Olá, " + nome)}
               </Typography>
+              <InputLabel>Tipo do Chamado: </InputLabel>
+              <NativeSelect
+                name="tipo"
+                onChange={handleChange}
+              >
+              <option key={1} name="infra">
+                Infraestrutura
+              </option>,
+              <option key={2} name="sistemas">
+                Sistemas
+              </option>,
+              </NativeSelect>
               <InputLabel>Departamento: </InputLabel>
               <NativeSelect
                 name="departamento"

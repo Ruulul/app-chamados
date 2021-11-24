@@ -11,7 +11,7 @@ const Home = () => {
   const redirect = useNavigate()
 
   useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/servicos/pendente', {withCredentials: true})
+    axios.get('http://10.0.0.83:5000/api/servicos/status/pendente', {withCredentials: true})
       .then(({data})=>{
         if (data === "Não autorizado") redirect("/login")
         console.log(data)

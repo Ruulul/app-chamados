@@ -10,23 +10,50 @@ const BarGraph = ({servicos, tipo}) => {
     const [state, setState] = useState({datasets: []});
 
     useEffect(()=>{
-        let prioridades = [0,0,0,0,0]
+        let todos = [0,0,0,0,0]
+        let infra = [0,0,0,0,0]
+        let sist = [0,0,0,0,0]
         servicos.forEach(element => {
             if (tipo === "aberto")
-            prioridades[element.prioridade - 1] += element.status === "resolvido" || element.status === "pendente" ?  1 : 0;
+            todos[element.prioridade - 1] += element.status === "resolvido" || element.status === "pendente" ?  1 : 0;
             else
-            prioridades[element.prioridade - 1] += element.status === tipo ? 1 : 0;
+            todos[element.prioridade - 1] += element.status === tipo ? 1 : 0;
+            if((tipo === "aberto" ? element.status === "resolvido" || element.status === "pendente" : element.status === tipo))
+            switch(element.tipo) {
+              case "Infraestrutura":
+                infra[element.prioridade - 1] += 1
+                break;
+              case "Sistemas":
+                sist[element.prioridade - 1] += 1
+                break;
+              default:
+                console.log("Estranho...")
+            }
         });
         setState({
           labels: ["Baixa", "Padrão", "Alta", "Urgente"],
           datasets: [
             {
-              label: 'Prioridades',
+              label: 'Todos',
               backgroundColor: 'rgba(75,192,192,1)',
               borderColor: 'rgba(0,0,0,1)',
               borderWidth: 1,
-              data: prioridades
-            }
+              data: todos
+            },
+            {
+              label: 'Infraestrutura',
+              backgroundColor: 'rgba(200,50,80,1)',
+              borderColor: 'rgba(0,0,0,1)',
+              borderWidth: 1,
+              data: infra
+            },
+            {
+              label: 'Sistemas',
+              backgroundColor: 'rgba(50,100,192,1)',
+              borderColor: 'rgba(0,0,0,1)',
+              borderWidth: 1,
+              data: sist
+            },
           ], 
         })
     }, [])
