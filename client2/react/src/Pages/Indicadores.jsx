@@ -129,7 +129,7 @@ const Indicadores = (props) => {
             </Table>
         </Stack>);
     
-}
+    }
     async function setarServicosResolvidos() {
         let servicos = await Servicos("abertos");
         if (servicos === "Não autorizado") redirect("/login")
@@ -185,7 +185,7 @@ const Indicadores = (props) => {
             </Table>
         </Stack>)
     
-}
+    }
     async function setarServicosTodos() {
         let servicos = await Servicos("");
         if (servicos === "Não autorizado") redirect("/login")

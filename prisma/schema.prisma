@@ -32,8 +32,8 @@ model MetadadoChamado {
 }
 model MetadadoUsuario {
   id          Int      @id @default(autoincrement())
-  autor       Usuario    @relation(fields: [autorId], references: [id])
-  autorId     Int
+  usuario     Usuario    @relation(fields: [usuarioId], references: [id])
+  usuarioId   Int
   nome        String   @db.VarChar(255)
   valor       String   @db.VarChar(255)
 }

@@ -8,7 +8,6 @@ import {
   TextField, 
   InputLabel, 
   NativeSelect,
-  Select,
   Input, 
   Button 
 } from "@mui/material";
@@ -25,21 +24,20 @@ export default function Requisicao () {
     tipo: "Infraestrutura",
     chat: [{ autorId: undefined, mensagem: "" }],
     id: undefined,
+    atendenteId: undefined,
     status: "pendente",
   });
   const [, forceUpdate] = useState({})
   const [nome, setNome] = useState(undefined)
+  const [atendentes, setAtendentes] = useState([])
   const navigate = useNavigate()
 
-  useEffect(async ()=>{
+  useEffect(()=>{
     axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
       .then(({data})=>{
-        console.log(data)
         if (data === "Não autorizado") redirect("/login")
         let novasInfos = infos;
         novasInfos.id = data.length !== 0 ? data[data.length-1].id + 1 : 0;
-        console.log("Dados do servidor: " + JSON.stringify(data))
-        console.log("Serviços contados. \ninfos:" + JSON.stringify(infos))
         setInfos(novasInfos)
         forceUpdate({})
       })
@@ -58,8 +56,22 @@ export default function Requisicao () {
       .catch(err=>{console.log("Erro obtendo nome");setNome("Falha obtendo nome")})
   },[])
 
+  useEffect(()=>{
+    axios.get('http://10.0.0.83:5000/api/usuarios/area/' + infos.tipo, { withCredentials: true })
+      .then(({data})=>{
+        console.log(data)
+        setAtendentes(data)
+        let novas_infos = infos
+        novas_infos.atendenteId = data[0].id
+        setInfos(novas_infos)
+      }).catch(err=>{console.log("Erro obtendo atendentes. \n:" + err); setAtendentes([{nome: "Sem atendentes nessa categoria"}])})
+  },[infos.tipo])
+
   function handleChange(event) {
     let novas_infos = infos
+    if (event.target.name === "atendente") {
+      novas_infos.atendenteId = atendentes[(atendentes.map((atendente)=>{return atendente.nome})).indexOf(event.target.value)].id
+    }
     if (event.target.name === "prioridade") {
       let prioridades = ["🟩Baixa", "🟧Média", "🟥Alta", "⬛Urgente"];
       novas_infos[event.target.name] = prioridades.indexOf(event.target.value) + 1;
@@ -72,6 +84,7 @@ export default function Requisicao () {
     else novas_infos[event.target.name] = [event.target.value][0];
     console.log(infos)
     setInfos(novas_infos)
+    forceUpdate({})
   }
 
   async function getPrazo() {
@@ -134,6 +147,19 @@ export default function Requisicao () {
               <option key={2} name="sistemas">
                 Sistemas
               </option>,
+              <option key={2} name="desenvolvimento">
+                Desenvolvimento
+              </option>,
+              </NativeSelect>
+              <InputLabel>Atendente: </InputLabel>
+              <NativeSelect
+                name="atendente"
+                onChange={handleChange}
+                onClick={handleChange}
+              >
+                {atendentes.map((atendente, i)=>{
+                  return <option key={i}>{atendente.nome}</option>
+                })}
               </NativeSelect>
               <InputLabel>Departamento: </InputLabel>
               <NativeSelect

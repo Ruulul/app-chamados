@@ -75,6 +75,7 @@ export default function servicosStatus() {
                                 <option>todos</option>
                                 <option>Infraestrutura</option>
                                 <option>Sistemas</option>
+                                <option>Desenvolvimento</option>
                             </NativeSelect>
                             <InputLabel htmlFor="filtro">Status: </InputLabel>
                             <NativeSelect

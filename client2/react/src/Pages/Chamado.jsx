@@ -16,7 +16,7 @@ import {
   TextField
 } from "@mui/material";
 
-import { useParams, Routes, Route, Outlet, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 
 export default function Chamado() {
@@ -28,15 +28,25 @@ export default function Chamado() {
     departamento: "Carregando...",
     status: "Carregando...",
   })
+  const [isCarregado, setCarregado] = useState(false);
+  const [atendente, setAtendente] = useState({nome: "Carregando..."})
 
   useEffect(()=>{
     axios.get('http://10.0.0.83:5000/api/servico/'+ infos.id, { withCredentials: true })
       .then(({data})=>{
         if (data === "Não autorizado") redirect("/login")
         setInfos(data)
+        setCarregado(true)
       })
       .catch(err=>{console.error("Erro obtendo serviço. \n" + err)})
   },[infos]);
+  useEffect(()=>{
+    axios.get('http://10.0.0.83:5000/api/usuario/' + infos.atendenteId, { withCredentials: true })
+      .then(({data})=>{
+        setAtendente(data)
+      })
+
+  },[isCarregado])
 
     return (
       <Grid container direction={{ xs: "column", sm: "row" }} spacing={3}>
@@ -49,6 +59,10 @@ export default function Chamado() {
               Assunto
             </Typography>
             <Typography m={2}>{infos.assunto}</Typography>
+            <Typography variant="h5" m={2}>
+              Atendente
+            </Typography>
+            <Typography m={2}>{atendente.nome}</Typography>
             <Typography variant="h5" m={2}>
               Categoria
             </Typography>

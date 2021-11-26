@@ -86,6 +86,8 @@ app.post('/api/novo/servico', async (req, res) => {
         departamento: servico.departamento,
         status: servico.status,
         prioridade: servico.prioridade,
+        tipo: servico.tipo,
+        atendenteId: servico.atendenteId,
         atendimento: String(false)}).map((metadado)=>{return {"nome": metadado[0], "valor": String(metadado[1])}})        
       }
     }
@@ -96,10 +98,19 @@ app.post('/api/novo/servico', async (req, res) => {
 
 app.post('/api/update/servico/:id', async (req, res) => {
   let novo_servico = req.body
-  req.session.valid ? (
-  (console.log("Salvando novo serviço")),
-  (novo_servico.chat.forEach((element)=>delete element.chamadoId)),
-  (await prisma.chamado.update({
+  let metadados =  Object.entries({
+    assunto: novo_servico.assunto,
+    departamento: novo_servico.departamento,
+    status: novo_servico.status,
+    prioridade: novo_servico.prioridade,
+    atendimento: true,
+    tipo: novo_servico.tipo,
+    atendenteId: novo_servico.atendenteId
+    }).map((metadado)=>{return {"nome": metadado[0], "valor": String(metadado[1])}});
+  req.session.valid ? ( async ()=>{
+  console.log("Atualizando serviço")
+  novo_servico.chat.forEach((element)=>delete element.chamadoId)
+  await prisma.chamado.update({
     where:{
       id: parseInt(req.params.id)
     },
@@ -111,22 +122,19 @@ app.post('/api/update/servico/:id', async (req, res) => {
           skipDuplicates: true
         }
       },
-      metadados: {
-        deleteMany: {chamadoId: parseInt(req.params.id)},
-        createMany: {
-          data: Object.entries({
-          assunto: novo_servico.assunto,
-          departamento: novo_servico.departamento,
-          status: novo_servico.status,
-          prioridade: novo_servico.prioridade,
-          atendimento: true
-          }).map((metadado)=>{return {"nome": metadado[0], "valor": String(metadado[1])}}),
-          skipDuplicates: false
-        }
-      }
     }
-  })),
-  (res.status(200).send(req.body)) ) : res.send("Não autorizado")
+  })
+  for (let metadado of metadados) 
+    await prisma.metadadoChamado.updateMany({
+      where:{
+        chamadoId: parseInt(req.params.id),
+        nome: metadado.nome
+      },
+      data: {
+        valor: metadado.valor
+      }
+    })
+  res.status(200).send(req.body)})()  : res.send("Não autorizado")
 });
 
 app.get('/api/servicos', async(req, res) => {
@@ -149,20 +157,19 @@ app.get('/api/servicos', async(req, res) => {
                   )
                 }
               )
-            console.log(Metas)
             res.send(data.map((chamado, index)=>{return {...chamado, ...Metas[index]}}))
           }
         ).catch("Ocorreu um erro no banco de dados")
   : res.send("Não autorizado") });
 
-app.get('/api/servicos/:filtro', async (req, res) => {
+app.get('/api/servicos/:tipo/:filtro', async (req, res) => {
   req.session.valid ? 
   prisma.chamado.findMany(
     {
       where:{
         metadados: {
           some: { 
-            nome: "status",
+            nome: req.params.tipo,
             valor: req.params.filtro
           },
         }
@@ -171,13 +178,11 @@ app.get('/api/servicos/:filtro', async (req, res) => {
   )
   .then(
     async (data)=>{
-      console.log(req.params)
       let Metas = [];
       for (const [index, chamado] of data.entries())
         await prisma.metadadoChamado.findMany({where:{chamado}})
         .then(
           (mds)=>{
-            console.log(mds)
             Metas[index] = 
             Object.fromEntries(
               mds.map(
@@ -188,11 +193,53 @@ app.get('/api/servicos/:filtro', async (req, res) => {
             )
           }
         )
-      console.log(Metas)
       res.send(
         data.map(
           (chamado, index)=>{
             return {...chamado, ...Metas[index]}
+          }
+        )
+      )
+    }
+  ) 
+  : res.send("Não autorizado")
+});
+
+app.get('/api/usuarios/:tipo/:filtro', async (req, res) => {
+  req.session.valid ? 
+  prisma.usuario.findMany(
+    {
+      where:{
+        metadados: {
+          some: { 
+            nome: req.params.tipo,
+            valor: req.params.filtro
+          },
+        }
+      }
+    }
+  )
+  .then(
+    async (data)=>{
+      let Metas = [];
+      for (const [index, usuario] of data.entries())
+        await prisma.metadadoUsuario.findMany({where:{usuario}})
+        .then(
+          (mds)=>{
+            Metas[index] = 
+            Object.fromEntries(
+              mds.map(
+                (md)=>{
+                  return [md.nome, md.valor]
+                }
+              )
+            )
+          }
+        )
+      res.send(
+        data.map(
+          (usuario, index)=>{
+            return {...usuario, ...Metas[index]}
           }
         )
       )
@@ -304,8 +351,44 @@ app.post('/api/login', async (req, res) => {
       res.send(JSON.stringify({"status": 404, "error": "Senha incorreta"}))
       return
     }
-    await req.session.save(err=>console.log)
-    res.send(JSON.stringify({"status": 200, "error": null}))
+    req.session.save((e)=>{res.send(JSON.stringify({"status": 200, "error": e}))})
+  }).catch((err)=>{
+    console.log(err)
+    res.send(JSON.stringify({"status": 500, "error": "Erro no login"}))
+    return false
+  })
+})
+
+app.post('/api/alterasenha', async (req, res) => {
+  await prisma.usuario.findMany({
+    where: {
+      email: req.body.email
+    }
+  }).then( async (usuario)=>{
+    if (usuario.length === 0) {
+      res.send(JSON.stringify({"status": 404, "error": "Usuário com esse email não encontrado"}))
+      return
+    }
+    req.session.valid = false
+    req.session.valid = await bcrypt.compare(req.body.senhaatual, usuario[0].senha)
+    console.log(await bcrypt.hash("",12))
+    if (req.session.valid) {
+      req.session.usuarioId = usuario[0].id
+      req.body.senha = await bcrypt.hash(req.body.senha, 12)
+      await prisma.usuario.update({
+        where: {
+          id: usuario[0].id
+        },
+        data: {
+          senha: req.body.senha
+        }
+      })
+    }
+    if (!req.session.valid) {
+      res.send(JSON.stringify({"status": 404, "error": "Senha incorreta"}))
+      return
+    }
+    req.session.save((e)=>{res.send(JSON.stringify({"status": 200, "error": e}))})
   }).catch((err)=>{
     console.log(err)
     res.send(JSON.stringify({"status": 500, "error": "Erro no login"}))
@@ -314,14 +397,14 @@ app.post('/api/login', async (req, res) => {
 })
 
 app.post('/api/logout', async (req, res) => {
-  //req.session.destroy((err)=>{if(!err) {res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso")} else {res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.")}})
-  try {
-  req.session.valid = false
-  req.session.save()
-  res.status(200).send("OK")
-  }  catch (e) {
-    console.log("Falha em logout. \n" + e)
-    res.status(500).send("Error")
-  }
+  req.session.destroy((err)=>{if(!err) {res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso")} else {res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.")}})
+  //try {
+  //req.session.valid = false
+  //req.session.save()
+  //res.status(200).send("OK")
+  //}  catch (e) {
+  //  console.log("Falha em logout. \n" + e)
+  //  res.status(500).send("Error")
+  //}
 })
 app.listen(port, () => console.log(`Listening on port ${port}`));

@@ -13,12 +13,14 @@ import Chamado from "./Pages/Chamado";
 import Registro from "./Pages/Registro";
 import Login from "./Pages/Login";
 import Avisos from "./Pages/Avisos";
+import MudarSenha from "./Pages/MudarSenha";
 
 ReactDOM.render(
   <React.StrictMode>
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/mudarsenha" element={<MudarSenha />} />
         <Route path="/" element={<App />} >
           <Route index element={<Home />} />
           <Route path="/registro" element={<Registro />} />

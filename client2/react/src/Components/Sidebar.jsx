@@ -13,12 +13,17 @@ import { Button, Stack, Badge, Tooltip } from "@mui/material";
 const SideBar = function (props) {
   const [pendentes, setPendentes] = useState(0)
   const [, update] = useState({})
+  useEffect(()=>{
+    let interval = setInterval(()=>{update({})}, 500)
+    return ()=>{
+      clearInterval(interval)
+    }
+  },[])
   useEffect(async ()=>{
     await axios.get("http://10.0.0.83:5000/api/servicos/status/pendente", { withCredentials: true })
       .then(({data})=>{
         setPendentes(data.length)
-      }).then(()=>{update({})})
-      .catch((err)=>{setPendentes(0);update({});console.log(err)})
+      }).catch((err)=>{setPendentes(0);update({});console.log(err)})
   })
   return (
     <Stack
