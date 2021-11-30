@@ -14,6 +14,7 @@ import Registro from "./Pages/Registro";
 import Login from "./Pages/Login";
 import Avisos from "./Pages/Avisos";
 import MudarSenha from "./Pages/MudarSenha";
+import EditarChamado from "./Pages/EditarChamado";
 
 ReactDOM.render(
   <React.StrictMode>
@@ -29,6 +30,7 @@ ReactDOM.render(
           <Route path="/nova_requisicao" element={<Requisicao />} />
           <Route path="/indicadores" element={<Indicadores />} />
           <Route path="/chamado/:id" element={<Chamado />} />
+          <Route path="/chamado/:id/editar" element={<EditarChamado />} />
           <Route path="*" element={
             <main>
               Erro 404, página não encontrada

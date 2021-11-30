@@ -10,9 +10,10 @@ const BarGraph = ({servicos, tipo}) => {
     const [state, setState] = useState({datasets: []});
 
     useEffect(()=>{
-        let todos = [0,0,0,0,0]
-        let infra = [0,0,0,0,0]
-        let sist = [0,0,0,0,0]
+        let todos = Array(5).fill(0)
+        let infra =  Array(5).fill(0)
+        let sist = Array(5).fill(0)
+        let dev =  Array(5).fill(0)
         servicos.forEach(element => {
             if (tipo === "aberto")
             todos[element.prioridade - 1] += element.status === "resolvido" || element.status === "pendente" ?  1 : 0;
@@ -26,7 +27,11 @@ const BarGraph = ({servicos, tipo}) => {
               case "Sistemas":
                 sist[element.prioridade - 1] += 1
                 break;
+              case "Desenvolvimento":
+                dev[element.prioridade - 1] += 1
+                break;
               default:
+                console.log(tipo, element)
                 console.log("Estranho...")
             }
         });
@@ -53,6 +58,13 @@ const BarGraph = ({servicos, tipo}) => {
               borderColor: 'rgba(0,0,0,1)',
               borderWidth: 1,
               data: sist
+            },
+            {
+              label: 'Desenvolvimento',
+              backgroundColor: 'rgba(120,120,230,1)',
+              borderColor: 'rgba(0,0,0,1)',
+              borderWidth: 1,
+              data: dev
             },
           ], 
         })
@@ -113,6 +125,8 @@ const DoughnutGraph = ({servicos, tipo}) => {
     }, [])
 
     return (
+      <>
+      {console.log("Forced")}
         <Doughnut
           style={{position: 'relative', height: '10em', width: '10em', padding: "3em"}}
           responsive="false"
@@ -137,10 +151,21 @@ const DoughnutGraph = ({servicos, tipo}) => {
           }}
           data={state}
         />
+      </>
     );
 }
 
 const Indicador = ({servicos, tipo}) => {
+  const [, forceUpdate] = useState({})
+
+  const update = ()=> {console.log("forcing update");forceUpdate({})}
+
+  useEffect(()=>{
+    let interval = setInterval(update, 500)
+    return ()=>{
+      clearInterval(interval)
+    }
+  },[])
   return (
     <>
       <BarGraph servicos={servicos} tipo={tipo} />
@@ -153,6 +178,16 @@ const PrioridadeTodos = ({servicos}) => {
   var [dados_prioridade_aberto, dados_prioridade_pendente, dados_prioridade_resolvido, dados_prioridade_fechado] = [[],[],[], []]
 
   const [state, setState] = useState({datasets: []});
+    const [, forceUpdate] = useState({})
+
+    const update = ()=> {console.log("forcing update");forceUpdate({})}
+
+    useEffect(()=>{
+      let interval = setInterval(update, 500)
+      return ()=>{
+        clearInterval(interval)
+      }
+    },[])
 
   useEffect(()=>{
     let tipo = "aberto"
@@ -176,9 +211,10 @@ const PrioridadeTodos = ({servicos}) => {
     tipo = "fechado"
     prioridades = [0,0,0,0,0]
     servicos.forEach(element => {
-        prioridades[element.prioridade - 1] += element.status === tipo && (new Date(element.updatedAt)).toISOString().split('T')[0] === (new Date().toISOString()).split('T')[0] ? 1 : 0;
-        console.log("Hoje: " + new Date().toLocaleDateString())
-        console.log("Dia da última atualização: " + new Date(element.updatedAt).toLocaleDateString())
+        prioridades[element.prioridade - 1] += 
+          element.status === tipo && 
+          (new Date(element.updatedAt)).toISOString().split('T')[0] === (new Date().toISOString()).split('T')[0] 
+          ? 1 : 0;
     });
     dados_prioridade_fechado = prioridades
     

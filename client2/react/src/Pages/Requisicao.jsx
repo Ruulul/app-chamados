@@ -9,12 +9,17 @@ import {
   InputLabel, 
   NativeSelect,
   Input, 
-  Button 
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
 } from "@mui/material";
 import axios from "axios";
 
 export default function Requisicao () {
   const redirect = useNavigate()
+  const [open, setOpen] = useState(false)
   const [infos, setInfos] = useState({
     departamento: "Contábil",
     prioridade: 1,
@@ -33,15 +38,21 @@ export default function Requisicao () {
   const navigate = useNavigate()
 
   useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
-      .then(({data})=>{
-        if (data === "Não autorizado") redirect("/login")
-        let novasInfos = infos;
-        novasInfos.id = data.length !== 0 ? data[data.length-1].id + 1 : 0;
-        setInfos(novasInfos)
-        forceUpdate({})
-      })
-      .catch((err)=>{console.log('Erro obtendo serviços. ' + err)})
+    const contaServicos = ()=>{
+      axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
+        .then(({data})=>{
+          if (data === "Não autorizado") redirect("/login")
+          let novasInfos = infos;
+          novasInfos.id = data.length !== 0 ? data[data.length-1].id + 1 : 0;
+          setInfos(novasInfos)
+          forceUpdate({})
+        })
+        .catch((err)=>{console.log('Erro obtendo serviços. ' + err)})
+    }
+    let interval = setInterval(contaServicos, 500)
+    return ()=>{
+      clearInterval(interval)
+    }
   }, [])
 
   useEffect(()=>{
@@ -91,10 +102,10 @@ export default function Requisicao () {
     let data = new Date()
     switch (infos.prioridade) {
       case 1:
-        data.setDate(data.getDate()+3)
+        data.setDate(data.getDate()+7)
         return data;
       case 2:
-        data.setDate(data.getDate()+2)
+        data.setDate(data.getDate()+3)
         return data;
       case 3:
         data.setDate(data.getDate()+1)
@@ -109,25 +120,38 @@ export default function Requisicao () {
 
   async function handleSubmit(event) {
     event.preventDefault();
+    setOpen(true)
     let requisicao = infos
     requisicao.status = "pendente"
     console.log(requisicao)
     await getPrazo().then(async (prazo)=>{
       requisicao.prazo=prazo.toISOString()
       await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
-        .then(res=>navigate('/servicos'))
         .catch(err=>console.log("Erro em salvar o chamado." + err))
     }).catch(console.log)
   }
   return (
     <Box sx={{ mt: "1em" }} component="form" onSubmit={handleSubmit}>
+      <Dialog open={open} onClose={()=>{redirect('/servicos');setOpen(false)}}>
+        <DialogContent p={2}>
+          <DialogContentText>
+            Seu chamado será atendido dentro de {["uma semana", "3 dias", "um dia", "algumas horas"][infos.prioridade - 1]}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="contained" padding={3} onClick={()=>{redirect('/servicos');setOpen(false)}} autoFocus sx={{width:"fit-content"}}>
+            Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Grid
         container
         item
         direction={{ xs: "column-reverse", sm: "row" }}
         justifyContent="space-between"
+        spacing={2}
       >
-        <Grid item container xs={10} spacing={2} direction={{ xs: "column", sm: "row" }} justifyContent="space-between">
+        <Grid item container xs={11} spacing={2} direction={{ xs: "column", sm: "row" }} justifyContent="space-between">
           <Grid item xs={3}>
             <Stack spacing={2}>
               <Typography>
@@ -147,7 +171,7 @@ export default function Requisicao () {
               <option key={2} name="sistemas">
                 Sistemas
               </option>,
-              <option key={2} name="desenvolvimento">
+              <option key={3} name="desenvolvimento">
                 Desenvolvimento
               </option>,
               </NativeSelect>
@@ -163,6 +187,7 @@ export default function Requisicao () {
               </NativeSelect>
               <InputLabel>Departamento: </InputLabel>
               <NativeSelect
+                component="select"
                 name="departamento"
                 onChange={handleChange}
               >
@@ -216,8 +241,8 @@ export default function Requisicao () {
               />
             </Stack>
           </Grid>
-          <Grid item />
-          <Grid item xs={8} justifyContent="space-between">
+          <Grid item container xs={9} justifyContent="space-between">
+            <Grid item xs={12} alignItems="stretch">
             <Stack spacing={2}>
               <TextField
                 name="assunto"
@@ -232,9 +257,9 @@ export default function Requisicao () {
                 size="small"
                 name="mensagem"
                 type="text"
-                label="Corpo da Mensagem"
+                label="Descreva a situação aqui"
                 onChange={handleChange}
-                minRows="10"
+                minRows="17"
                 required
               />
               <Button
@@ -246,13 +271,23 @@ export default function Requisicao () {
                 Enviar
               </Button>
             </Stack>
+            </Grid>
           </Grid>
         </Grid>
-        <Grid item sm={1} xs={12}>
+        <Grid item xs={12} sm={0.5}>
           <Button
             variant="contained"
             color="warning"
             component={Link}
+            padding={5}
+            sx={{
+              minWidth: 0,
+              minHeight: 0,
+              paddingX: 1,
+              width: "fit-content",
+              height: "fit-content",
+              position: "absolute",
+            }}
             to="/"
           >
             X

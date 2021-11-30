@@ -22,10 +22,8 @@ export default function Login() {
         await axios.post("http://10.0.0.83:5000/api/login", login, { withCredentials: true })
             .then(({data})=>{
               setError(data.error)
-              if(!data.error) {
-                console.log("go!");
-                setEnviando(false);redirect("/")
-              }
+              if(!data.error) redirect("/")
+              setEnviando(false)
             }
             )
             .catch((e)=>{console.error(e);

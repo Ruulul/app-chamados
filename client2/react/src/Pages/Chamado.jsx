@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
+import { faPlusCircle, faPen } from "@fortawesome/free-solid-svg-icons";
 
 import { Typography } from "@mui/material";
 
@@ -16,11 +16,10 @@ import {
   TextField
 } from "@mui/material";
 
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 
 export default function Chamado() {
-  const [, forceUpdate] = useState({})
   const [addMensagem, setMensagem] = useState(false)
   const [infos, setInfos] = useState({
     id: useParams().id,
@@ -31,16 +30,26 @@ export default function Chamado() {
   const [isCarregado, setCarregado] = useState(false);
   const [atendente, setAtendente] = useState({nome: "Carregando..."})
 
-  useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/servico/'+ infos.id, { withCredentials: true })
-      .then(({data})=>{
-        if (data === "Não autorizado") redirect("/login")
-        setInfos(data)
-        setCarregado(true)
-      })
-      .catch(err=>{console.error("Erro obtendo serviço. \n" + err)})
-  },[infos]);
-  useEffect(()=>{
+  const redirect = useNavigate()
+  
+  useLayoutEffect(
+    ()=>{
+      const getInfos = ()=>{
+        axios.get('http://10.0.0.83:5000/api/servico/'+ infos.id, { withCredentials: true })
+          .then(({data})=>{
+            if (data === "Não autorizado") redirect("/login")
+            setInfos(data)
+            setCarregado(true)
+          })
+          .catch(err=>{console.error("Erro obtendo serviço. \n" + err)})
+      }
+      let interval = setInterval(getInfos, 500)
+      return ()=>{
+        clearInterval(interval)
+      }
+    }
+    ,[infos]);
+  useLayoutEffect(()=>{
     axios.get('http://10.0.0.83:5000/api/usuario/' + infos.atendenteId, { withCredentials: true })
       .then(({data})=>{
         setAtendente(data)
@@ -53,7 +62,20 @@ export default function Chamado() {
         <Grid item xs={6}>
           <Card>
             <Typography variant="h4" m={2}>
-              Chamado Número {infos.id}
+              Chamado Número {infos.id} 
+              <Box 
+                component="span" 
+                sx={{
+                  backgroundColor: "lightblue", 
+                  padding: 0.7, 
+                  borderRadius: 2,
+                  fontSize: 15,
+                  margin: 3
+                }} 
+                onClick={()=>{redirect("/chamado/"+infos.id+"/editar")}}
+              > 
+                <FontAwesomeIcon icon={faPen} /> 
+              </Box>
             </Typography>
             <Typography variant="h5" m={2}>
               Assunto
@@ -76,7 +98,7 @@ export default function Chamado() {
         <Grid item xs={6}>
           {!addMensagem ? <Mensagens
               infos={infos}
-              mudastatus={(novasInfos)=>{setInfos(novasInfos); forceUpdate({})}}
+              mudastatus={(novasInfos)=>{setInfos(novasInfos);}}
               addMensagem={setMensagem}
             /> : <AddMensagem infos={infos} setMensagem={setMensagem} />}
         </Grid>
@@ -87,10 +109,12 @@ export default function Chamado() {
   
 const Mensagens = (props) => {
     const [zoom, setScale] = useState(1);
+    const redirect = useNavigate()
   
     useEffect(()=>{
-      if (props.infos.status === "fechado")
+      if (props.infos.status === "fechado") {
         setScale(0);
+      }
       else setScale(1);
     }, [props.infos.status])
     return (
@@ -105,20 +129,21 @@ const Mensagens = (props) => {
   
               <Stack alignItems="stretch" justifyContent="flex-start" direction="column-reverse" spacing={6}>
                 {props.infos.chat ? props.infos.chat.map((mensagem)=>{
-                    return <Mensagem key={mensagem.id} autorId={mensagem.autorId} mensagem={mensagem.mensagem} />
+                    return <Mensagem 
+                    key={mensagem.id} 
+                    autorId={mensagem.autorId} 
+                    mensagem={mensagem.mensagem} />
                 }) : undefined}
               </Stack>
             </Grid>
-            <Grid item xs={1} />
+            <Grid item xs={2} />
           </Grid>
-          <ButtonGroup
-            sx={{ placeSelf: "center", placeItems: "center" }}
-            orientation="vertical"
+          <Stack alignItems="right" paddingLeft={{xs:"30%",sm:"40%",md:"50%", lg:"60%", xl:"70%"}}
           >
             <Button
               variant="contained"
               color="secondary"
-              sx={{ width: 'fit-content',padding: '1em', transform:`scale(${zoom})`}}
+              sx={{ width: 200,padding: '2em', transform:`scale(${zoom})`, borderRadius:5, fontSize: 10}}
               onClick={
                 props.addMensagem
               }
@@ -128,7 +153,7 @@ const Mensagens = (props) => {
   
             <Button
               variant="contained"
-              sx={{ width: "fit-content",padding: "1em", transform:`scale(${zoom})`}}
+              sx={{ width: 200,padding: "2em", transform:`scale(${zoom})`, borderRadius:5, fontSize: 10}}
               onClick={
                 (event)=>{
                   let servico = props.infos
@@ -138,6 +163,7 @@ const Mensagens = (props) => {
                       break;
                     case "resolvido":
                       servico.status = "fechado";
+                      redirect('/servicos')
                       break;
                     case "fechado":
                       alert("Isso não devia aparecer");
@@ -158,7 +184,7 @@ const Mensagens = (props) => {
                 ? "Marcar como Fechado"
                 : undefined) : undefined}
             </Button>
-          </ButtonGroup>
+          </Stack>
         </Stack>
       </Card>
     );

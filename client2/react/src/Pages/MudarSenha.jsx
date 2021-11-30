@@ -15,29 +15,37 @@ export default function MudarSenha() {
         error: undefined
     }
     function reducer(state, action) {
+        const [, update] = useState({})
         if (action.type === "enviando" || action.type === "error")
             state[action.type] = action.payload
         else
             state[action.type][action.payload.name] = action.payload.value
-        console.log({...state.campos, enviando: state.enviando, error: state.error})
+        update({})
         return state
     }
 
-    const [, update] = useState({})
     const [state, dispatch] = useReducer(reducer, initialState);
     const redirect = useNavigate()
+    console.log({...state.campos, enviando: state.enviando, error: state.error})
 
     function handleChange({target}) {
         dispatch({type: "campos", payload: target})
     }
 
     async function onSubmit(event) {
+        function limpacampos() {
+            dispatch({type: "enviando", payload: false})
+            dispatch({type: "campos", payload: {name: "senhaatual", value: ""}})
+            dispatch({type: "campos", payload: {name: "confirmasenha", value: ""}})
+            dispatch({type: "campos", payload: {name: "senha", value: ""}})
+        }
         event.preventDefault();
-        let {email, senhaatual, senha} = state.campos
+        let {email, senhaatual, confirmasenha, senha} = state.campos
         const login = {email, senhaatual, senha};
         dispatch({type: "enviando", payload: true})
         dispatch({type: "error", payload: undefined})
         update({})
+        if (senhaatual === confirmasenha)
         await axios.post("http://10.0.0.83:5000/api/alterasenha", login, { withCredentials: true })
             .then(({data})=>{
                 dispatch({type: "error", payload: data.error})
@@ -49,10 +57,10 @@ export default function MudarSenha() {
             )
             .catch((e)=>{
                 console.error(e);
-                dispatch({type: "error", payload: e.message})
-                dispatch({type: "enviando", payload: false})
                 }
             )
+        else dispatch({type: "error", payload: "Campos não correspondem"})
+        limpacampos()
         update({})
     }
     return (
@@ -65,24 +73,28 @@ export default function MudarSenha() {
                     label="Email" 
                     name="email"  
                     type="email"
+                    value={state.campos.email}
                     onChange={handleChange} required
                 />
                 <TextField 
                     label="Senha Atual" 
                     name="senhaatual" 
                     type="password" 
+                    value={state.campos.senhaatual}
                     onChange={handleChange} required
                 />
                 <TextField 
                     label="Confirmar Senha" 
                     name="confirmasenha" 
                     type="password" 
+                    value={state.campos.confirmasenha}
                     onChange={handleChange} required
                 />
                 <TextField 
                     label="Nova Senha" 
                     name="senha" 
                     type="password" 
+                    value={state.campos.senha}
                     onChange={handleChange} required
                 />
                 {state.error ? (console.log(state.error), <Alert severity="error">{state.error + "."}</Alert>) : undefined}

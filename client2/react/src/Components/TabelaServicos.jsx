@@ -17,18 +17,17 @@ const TabelaServicos = (props) => {
   return (
       <Table>
         <TableHead>
-          <TableRow>
-            <TableCell>Navegar</TableCell>
-            <TableCell>ID</TableCell>
-            <TableCell>Urgência</TableCell>
-            <TableCell>Assunto</TableCell>
-            <TableCell>Departamento</TableCell>
-            <TableCell>Status</TableCell>
+          <TableRow >
+            <TableCell align="right" colSpan={2}>ID</TableCell>
+            <TableCell align="right">Urgência</TableCell>
+            <TableCell align="right">Assunto</TableCell>
+            <TableCell align="right">Departamento</TableCell>
+            <TableCell align="right">Status</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {typeof(props.servicos) === "object" ? props.servicos.map((s) => {
-            return (<TableRow key={s.id}>
+            return (<TableRow key={s.id} alignItems="right">
                       <TableCell>
                         <Button
                           variant="contained"
@@ -39,11 +38,11 @@ const TabelaServicos = (props) => {
                           <FontAwesomeIcon icon={faEnvelopeOpen} />
                         </Button>
                       </TableCell>
-                      <TableCell>{s.id}</TableCell>
-                      <TableCell>{(["Baixa", "Média", "Alta", "Urgente"])[s.prioridade - 1]}</TableCell>
-                      <TableCell>{s.assunto}</TableCell>
-                      <TableCell>{s.departamento}</TableCell>
-                      <TableCell>{s.status}</TableCell>
+                      <TableCell align="right">{s.id}</TableCell>
+                      <TableCell align="right">{(["Baixa", "Média", "Alta", "Urgente"])[s.prioridade - 1]}</TableCell>
+                      <TableCell align="right">{s.assunto}</TableCell>
+                      <TableCell align="right">{s.departamento}</TableCell>
+                      <TableCell align="right">{s.status}</TableCell>
                     </TableRow>);
               }
             ) : props.servicos

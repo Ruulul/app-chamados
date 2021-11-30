@@ -25,17 +25,23 @@ export default function Avisos(props) {
     const [servicos, setServicos] = useState([]);
     const redirect = useNavigate()
     useEffect(()=>{
-        axios.get("http://10.0.0.83:5000/api/servicos/status/pendente", { withCredentials: true })
-            .then(({data})=>{
-                data.forEach((servico, index)=>{
-                    let criado_em = new Date(servico.createdAt)
-                    let prazo = new Date(servico.prazo)
-                    data[index] = {...servico, ...{criado_em, prazo}}
+        const getServicos = ()=>{
+            axios.get("http://10.0.0.83:5000/api/servicos/status/pendente", { withCredentials: true })
+                .then(({data})=>{
+                    data.forEach((servico, index)=>{
+                        let criado_em = new Date(servico.createdAt)
+                        let prazo = new Date(servico.prazo)
+                        data[index] = {...servico, ...{criado_em, prazo}}
+                    })
+                    setServicos(data)
                 })
-                setServicos(data)
-            })
-            .catch(()=>{redirect("/login")})
-    },[servicos]);
+                .catch(()=>{redirect("/login")})
+        }
+        let interval = setInterval(getServicos, 500)
+        return ()=>{
+            clearInterval(interval)
+        }
+    },[]);
     return (
     <Card>
         <Grid container width={1}>
@@ -56,7 +62,7 @@ export default function Avisos(props) {
                 <TableBody>
                     {servicos!=[] ?
                     servicos.map((servico)=>{
-                            let tempo_restante = Math.abs(servico.prazo.getTime() - (Date.now()))
+                            let tempo_restante = servico.prazo.getTime() - (Date.now())
                             let duracao_prazo = (servico.prazo.getTime() - (servico.criado_em.getTime()))
                             let percentual_faltante = (tempo_restante/duracao_prazo);
                             return <TableRow>
@@ -85,7 +91,7 @@ export default function Avisos(props) {
                                 </TableCell>
                                 <TableCell>
                                     <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-                                      <CircularProgress color="warning" variant="determinate" value={percentual_faltante * 100} />
+                                      <CircularProgress color="warning" variant="determinate" value={-percentual_faltante * 100} />
                                       <Box
                                         sx={{
                                           top: 0,

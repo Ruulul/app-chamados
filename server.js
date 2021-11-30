@@ -18,6 +18,7 @@ const SECRET = fs.readFileSync('./key', 'utf-8');
 const prisma = new PrismaClient()
 const express = require('express');
 const { ObjectFlags } = require('typescript');
+const { transformDocument } = require('@prisma/client/runtime');
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -73,6 +74,7 @@ app.post('/api/novo/servico', async (req, res) => {
   let autorId = servico.autorId
   req.session.valid ? 
   ((console.log("Salvando novo serviço")),
+  (servico.chat[servico.chat.length] = {autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1]}),
   (await prisma.chamado.create({data: {
     autorId,
     chat: {
@@ -103,12 +105,27 @@ app.post('/api/update/servico/:id', async (req, res) => {
     departamento: novo_servico.departamento,
     status: novo_servico.status,
     prioridade: novo_servico.prioridade,
-    atendimento: true,
+    atendimento: (novo_servico.chat ? (novo_servico.chat.length > 1 ? true : false) : undefined),
     tipo: novo_servico.tipo,
     atendenteId: novo_servico.atendenteId
     }).map((metadado)=>{return {"nome": metadado[0], "valor": String(metadado[1])}});
-  req.session.valid ? ( async ()=>{
+  let validUpdate = await prisma.metadadoChamado.findFirst(
+    {where:{
+      chamadoId: novo_servico.id,
+      nome: "atendenteId"
+    }
+  }).then(async (valor)=>{
+    console.log(valor)
+    let usuario = await prisma.usuario.findUnique({where:{id: req.session.usuarioId},select:{id:true, metadados:true}})
+    let metadados = Object.fromEntries(usuario.metadados.map((metadado)=>[metadado.nome, metadado.valor]))
+    if (valor.valor == usuario.id || metadados.cargo == "admin")
+      return true;
+    else return false;
+  })
+  console.log("Edição é " + (validUpdate ? "válida" : "inválida"))
+  req.session.valid && validUpdate ? ( async ()=>{
   console.log("Atualizando serviço")
+  if (novo_servico.chat) {
   novo_servico.chat.forEach((element)=>delete element.chamadoId)
   await prisma.chamado.update({
     where:{
@@ -124,6 +141,7 @@ app.post('/api/update/servico/:id', async (req, res) => {
       },
     }
   })
+  }
   for (let metadado of metadados) 
     await prisma.metadadoChamado.updateMany({
       where:{
@@ -216,6 +234,13 @@ app.get('/api/usuarios/:tipo/:filtro', async (req, res) => {
             valor: req.params.filtro
           },
         }
+      },
+      select: {
+        id: true,
+        nome: true,
+        sobrenome: true,
+        senha: false,
+        email: false,
       }
     }
   )
@@ -228,12 +253,13 @@ app.get('/api/usuarios/:tipo/:filtro', async (req, res) => {
           (mds)=>{
             Metas[index] = 
             Object.fromEntries(
-              mds.map(
+              mds.filter((md)=>md.nome!=="area").map(
                 (md)=>{
                   return [md.nome, md.valor]
                 }
               )
             )
+            Metas[index].area = mds.filter((md)=>md.nome==="area").map(md=>md.valor)
           }
         )
       res.send(
@@ -303,6 +329,13 @@ app.get('/api/usuario/:id', (req, res) => {
   req.session.valid ? prisma.usuario.findUnique({
     where: {
       id: parseInt(req.params.id)
+    },
+    select: {
+      id: true,
+      nome: true,
+      sobrenome: true,
+      senha: false,
+      email: false,
     }
   }).then((usuario)=>{
     res.send(usuario)
@@ -371,7 +404,6 @@ app.post('/api/alterasenha', async (req, res) => {
     }
     req.session.valid = false
     req.session.valid = await bcrypt.compare(req.body.senhaatual, usuario[0].senha)
-    console.log(await bcrypt.hash("",12))
     if (req.session.valid) {
       req.session.usuarioId = usuario[0].id
       req.body.senha = await bcrypt.hash(req.body.senha, 12)

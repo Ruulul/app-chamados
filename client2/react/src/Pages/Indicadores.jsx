@@ -192,10 +192,18 @@ const Indicadores = (props) => {
         setTabelaTodos(<PrioridadeTodos servicos={servicos}/>)
     }
 
-    useEffect(setarServicosAbertos, [servicos_abertos])
-    useEffect(setarServicosPendentes, [servicos_pendentes])
-    useEffect(setarServicosResolvidos, [servicos_resolvidos])
-    useEffect(setarServicosTodos, [tabelaTodos])
+    useEffect(()=>{
+        const setAll = () => {
+            setarServicosAbertos()
+            setarServicosPendentes()
+            setarServicosResolvidos()
+            setarServicosTodos()
+        }
+        let interval = setInterval(setAll, 500)
+        return ()=>{
+            clearInterval(interval)
+        }
+    },[servicos_abertos,servicos_pendentes,servicos_resolvidos, tabelaTodos])
 
     return (    
     <Card elevation={3} xs={{padding: 0}} md={{ padding: 5}}>

@@ -14,8 +14,16 @@ export default function Main() {
           <Grid item xs={12} md={1}>
             <SideBar />
           </Grid>
-          <Grid item sx={{ padding: 0 }} xs={24} md={10}>
-            <Divider />
+          <Grid item sx={{ padding: 0 }} xs={24} md={10.8}>
+            <Divider sx={
+              {
+                position: "absolute", 
+                left: 0, 
+                width: "100vw",
+                backgroundColor: "#2DB5FA",
+                borderWidth: 1
+              }
+            } />
                 <Outlet />
           </Grid>
         </Grid>

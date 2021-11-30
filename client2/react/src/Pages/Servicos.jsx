@@ -18,34 +18,42 @@ export default function servicosStatus() {
     const [servicosTipo, setservicosTipo] = useState([])
     const [servicos, setServicos] = useState([])
     const redirect = useNavigate()
-    useEffect(()=>filtroStatus === "todos" ?
+    useEffect(()=>{
+      let getServicos = () => filtroStatus === "todos" ?
       axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
-          console.log("Servicos ", filtroStatus, " ", res.data)
           setservicosStatus(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
     : axios.get('http://10.0.0.83:5000/api/servicos/status/' + filtroStatus, { withCredentials: true })
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
-          console.log("Servicos ", filtroStatus, " ", res.data)
           setservicosStatus(res.data)
         })
-        .catch(err => console.log("Erro obtendo serviços. \n" + err)), [filtroStatus])
-    useEffect(()=>filtroTipo === "todos" ?
+        .catch(err => console.log("Erro obtendo serviços. \n" + err))
+      let interval = setInterval(getServicos, 500)
+      return ()=>{
+        clearInterval(interval)
+      }
+    }, [filtroStatus])
+    useEffect(()=>{
+      let getServicos = ()=>filtroTipo === "todos" ?
       axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
-          console.log("Servicos ", filtroTipo, " ", res.data)
           setservicosTipo(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
     : axios.get('http://10.0.0.83:5000/api/servicos/tipo/' + filtroTipo, { withCredentials: true })
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
-          console.log("Servicos ", filtroTipo, " ", res.data)
           setservicosTipo(res.data)
         })
-        .catch(err => console.log("Erro obtendo serviços. \n" + err)), [filtroTipo])
+        .catch(err => console.log("Erro obtendo serviços. \n" + err))
+        let interval = setInterval(getServicos, 500)
+        return ()=>{
+          clearInterval(interval)
+        }
+    }, [filtroTipo])
     useEffect(()=>{
       let temp_servicos = []
       if (servicosStatus.length > 0 && servicosTipo.length > 0)
@@ -53,11 +61,11 @@ export default function servicosStatus() {
         for (let y of servicosStatus)
           if (x.id === y.id)
             temp_servicos.push(x)
-      console.log("Serviços ambos: ", temp_servicos)
       setServicos(temp_servicos)
     },[servicosTipo, servicosStatus])
+
     return (
-        <Grid container direction={{ xs: "column", md: "row" }}>
+        <Grid container direction={{ xs: "column", md: "row" }} pt={2}>
             <Grid item xs={12}>
                 <Card>
                   <Grid container>
@@ -93,10 +101,10 @@ export default function servicosStatus() {
                             </NativeSelect>
                           
                             <Card
-                              sx={{ margin: "1em", padding: "1em", placeContent: "center" }}
+                              sx={{ marginY: 1, padding: 1, placeContent: "center", }}
                               elevation={2}
                             >
-                              <Typography variant="caption">
+                              <Typography variant="body2">
                                 {filtroStatus !== "todos"
                                   ? "Serviços " +
                                     filtroStatus +
@@ -106,10 +114,10 @@ export default function servicosStatus() {
                               </Typography>
                             </Card>
                             <Card
-                              sx={{ margin: "1em", padding: "1em", placeContent: "center" }}
+                              sx={{ marginY: 1, padding: 1, placeContent: "center" }}
                               elevation={2}
                             >
-                              <Typography variant="caption">
+                              <Typography variant="body2">
                                 {filtroTipo !== "todos"
                                   ? "Serviços de " +
                                     filtroTipo + ": " +

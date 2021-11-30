@@ -35,6 +35,14 @@ const UpBar = (props) => {
                   .then(()=>redirect("/login"))
                   .catch(()=>setVariant("error"))
               }}
+              
+              sx={{
+                minWidth: 0,
+                minHeight: 0,
+                width: 1/30,
+                position: "absolute",
+                right: 30
+              }}
             >
               <FontAwesomeIcon icon={faSignOutAlt} />
             </Button>

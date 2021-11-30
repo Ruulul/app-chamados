@@ -28,7 +28,7 @@ const SideBar = function (props) {
   return (
     <Stack
       direction={{ xs: "row", md: "column" }}
-      sx={{ placeContent: "center",  }}
+      sx={{ placeContent: "center", paddingTop: 5 }}
     >
       <Tooltip title="Home">
       <Button
@@ -42,7 +42,8 @@ const SideBar = function (props) {
       </Tooltip>
       <Tooltip title="Serviços">
       <Button
-        variant="outlined"
+        variant="contained"
+        sx={{backgroundColor:"#DDD", color: "#000"}}
         component={Link}
         to="/servicos"
       >
@@ -51,7 +52,8 @@ const SideBar = function (props) {
       </Tooltip>
       <Tooltip title="Indicadores">
       <Button 
-        variant="outlined" 
+        variant="contained"
+        sx={{backgroundColor:"#DDD", color: "#000"}}
         component={Link}
         to="/indicadores"
       >
@@ -61,7 +63,8 @@ const SideBar = function (props) {
       <Tooltip title="Avisos">
       <Button 
         color="warning" 
-        variant="outlined"
+        variant="contained"
+        sx={{backgroundColor:"#DDD", color: "#000"}}
         component={Link}
         to="/avisos">
         <Badge 
