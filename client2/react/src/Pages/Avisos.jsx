@@ -43,7 +43,7 @@ export default function Avisos(props) {
         }
     },[]);
     return (
-    <Card>
+    <Card marginTop={3}>
         <Grid container width={1}>
             <Grid item xs={12} component="table" >
                 <TableHead>
@@ -61,15 +61,19 @@ export default function Avisos(props) {
                 </TableHead>
                 <TableBody>
                     {servicos!=[] ?
-                    servicos.map((servico)=>{
-                            let tempo_restante = servico.prazo.getTime() - (Date.now())
-                            let duracao_prazo = (servico.prazo.getTime() - (servico.criado_em.getTime()))
-                            let percentual_faltante = (tempo_restante/duracao_prazo);
-                            return <TableRow>
+                    servicos.sort(
+                        (a, b)=>a.prazo.getTime() - b.prazo.getTime()
+                        ).map(
+                            (servico)=>{
+                                let tempo_restante = servico.prazo.getTime() - (Date.now())
+                                let duracao_prazo = (servico.prazo.getTime() - (servico.criado_em.getTime()))
+                                let percentual_faltante = (tempo_restante/duracao_prazo);
+                                return <TableRow>
                                 <TableCell>
                                     <Button 
                                         variant="contained"
                                         component={Link}
+                                        color={tempo_restante < 0 ? "error" : "primary"}
                                         to={`/chamado/${servico.id}`}
                                     >
                                     {" "}
@@ -110,8 +114,9 @@ export default function Avisos(props) {
                                       </Box>
                                     </Box>
                                 </TableCell>
-                            </TableRow>
-                        }) :
+                                </TableRow>
+                            }
+                        ) :
                         <>
                     <Skeleton animation={false} variant="rectangular" sx={{height:25}}/>
                     <Skeleton animation={false} variant="rectangular" sx={{height:25}}/>

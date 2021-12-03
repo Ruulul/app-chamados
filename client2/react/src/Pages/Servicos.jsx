@@ -65,7 +65,7 @@ export default function servicosStatus() {
     },[servicosTipo, servicosStatus])
 
     return (
-        <Grid container direction={{ xs: "column", md: "row" }} pt={2}>
+        <Grid container direction={{ xs: "column", md: "row" }} pt={3}>
             <Grid item xs={12}>
                 <Card>
                   <Grid container>

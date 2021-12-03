@@ -4,7 +4,8 @@ import {
   faHome,
   faTasks,
   faChartBar,
-  faBell
+  faBell,
+  faBookOpen
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom";
 import axios from "axios";
@@ -74,6 +75,16 @@ const SideBar = function (props) {
           max={9}>
           <FontAwesomeIcon icon={faBell} />
         </Badge>
+      </Button>
+      </Tooltip>
+      <Tooltip title="Relatórios">
+      <Button 
+        color="info" 
+        variant="contained"
+        sx={{backgroundColor:"#DDD", color: "#000"}}
+        component={Link}
+        to="/relatorios">
+          <FontAwesomeIcon icon={faBookOpen} />
       </Button>
       </Tooltip>
     </Stack>

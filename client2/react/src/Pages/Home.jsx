@@ -68,8 +68,8 @@ const Home = () => {
                   {nome !== "Carregando..." && nome !== "Falha obtendo nome" 
                   ? "Olá," : undefined }
                 </Typography>
-                <Typography component="h5" variant="h6" color="secondary" sx={{fontWeight: 700}}>
-                  {nome}
+                <Typography component="h5" variant="h6" color="secondary">
+                  <strong>{nome}</strong>
                 </Typography>
             </Stack>
       </Grid>
@@ -82,7 +82,7 @@ const Home = () => {
       <Grid item container xs={12}>
         <Grid item xs={6}>
             <Stack spacing={1} align="left" justifyContent="space-evenly">
-            <Typography variant="h6">{contagem.pendentes} pendentes</Typography>
+            <Typography variant="h5"><strong>{contagem.pendentes} pendentes</strong></Typography>
             <Typography variant="h6">{contagem.parados} parados</Typography>
             <Typography variant="h6">{contagem.atendimento} em atendimento</Typography>
             </Stack>

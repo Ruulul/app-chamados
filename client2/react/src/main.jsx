@@ -15,6 +15,7 @@ import Login from "./Pages/Login";
 import Avisos from "./Pages/Avisos";
 import MudarSenha from "./Pages/MudarSenha";
 import EditarChamado from "./Pages/EditarChamado";
+import Relatorios from "./Pages/Relatorios";
 
 ReactDOM.render(
   <React.StrictMode>
@@ -29,6 +30,7 @@ ReactDOM.render(
           <Route path="/avisos" element={<Avisos />} />
           <Route path="/nova_requisicao" element={<Requisicao />} />
           <Route path="/indicadores" element={<Indicadores />} />
+          <Route path="/relatorios" element={<Relatorios/>} />
           <Route path="/chamado/:id" element={<Chamado />} />
           <Route path="/chamado/:id/editar" element={<EditarChamado />} />
           <Route path="*" element={

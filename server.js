@@ -197,6 +197,7 @@ app.get('/api/servicos/:tipo/:filtro', async (req, res) => {
   .then(
     async (data)=>{
       let Metas = [];
+      data = data.filter(({id})=>id>3)
       for (const [index, chamado] of data.entries())
         await prisma.metadadoChamado.findMany({where:{chamado}})
         .then(
@@ -215,6 +216,50 @@ app.get('/api/servicos/:tipo/:filtro', async (req, res) => {
         data.map(
           (chamado, index)=>{
             return {...chamado, ...Metas[index]}
+          }
+        )
+      )
+    }
+  ) 
+  : res.send("Não autorizado")
+});
+
+app.get('/api/usuarios/', async (req, res) => {
+  req.session.valid ? 
+  prisma.usuario.findMany(
+    {
+      select: {
+        id: true,
+        nome: true,
+        sobrenome: true,
+        senha: false,
+        email: false,
+      }
+    }
+  )
+  .then(
+    async (data)=>{
+      let Metas = [];
+      data = data.filter(({id})=>id>3)
+      for (const [index, usuario] of data.entries())
+        await prisma.metadadoUsuario.findMany({where:{usuario}})
+        .then(
+          (mds)=>{
+            Metas[index] = 
+            Object.fromEntries(
+              mds.filter((md)=>md.nome!=="area").map(
+                (md)=>{
+                  return [md.nome, md.valor]
+                }
+              )
+            )
+            Metas[index].area = mds.filter((md)=>md.nome==="area").map(md=>md.valor)
+          }
+        )
+      res.send(
+        data.map(
+          (usuario, index)=>{
+            return {...usuario, ...Metas[index]}
           }
         )
       )
