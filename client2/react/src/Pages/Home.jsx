@@ -59,9 +59,23 @@ const Home = () => {
       clearInterval(interval)
     }
   },[])
+
+  let conversao = 
+  ["Jan", "Jan", 
+  "Feb", "Fev", 
+  "Mar", "Mar", 
+  "Apr", "Abr", 
+  "May", "Mai", 
+  "Jun", "Jun", 
+  "Jul", "Jul", 
+  "Aug", "Ago", 
+  "Sep", "Set", 
+  "Oct", "Out", 
+  "Nov", "Nov", 
+  "Dec", "Dez"]
   return (
-    <>
-    <Grid container spacing={2} component={Card} elevation={5} xs={12} md={6} lg={4} xl={3} sx={{padding: 3, marginTop: 3, zIndex:1}}>
+    <Grid container item xs={12} display="flex" direction="row" justifyContent="space-between">
+    <Grid item container spacing={2} component={Card} elevation={5} xs={12} md={6} lg={4} xl={3} sx={{padding: 3, marginTop: 3, zIndex:1}}>
       <Grid item xs={12}>
             <Stack direction="row" alignItems="flex-end" justifyContent="space-evenly">
                 <Typography variant="h5" component="h5" sx={{fontWeight: 500}}>
@@ -116,7 +130,16 @@ const Home = () => {
         </Stack>
       </Grid>
     </Grid>
-    </>
+    <Grid item component={Card} xs={2}  elevation={5} sx={{padding: 0, maxHeight:250, margin: 10, marginTop: 3, zIndex:1}}>
+      <Typography align="center" paddingTop={3} paddingBottom={2} variant="h4" sx={{backgroundColor: '#EB5655'}}>
+        {conversao[conversao.indexOf(Date().split(' ')[1]) + 1]}
+      </Typography>
+      <Divider />
+      <Typography align="center" marginTop={3} variant="h1">
+        {Date().split(' ')[2]}
+      </Typography>
+    </Grid>
+    </Grid>
   );
 };
 
