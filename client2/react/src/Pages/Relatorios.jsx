@@ -49,6 +49,7 @@ const Relatorios = (props) => {
         (async () => {
             for (let filtro of filtrosAtivos) {
                 console.log(filtro)
+
                 switch (filtro.tipo) {
                     case "Departamento":
                         data = await axios.get('http://10.0.0.83:5000/api/servicos/departamento/' + filtro.valor, { withCredentials: true })
@@ -79,7 +80,7 @@ const Relatorios = (props) => {
                 }
             }
             let relatoriodata =
-                filtrosAtivos.length === 0 ?
+                filtrosAtivos.filter(a=>!a.tipo.includes('Data')).length === 0 ?
                     ({ data } = await axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true }),
                         data) :
                     ([serDs, serAs, serCs, serSs, serUs])
@@ -89,6 +90,14 @@ const Relatorios = (props) => {
                                     : p.filter(e1 => c.some(e2 => e1.id === e2.id))
                         )
             console.log(relatoriodata)
+            if (filtrosAtivos.some(a=>a.tipo==="DataInicio"))
+                relatoriodata = relatoriodata.filter(servico=>servico.createdAt.split('T')[0] >= filtrosAtivos.find(a=>a.tipo==="DataInicio").valor)
+            if (filtrosAtivos.some(a=>a.tipo==="DataFim"))
+                relatoriodata = relatoriodata.filter(servico=>servico.createdAt.split('T')[0] <= filtrosAtivos.find(a=>a.tipo==="DataFim").valor)
+                if (filtrosAtivos.some(a=>a.tipo==="DataInicio: Prazo"))
+                    relatoriodata = relatoriodata.filter(servico=>servico.prazo.split('T')[0] >= filtrosAtivos.find(a=>a.tipo==="DataInicio: Prazo").valor)
+                if (filtrosAtivos.some(a=>a.tipo==="DataFim: Prazo"))
+                    relatoriodata = relatoriodata.filter(servico=>servico.prazo.split('T')[0] <= filtrosAtivos.find(a=>a.tipo==="DataFim: Prazo").valor)
             setRelatorio(relatoriodata)
         })()
     }
@@ -119,6 +128,8 @@ const Relatorios = (props) => {
                 setAtendentes(Atendentes.map(a => ({ nome: a, id: data[Usuario.indexOf(a)].id })))
             })
             .catch(err => console.log('Error: ' + err))}, [])
+
+    console.table(campos)
     
     return (
         <Grid container >
@@ -157,6 +168,10 @@ const Relatorios = (props) => {
                         <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Categoria', valor: null }])}>Categoria</MenuItem>
                         <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Urgência', valor: null }])}>Urgência</MenuItem>
                         <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Status', valor: null }])}>Status</MenuItem>
+                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataInicio', valor: "" }])}>Data de Início</MenuItem>
+                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataFim', valor: "" }])}>Data de Fim</MenuItem>
+                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataInicio: Prazo', valor: "" }])}>Data de Início (Prazo)</MenuItem>
+                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataFim: Prazo', valor: "" }])}>Data de Fim (Prazo)</MenuItem>
                     </Menu>
                     <Button
                         onClick={() => setFiltros([])}>
@@ -173,6 +188,16 @@ const Relatorios = (props) => {
                     .map(
                         (filtro, i) =>
                             <Grid item xs={3.5} margin={1} component={Card} key={i} sx={{ p: 1.5, mb: 1 }}>
+                                {
+                                    filtro.tipo.includes("Data") ?
+                                    <>
+                                    <Typography>
+                                        {`Data de ${filtro.tipo.slice(4)}`}
+                                    </Typography>
+                                    <TextField type="date" value={filtro.valor} onChange={(e)=>{let filtrosa = filtrosAtivos; filtrosa[i].valor = e.target.value; filtrosa[i].label = `Data de ${filtro.tipo.slice(4)}`; setFiltros(filtrosa); update()}}/>
+                                    </>
+                                    :
+                                <>
                                 <Typography>
                                     {filtro.tipo}
                                 </Typography>
@@ -190,10 +215,12 @@ const Relatorios = (props) => {
                                             <MenuItem onClickCapture={() => 
                                                 { let filtrosa = filtrosAtivos; filtrosa[i].valor = a.id; filtrosa[i].label = a.nome; setFiltros(filtrosa); update() }}>
                                                 {a.nome}</MenuItem>)
-                                            : 
+                                            :
                                         campos[filtro.tipo].map(a => <MenuItem onClick={() => { let filtrosa = filtrosAtivos; filtrosa[i] = { tipo: filtrosa[i].tipo, valor: a, label: a }; setFiltros(filtrosa); update() }}>{typeof (a) === "string" ? a : a.value}</MenuItem>)
                                     }
                                 </TextField>
+                                </>
+                                }
                             </Grid>
                     )}
             </Grid>
@@ -204,6 +231,7 @@ const Relatorios = (props) => {
                     <Button
                         variant="contained"
                         align="center"
+                        size="small"
                         onClick={
                             () => {
                                 const doc = new jsPDF({
@@ -225,7 +253,7 @@ const Relatorios = (props) => {
                                         `${filtro.tipo}: ${filtro.valor}`
                                     ).join('\n')
                                 ,20, 25)
-                                ;(["Assunto", "Atendente", "Urgência", "Status", "Categoria", "Departamento", "ID"])
+                                ;(["Assunto", "", "", "", "Categoria", "Departamento", "ID"])
                                     .forEach(
                                         (campo, index)=>{
                                             doc.text(campo, index ? index * (campo_l + u) : u, 30 + filtrosAtivos.length * 5)
@@ -241,16 +269,20 @@ const Relatorios = (props) => {
                                         console.log(servico)
                                         doc.setFontSize(8)
                                         doc.text(
-                                            servico.assunto.length >= campo_l - u ? 
-                                            [servico.assunto.slice(0, campo_l/3), '...', servico.assunto.slice(servico.assunto.length - campo_l/4 + 2)]
-                                            .join('') : 
+                                        //    servico.assunto.length >= campo_l - u ? 
+                                        //    [servico.assunto.slice(0, campo_l/3), '...', servico.assunto.slice(servico.assunto.length - campo_l/4 + 2)]
+                                        //    .join('') : 
                                             servico.assunto, u, yo)
-                                        doc.text(
-                                            atendentes.find(e => e.id == servico.atendenteId) ? 
-                                            atendentes.find(e => e.id == servico.atendenteId).nome : 
-                                            "Não encontrado", campo_l + u, yo)
-                                        doc.text((["Baixa", "Média", "Alta", "Urgente"])[parseInt(servico.prioridade) - 1], 2 * (campo_l + u), yo)
-                                        doc.text(servico.status, 3 * (campo_l + u), yo)
+                                        //doc.text(
+                                        //    atendentes.find(e => e.id == servico.atendenteId) ? 
+                                        //    atendentes.find(e => e.id == servico.atendenteId).nome : 
+                                        //    "Não encontrado", campo_l + u, yo)
+                                        //doc.text((["Baixa", "Média", "Alta", "Urgente"])[parseInt(servico.prioridade) - 1], 2 * (campo_l + u), yo)
+                                        //doc.text(servico.status, 3 * (campo_l + u), yo)
+                                        //doc.text(
+                                        //    atendentes.find(e => e.id == servico.atendenteId) ? 
+                                        //    atendentes.find(e => e.id == servico.atendenteId).nome : 
+                                        //    "Não encontrado", 3 * (campo_l + u), yo);
                                         doc.text(servico.tipo, 4 * (campo_l + u), yo)
                                         doc.text(servico.departamento, 5 * (campo_l + u), yo)
                                         doc.text(String(servico.id), 6 * (campo_l + u), yo)
@@ -262,8 +294,18 @@ const Relatorios = (props) => {
                                 doc.save('Relatorio.pdf')
                                 console.log("Saved!")
                             }
-                        }>
-                        Baixar
+                        }
+                        
+                        sx={{
+                            width: 'fit-content',
+                            paddingX: 2,
+                            height: 'fit-content',
+                            paddingY: 0.15,
+                            '& span': {
+                                margin: 0
+                            }
+                        }}>
+                        Imprimir
                     </Button>
                     <Typography align="left" margin={2} ref={pdfRef}>
                         <Stack component={Card} padding={4} spacing={3}>
@@ -282,6 +324,9 @@ const Relatorios = (props) => {
                                     <TableRow>
                                         <TableCell colSpan={2}>
                                             Assunto
+                                        </TableCell>
+                                        <TableCell>
+                                            Data
                                         </TableCell>
                                         <TableCell>
                                             Atendente
@@ -321,6 +366,9 @@ const Relatorios = (props) => {
                                                     <Typography>
                                                         {r.assunto}
                                                     </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    {(new Date(r.createdAt)).toISOString().split('T')[0]}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Typography>

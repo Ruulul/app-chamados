@@ -8,6 +8,23 @@ const Home = () => {
   const [nome, setNome] = useState("Carregando...")
   const [contagemPrazo, setPrazo] = useState({vencidos: 0, hoje: 0, semana: 0})
 
+  let conversao = 
+  ["Jan", "Jan", 
+  "Feb", "Fev", 
+  "Mar", "Mar", 
+  "Apr", "Abr", 
+  "May", "Mai", 
+  "Jun", "Jun", 
+  "Jul", "Jul", 
+  "Aug", "Ago", 
+  "Sep", "Set", 
+  "Oct", "Out", 
+  "Nov", "Nov", 
+  "Dec", "Dez"]
+  let agora = Date().split(' ')
+
+  let geraISOhoje = (agora, conversao) => `${agora[3]}-${conversao.indexOf(agora[1])/2 + 1}-${agora[2]}T${agora[4]}Z`
+
   const redirect = useNavigate()
   useEffect(()=>{
     axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
@@ -29,20 +46,23 @@ const Home = () => {
           let amanha = new Date()
           semana.setDate(hoje.getDate() + (5 + 7 - hoje.getDay()) % 7)
           amanha.setDate(hoje.getDate() + 1)
-          data !== "Não autorizado" ? data.forEach((servico, i) => {
+          hoje = hoje.toISOString()
+          semana = semana.toISOString()
+          amanha = amanha.toISOString()
+          data !== "Não autorizado" ? data.forEach((servico) => {
             //console.log(i)
             //console.log(hoje)
             //console.log(amanha)
             //console.log(semana)
-            let prazo = new Date(servico.prazo)
+            let prazo = servico.prazo
             //console.log(prazo)
             if (prazo < hoje)
               novoPrazo.vencidos += 1
-            if (prazo.toDateString() === hoje.toDateString())
+            if (prazo.split('T')[0] === hoje.split('T')[0])
               novoPrazo.hoje += 1
             if (prazo > amanha && prazo <= semana)
               novoPrazo.semana += 1
-            if (servico.createdAt.split('T')[0] === hoje.toISOString().split('T')[0])
+            if (servico.createdAt.split('T')[0] === hoje.split('T')[0])
               novaContagem.novos += 1
             if (servico.atendimento === "true")
               novaContagem.atendimento += 1
@@ -59,20 +79,6 @@ const Home = () => {
       clearInterval(interval)
     }
   },[])
-
-  let conversao = 
-  ["Jan", "Jan", 
-  "Feb", "Fev", 
-  "Mar", "Mar", 
-  "Apr", "Abr", 
-  "May", "Mai", 
-  "Jun", "Jun", 
-  "Jul", "Jul", 
-  "Aug", "Ago", 
-  "Sep", "Set", 
-  "Oct", "Out", 
-  "Nov", "Nov", 
-  "Dec", "Dez"]
   return (
     <Grid container item xs={12} display="flex" direction="row" justifyContent="space-between">
     <Grid item container spacing={2} component={Card} elevation={5} xs={12} md={6} lg={4} xl={3} sx={{padding: 3, marginTop: 3, zIndex:1}}>
@@ -89,7 +95,7 @@ const Home = () => {
       </Grid>
       <Grid item xs={12}>
         <Typography variant="h5">
-          Tickets abertos:
+          Tickets abertos
         </Typography>
         <Divider sx={{backgroundColor: "#2DB5FA", borderWidth:1, width:1}} />
       </Grid>
@@ -110,14 +116,14 @@ const Home = () => {
       </Grid>
       
       <Grid item xs={12}>
+        <Typography variant="h5">
+          Vencimentos
+        </Typography>
         <Divider sx={{backgroundColor: "#2DB5FA", borderWidth:1, width:1}} />
       </Grid>
 
       <Grid item xs={12}>
         <Stack spacing={1}>
-        <Typography variant="h5" pb={3}>
-          Vencimentos
-        </Typography>
         <Typography>
         🟥 {contagemPrazo.vencidos} vencidos
         </Typography>
@@ -131,12 +137,11 @@ const Home = () => {
       </Grid>
     </Grid>
     <Grid item component={Card} xs={2}  elevation={5} sx={{padding: 0, maxHeight:250, margin: 10, marginTop: 3, zIndex:1}}>
-      <Typography align="center" paddingTop={3} paddingBottom={2} variant="h4" sx={{backgroundColor: '#EB5655'}}>
-        {conversao[conversao.indexOf(Date().split(' ')[1]) + 1]}
+      <Typography align="center" paddingTop={3} paddingBottom={2} variant="h4" sx={{backgroundColor: '#B71B00', color: "#E6E6E6"}}>
+        {conversao[conversao.indexOf(agora[1]) + 1]}
       </Typography>
-      <Divider />
       <Typography align="center" marginTop={3} variant="h1">
-        {Date().split(' ')[2]}
+        {agora[2]}
       </Typography>
     </Grid>
     </Grid>

@@ -448,7 +448,10 @@ app.post('/api/alterasenha', async (req, res) => {
       return
     }
     req.session.valid = false
+    if (usuario[0].senha !== "")
     req.session.valid = await bcrypt.compare(req.body.senhaatual, usuario[0].senha)
+    else
+    req.session.valid = true
     if (req.session.valid) {
       req.session.usuarioId = usuario[0].id
       req.body.senha = await bcrypt.hash(req.body.senha, 12)

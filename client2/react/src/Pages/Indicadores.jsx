@@ -354,7 +354,6 @@ const IndicadoresMui = (props) => {
     useEffect(()=>{
         const setAll = () => {
             setarServicosTodos().then((s)=>{
-                console.log(s.filter(s=>s.status!=="fechado").map(s=>({tipo: s.tipo, status: s.status, prioridade: s.prioridade})))
                 setarServicosAbertos(s)
                 setarServicosPendentes(s)
                 setarServicosResolvidos(s)

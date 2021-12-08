@@ -14,8 +14,8 @@ export default function MudarSenha() {
         enviando: false, 
         error: undefined
     }
+    const [, update] = useState({})
     function reducer(state, action) {
-        const [, update] = useState({})
         if (action.type === "enviando" || action.type === "error")
             state[action.type] = action.payload
         else
