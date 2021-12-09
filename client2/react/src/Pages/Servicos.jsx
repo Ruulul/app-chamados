@@ -31,6 +31,7 @@ export default function servicosStatus() {
           setservicosStatus(res.data)
         })
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
+      getServicos()
       let interval = setInterval(getServicos, 500)
       return ()=>{
         clearInterval(interval)
@@ -49,6 +50,7 @@ export default function servicosStatus() {
           setservicosTipo(res.data)
         })
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
+        getServicos()
         let interval = setInterval(getServicos, 500)
         return ()=>{
           clearInterval(interval)

@@ -195,7 +195,7 @@ const RadialBar = ({ values, size, ...props }) => {
                     '& .MuiCircularProgress-svg': {
                         rotate: `${values.slice(0, index).reduce((pv, co)=>pv+co.value, 0)/100 * 360}deg`,
                         color: color_color
-                    }
+                    },
                 }
               }}
               className={classes.bar}

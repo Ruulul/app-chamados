@@ -76,6 +76,7 @@ const Home = () => {
         .catch(err=>console.error("Erro obtendo serviços.\n"+err));
       return ()=>{setServicos(undefined)}
     }
+    getServicos()
     let interval = setInterval(getServicos, 500)
     return ()=>{
       clearInterval(interval)
