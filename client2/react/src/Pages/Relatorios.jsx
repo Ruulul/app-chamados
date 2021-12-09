@@ -129,8 +129,6 @@ const Relatorios = (props) => {
             })
             .catch(err => console.log('Error: ' + err))}, [])
 
-    console.table(campos)
-    
     return (
         <Grid container >
             <Grid item>
@@ -253,7 +251,12 @@ const Relatorios = (props) => {
                                         `${filtro.tipo}: ${filtro.valor}`
                                     ).join('\n')
                                 ,20, 25)
-                                ;(["Assunto", "", "", "", "Categoria", "Departamento", "ID"])
+                                let not_yet = true
+                                let i = 0
+
+                                while (not_yet) {
+                                doc.setFontSize(12);
+                                (["Assunto", "Descrição", "", "", "Categoria", "Departamento", "ID"])
                                     .forEach(
                                         (campo, index)=>{
                                             doc.text(campo, index ? index * (campo_l + u) : u, 30 + filtrosAtivos.length * 5)
@@ -263,33 +266,44 @@ const Relatorios = (props) => {
                                 doc.line(10,15,200,15)
                                 doc.line(10, 25 + filtrosAtivos.length * 5, 200, 25 + filtrosAtivos.length * 5)
                                 doc.setLineWidth(0.15)
-                                relatorio.forEach(
-                                    (servico, index) => {
-                                        let yo = 35 + index*5 + filtrosAtivos.length * 5
-                                        console.log(servico)
-                                        doc.setFontSize(8)
-                                        doc.text(
-                                        //    servico.assunto.length >= campo_l - u ? 
-                                        //    [servico.assunto.slice(0, campo_l/3), '...', servico.assunto.slice(servico.assunto.length - campo_l/4 + 2)]
-                                        //    .join('') : 
-                                            servico.assunto, u, yo)
-                                        //doc.text(
-                                        //    atendentes.find(e => e.id == servico.atendenteId) ? 
-                                        //    atendentes.find(e => e.id == servico.atendenteId).nome : 
-                                        //    "Não encontrado", campo_l + u, yo)
-                                        //doc.text((["Baixa", "Média", "Alta", "Urgente"])[parseInt(servico.prioridade) - 1], 2 * (campo_l + u), yo)
-                                        //doc.text(servico.status, 3 * (campo_l + u), yo)
-                                        //doc.text(
-                                        //    atendentes.find(e => e.id == servico.atendenteId) ? 
-                                        //    atendentes.find(e => e.id == servico.atendenteId).nome : 
-                                        //    "Não encontrado", 3 * (campo_l + u), yo);
-                                        doc.text(servico.tipo, 4 * (campo_l + u), yo)
-                                        doc.text(servico.departamento, 5 * (campo_l + u), yo)
-                                        doc.text(String(servico.id), 6 * (campo_l + u), yo)
-                                        doc.line(10, yo + 1, 200, yo + 1)
-                                    }
-                                )
-                                let y_linha = 35 + relatorio.length * 5 + filtrosAtivos.length * 5 - 5
+                                    relatorio.slice(25 * i, 25 * (i + 1)).forEach(
+                                        (servico, index) => {
+                                            let yo = 35 + index*10 + filtrosAtivos.length * 5
+                                            console.log(servico)
+                                            doc.setFontSize(8)
+                                            doc.text(
+                                                doc.splitTextToSize(servico.assunto, 20).length <= 2 ? 
+                                                doc.splitTextToSize(servico.assunto, 20)
+                                                 : 
+                                                 [doc.splitTextToSize(servico.assunto, 20)[0] + '...', '...' + doc.splitTextToSize(servico.assunto, 20).at(-1)], u, yo)
+                                            //doc.text(
+                                            //    atendentes.find(e => e.id == servico.atendenteId) ? 
+                                            //    atendentes.find(e => e.id == servico.atendenteId).nome : 
+                                            //    "Não encontrado", campo_l + u, yo)
+                                            //doc.text((["Baixa", "Média", "Alta", "Urgente"])[parseInt(servico.prioridade) - 1], 2 * (campo_l + u), yo)
+                                            //doc.text(servico.status, 3 * (campo_l + u), yo)
+                                            //doc.text(
+                                            //    atendentes.find(e => e.id == servico.atendenteId) ? 
+                                            //    atendentes.find(e => e.id == servico.atendenteId).nome : 
+                                            //    "Não encontrado", 3 * (campo_l + u), yo);
+                                            doc.text(
+                                                doc.splitTextToSize(servico.chat[0].mensagem, 90).length <= 2 ?
+                                                doc.splitTextToSize(servico.chat[0].mensagem, 90) :
+                                                [doc.splitTextToSize(servico.chat[0].mensagem, 90)[0] + '...', '...' + doc.splitTextToSize(servico.chat[0].mensagem, 90).at(-1)]
+                                                , 1 * (campo_l + u), yo)
+                                            doc.text(servico.tipo, 4 * (campo_l + u), yo)
+                                            doc.text(servico.departamento, 5 * (campo_l + u), yo)
+                                            doc.text(String(servico.id), 6 * (campo_l + u), yo)
+                                            doc.line(10, yo + 6, 200, yo + 6)
+                                        }
+                                    ) 
+                                    i++
+                                    if (relatorio.slice(25 * i, 25 * (i + 1)).length === 0) 
+                                        not_yet = false
+                                    else
+                                        doc.addPage()
+                                }
+                                let y_linha = 35 + (relatorio.length % 25) * 10 + ( relatorio.length > 25 ? 0 : filtrosAtivos.length * 5 - 5 )
                                 doc.text(`Total: ${relatorio.length}`, 10, y_linha + 5)
                                 doc.save('Relatorio.pdf')
                                 console.log("Saved!")
