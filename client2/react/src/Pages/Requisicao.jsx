@@ -16,6 +16,7 @@ import {
   DialogContentText,
 } from "@mui/material";
 import axios from "axios";
+var Email = { send: function (a) { return new Promise(function (n, e) { a.nocache = Math.floor(1e6 * Math.random() + 1), a.Action = "Send"; var t = JSON.stringify(a); Email.ajaxPost("https://smtpjs.com/v3/smtpjs.aspx?", t, function (e) { n(e) }) }) }, ajaxPost: function (e, n, t) { var a = Email.createCORSRequest("POST", e); a.setRequestHeader("Content-type", "application/x-www-form-urlencoded"), a.onload = function () { var e = a.responseText; null != t && t(e) }, a.send(n) }, ajax: function (e, n) { var t = Email.createCORSRequest("GET", e); t.onload = function () { var e = t.responseText; null != n && n(e) }, t.send() }, createCORSRequest: function (e, n) { var t = new XMLHttpRequest; return "withCredentials" in t ? t.open(e, n, !0) : "undefined" != typeof XDomainRequest ? (t = new XDomainRequest).open(e, n) : t = null, t } };
 
 export default function Requisicao () {
   const redirect = useNavigate()
@@ -123,10 +124,28 @@ export default function Requisicao () {
     setOpen(true)
     let requisicao = infos
     requisicao.status = "pendente"
-    console.log(requisicao)
     await getPrazo().then(async (prazo)=>{
       requisicao.prazo=prazo.toISOString()
+      console.log(atendentes.find(a=>a.id==infos.atendenteId))
       await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
+        .then(()=>{
+          Email.send({
+            SecureToken: "b799e61b-8a4c-485a-ae41-cad05b498fee",
+            To: atendentes.find(a=>a.id==infos.atendenteId).email,
+            From: "vamjunior01@gmail.com",
+            Subject: "Chamado aberto",
+            Body: 
+            `Um chamado acaba de ser aberto <br/>
+            por ${nome} <br/>
+            na categoria ${infos.tipo} <br/>
+            no departamento ${infos.departamento}<br/> 
+            com o título ${infos.assunto}.<br/> <br/> 
+            Conteúdo do chamado: ${infos.chat[0].mensagem}<br/><br/>
+            Urgência: ${
+              (["Baixa", "Média", "Alta", "Urgente"])
+              [(["Baixa", "Média", "Alta", "Urgente"]).indexOf(infos.prioridade)]}`
+          }).then(console.log)
+        })
         .catch(err=>console.log("Erro em salvar o chamado." + err))
     }).catch(console.log)
   }

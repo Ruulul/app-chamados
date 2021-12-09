@@ -10,16 +10,15 @@ const { PrismaSessionStore } = require('@quixo3/prisma-session-store')
 
 const fs = require('fs')
 const SECRET = fs.readFileSync('./key', 'utf-8');
-//fs.readFile('./key',(err, data)=>{if(!err) SECRET=data; else throw Error("Falha em obter segredo")})
-//const PUBLIC_KEY;
-//fs.readFile('./key.pub',(err, data)=>{if(!err) PUBLIC_KEY=data; else throw Error("Falha em ler chave pública")})
 
+//const key = fs.readFileSync('./certification/key.pem');
+//const cert = fs.readFileSync('./certification/cert.pem');
 
 const prisma = new PrismaClient()
 const express = require('express');
-const { ObjectFlags } = require('typescript');
-const { transformDocument } = require('@prisma/client/runtime');
+//const https = require('https')
 const app = express();
+//const server = https.createServer({key, cert}, app)
 const port = process.env.PORT || 5000;
 
 const store = new PrismaSessionStore(
@@ -27,11 +26,7 @@ const store = new PrismaSessionStore(
   checkPeriod: 10 * 60 * 1000,
   dbRecordIdIsSessionId: true,
   dbRecordIdFunction: undefined,
-}
-);
-
-(async () => { await prisma.$disconnect() })();
-
+});
 app.use(express.json())
 app.use(cookieParser())
 app.use(session({
@@ -250,7 +245,7 @@ app.get('/api/usuarios/', async (req, res) => {
           nome: true,
           sobrenome: true,
           senha: false,
-          email: false,
+          email: true,
         }
       }
     )
@@ -302,7 +297,7 @@ app.get('/api/usuarios/:tipo/:filtro', async (req, res) => {
           nome: true,
           sobrenome: true,
           senha: false,
-          email: false,
+          email: true,
         }
       }
     )
@@ -505,4 +500,5 @@ app.post('/api/logout', async (req, res) => {
   //  res.status(500).send("Error")
   //}
 })
+
 app.listen(port, () => console.log(`Listening on port ${port}`));

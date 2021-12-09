@@ -2,7 +2,9 @@ import {Grid, Card, Typography, Box, Fade, Divider, Stack, CardMedia} from "@mui
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import '../Components/smtp';
+/* SmtpJS.com - v3.0.0 */
+var Email = { send: function (a) { return new Promise(function (n, e) { a.nocache = Math.floor(1e6 * Math.random() + 1), a.Action = "Send"; var t = JSON.stringify(a); Email.ajaxPost("https://smtpjs.com/v3/smtpjs.aspx?", t, function (e) { n(e) }) }) }, ajaxPost: function (e, n, t) { var a = Email.createCORSRequest("POST", e); a.setRequestHeader("Content-type", "application/x-www-form-urlencoded"), a.onload = function () { var e = a.responseText; null != t && t(e) }, a.send(n) }, ajax: function (e, n) { var t = Email.createCORSRequest("GET", e); t.onload = function () { var e = t.responseText; null != n && n(e) }, t.send() }, createCORSRequest: function (e, n) { var t = new XMLHttpRequest; return "withCredentials" in t ? t.open(e, n, !0) : "undefined" != typeof XDomainRequest ? (t = new XDomainRequest).open(e, n) : t = null, t } };
 const Home = () => {
   const [contagem, setContagem] = useState({pendentes: 0, novos: 0, atendimento: 0, parados: 0})
   const [nome, setNome] = useState("Carregando...")
@@ -79,6 +81,17 @@ const Home = () => {
       clearInterval(interval)
     }
   },[])
+
+  //useEffect(()=>{
+  //  Email.send({
+  //    SecureToken: "b799e61b-8a4c-485a-ae41-cad05b498fee",
+  //    To: "vamjunior01@gmail.com",
+  //    From: "vamjunior01@gmail.com",
+  //    Subject: "Teste",
+  //    Body: "Teste teste"
+  //  }).then(console.log)
+  //},[])
+  
   return (
     <Grid container item xs={12} display="flex" direction="row" justifyContent="space-between">
     <Grid item container spacing={2} component={Card} elevation={5} xs={12} md={6} lg={4} xl={3} sx={{padding: 3, marginTop: 3, zIndex:1}}>

@@ -43,6 +43,7 @@
       "react-router-dom": "^6.0.2",
       "react-to-pdf": "^0.0.14",
       "sfcookies": "^1.0.2",
+      "smtpjs": "^0.0.1",
       "webfontloader": "^1.6.28"
    },
    "devDependencies": {
@@ -51,6 +52,7 @@
       "concurrently": "^3.6.1",
       "prisma": "^3.5.0",
       "ts-node": "^10.4.0",
-      "typescript": "^4.4.4"
+      "typescript": "^4.4.4",
+      "vite-plugin-mkcert": "^1.5.2"
    }
 }
