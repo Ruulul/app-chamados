@@ -166,6 +166,7 @@ const IndicadoresMui = (props) => {
         setarServicosResolvidos(s);
       });
     };
+    setAll()
     let interval = setInterval(setAll, 2000);
     return () => {
       clearInterval(interval);

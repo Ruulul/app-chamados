@@ -143,7 +143,7 @@ export default function Requisicao () {
             Conteúdo do chamado: ${infos.chat[0].mensagem}<br/><br/>
             Urgência: ${
               (["Baixa", "Média", "Alta", "Urgente"])
-              [(["Baixa", "Média", "Alta", "Urgente"]).indexOf(infos.prioridade)]}`
+              [(["Baixa", "Média", "Alta", "Urgente"]).indexOf(infos.prioridade - 1)]}`
           }).then(console.log)
         })
         .catch(err=>console.log("Erro em salvar o chamado." + err))

@@ -393,7 +393,7 @@ app.get('/api/usuario/:id', (req, res) => {
       nome: true,
       sobrenome: true,
       senha: false,
-      email: false,
+      email: true,
     }
   }).then((usuario) => {
     res.send(usuario)
