@@ -4,7 +4,7 @@ import { faPlusCircle, faPen } from "@fortawesome/free-solid-svg-icons";
 
 import { Typography } from "@mui/material";
 
-import axios from "axios";
+import axios from "../Components/Requisicao";
 
 import {
   Card,
@@ -73,10 +73,7 @@ export default function Chamado() {
 
   useLayoutEffect(() => {
     const getInfos = () => {
-      axios
-        .get("http://10.0.0.83:5000/api/servico/" + infos.id, {
-          withCredentials: true,
-        })
+      axios("get", "/api/servico/" + infos.id)
         .then(({ data }) => {
           if (data === "Não autorizado") redirect("/login");
           setInfos(data);
@@ -93,13 +90,9 @@ export default function Chamado() {
     };
   }, [infos]);
   useLayoutEffect(() => {
-    axios
-      .get("http://10.0.0.83:5000/api/usuario/" + infos.atendenteId, {
-        withCredentials: true,
-      })
-      .then(({ data }) => {
-        setAtendente(data);
-      });
+    axios("get", "/api/usuario/" + infos.atendenteId).then(({ data }) => {
+      setAtendente(data);
+    });
   }, [isCarregado]);
 
   return (
@@ -148,13 +141,9 @@ export default function Chamado() {
             infos={infos}
             mudastatus={(novasInfos) => {
               setInfos(novasInfos);
-              axios
-                .get(
-                  "http://10.0.0.83:5000/api/usuario/" + novasInfos.atendenteId,
-                  { withCredentials: true }
-                )
-                .then(({data}) => {
-                  console.log(data)
+              axios("get", "/api/usuario/" + novasInfos.atendenteId).then(
+                ({ data }) => {
+                  console.log(data);
                   Email.send({
                     SecureToken: "b799e61b-8a4c-485a-ae41-cad05b498fee",
                     To: data.email,
@@ -162,7 +151,8 @@ export default function Chamado() {
                     Subject: `Chamado sobre "${novasInfos.assunto}" modificado`,
                     Body: `O chamado de id ${novasInfos.id} teve seu status modificado para ${novasInfos.status}.`,
                   }).then(console.log);
-                });
+                }
+              );
             }}
             addMensagem={setMensagem}
           />
@@ -265,12 +255,7 @@ const Mensagens = (props) => {
                   alert("Isso definitivamente não devia aparecer");
               }
               if (servico)
-                axios
-                  .post(
-                    "http://10.0.0.83:5000/api/update/servico/" + servico.id,
-                    servico,
-                    { withCredentials: true }
-                  )
+                axios("post", "/api/update/servico/" + servico.id, servico)
                   .then((res) => props.mudastatus(servico))
                   .catch((err) =>
                     console.error("Falha em salvar o serviço \n" + err)
@@ -297,8 +282,7 @@ const AddMensagem = (props) => {
   const [nome, setNome] = useState(undefined);
 
   useEffect(async () => {
-    await axios
-      .get("http://10.0.0.83:5000/api/perfil", { withCredentials: true })
+    await axios("get", "/api/perfil")
       .then(({ data }) => {
         setNome(data.nome);
         setAutor(data.id);
@@ -316,12 +300,7 @@ const AddMensagem = (props) => {
     event.preventDefault();
     let novasInfos = props.infos;
     novasInfos.chat.push({ autorId: autorId, mensagem });
-    axios
-      .post(
-        "http://10.0.0.83:5000/api/update/servico/" + novasInfos.id,
-        novasInfos,
-        { withCredentials: true }
-      )
+    axios("post", "/api/update/servico/" + novasInfos.id, novasInfos)
       .then((res) => props.setMensagem(false))
       .catch((err) => console.error("Erro em adicionar mensagem. \n" + err));
   }
@@ -360,10 +339,7 @@ const AddMensagem = (props) => {
 const Mensagem = (props) => {
   const [autor, setAutor] = useState(undefined);
   useEffect(() => {
-    axios
-      .get("http://10.0.0.83:5000/api/usuario/" + props.autorId, {
-        withCredentials: true,
-      })
+    axios("get", "/api/usuario/" + props.autorId)
       .then(({ data }) => setAutor(data))
       .catch(({ erro }) => setAutor(erro));
   }, []);

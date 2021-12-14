@@ -8,7 +8,7 @@ import {Link} from "react-router-dom"
 
 import { Grid, Button } from "@mui/material";
 import Stack from "@mui/material/Stack";
-import axios from "axios";
+import axios from "./Requisicao";
 import { useNavigate } from "react-router-dom"
 
 const UpBar = (props) => {
@@ -31,9 +31,9 @@ const UpBar = (props) => {
               variant="contained"
               color={variant}
               onClick={async ()=>{
-                await axios.post('http://10.0.0.83:5000/api/logout', {}, { withCredentials: true })
+                await axios("post", '/api/logout')
                   .then(()=>redirect("/login"))
-                  .catch(()=>setVariant("error"))
+                  .catch((err)=>{console.log(err);return setVariant("error")})
               }}
               
               sx={{

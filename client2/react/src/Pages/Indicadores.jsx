@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import axios from "axios";
+import axios from "../Components/Requisicao";
 import {
   Card,
   Typography,
@@ -27,8 +27,8 @@ import { useNavigate } from "react-router-dom";
 
 async function Servicos(filtro) {
   let Tabela = "Não autorizado";
-  await axios
-    .get("http://10.0.0.83:5000/api/servicos", { withCredentials: true })
+  await axios(
+    "get", "/api/servicos")
     .then(({ data }) => {
       if (data === "Não autorizado") return "Não autorizado";
       switch (filtro) {

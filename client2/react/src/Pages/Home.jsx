@@ -8,7 +8,7 @@ import {
   Stack,
   CardMedia,
 } from "@mui/material";
-import axios from "axios";
+import axios from "../Components/Requisicao";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Chat from "../Components/Chat";
@@ -103,8 +103,8 @@ const Home = () => {
 
   const redirect = useNavigate();
   useEffect(() => {
-    axios
-      .get("http://10.0.0.83:5000/api/perfil", { withCredentials: true })
+    axios(
+      "get","/api/perfil")
       .then(({ data }) => {
         if (data === "Não autorizado") redirect("/login");
         setNome(data.nome);
@@ -116,10 +116,8 @@ const Home = () => {
   }, []);
   useEffect(() => {
     const getServicos = () => {
-      axios
-        .get("http://10.0.0.83:5000/api/servicos/status/pendente", {
-          withCredentials: true,
-        })
+      axios(
+        "get","/api/servicos/status/pendente")
         .then(({ data }) => {
           if (data === "Não autorizado") redirect("/login");
           let novaContagem = {

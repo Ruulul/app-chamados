@@ -8,7 +8,7 @@ import {
   faBookOpen
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom";
-import axios from "axios";
+import req from "./Requisicao";
 import { Button, Stack, Badge, Tooltip } from "@mui/material";
 
 const SideBar = function (props) {
@@ -21,7 +21,7 @@ const SideBar = function (props) {
     }
   },[])
   useEffect(async ()=>{
-    await axios.get("http://10.0.0.83:5000/api/servicos/status/pendente", { withCredentials: true })
+    await req("get", "/api/servicos/status/pendente")
       .then(({data})=>{
         setPendentes(data.length)
       }).catch((err)=>{setPendentes(0);update({});console.log(err)})

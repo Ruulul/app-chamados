@@ -15,7 +15,7 @@ import {
     TableBody,
     Stack
 } from "@mui/material"
-import axios from "axios"
+import axios from "../Components/Requisicao"
 import { createRef, useEffect, useLayoutEffect, useMemo, useState } from "react"
 
 import { jsPDF } from 'jspdf';
@@ -52,28 +52,28 @@ const Relatorios = (props) => {
 
                 switch (filtro.tipo) {
                     case "Departamento":
-                        data = await axios.get('http://10.0.0.83:5000/api/servicos/departamento/' + filtro.valor, { withCredentials: true })
+                        data = await axios("get",'/api/servicos/departamento/' + filtro.valor)
                         let serD = data.data
                         serDs = [...serDs, ...serD]
                         break;
                     case "Atendente":
-                        data = await axios.get('http://10.0.0.83:5000/api/servicos/atendenteId/' + filtro.valor, { withCredentials: true })
+                        data = await axios("get",'/api/servicos/atendenteId/' + filtro.valor)
                         let serA = data.data
                         console.log(serA)
                         serAs = [...serAs, ...serA]
                         break;
                     case "Categoria":
-                        data = await axios.get('http://10.0.0.83:5000/api/servicos/tipo/' + filtro.valor, { withCredentials: true })
+                        data = await axios("get",'/api/servicos/tipo/' + filtro.valor)
                         let serC = data.data
                         serCs = [...serCs, ...serC]
                         break;
                     case "Urgência":
-                        data = await axios.get('http://10.0.0.83:5000/api/servicos/prioridade/' + filtro.valor, { withCredentials: true })
+                        data = await axios("get",'/api/servicos/prioridade/' + filtro.valor)
                         let serU = data.data
                         serUs = [...serUs, ...serU]
                         break;
                     case "Status":
-                        data = await axios.get('http://10.0.0.83:5000/api/servicos/status/' + filtro.valor, { withCredentials: true })
+                        data = await axios("get",'/api/servicos/status/' + filtro.valor)
                         let serS = data.data
                         serSs = [...serSs, ...serS]
                         break;
@@ -81,7 +81,7 @@ const Relatorios = (props) => {
             }
             let relatoriodata =
                 filtrosAtivos.filter(a=>!a.tipo.includes('Data')).length === 0 ?
-                    ({ data } = await axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true }),
+                    ({ data } = await axios("get",'/api/servicos'),
                         data) :
                     ([serDs, serAs, serCs, serSs, serUs])
                         .reduce(
@@ -104,7 +104,7 @@ const Relatorios = (props) => {
 
     useLayoutEffect(() => {
         console.log("a")
-        axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
+        axios("get",'/api/servicos')
             .then(({ data }) => {
                 let Departamento = data.map(s => s.departamento)
                 Departamento = [...new Set(Departamento)]
@@ -120,7 +120,7 @@ const Relatorios = (props) => {
     }, [])
 
     useEffect(()=>{
-        axios.get('http://10.0.0.83:5000/api/usuarios', { withCredentials: true })
+        axios("get",'/api/usuarios')
             .then(({ data }) => {
                 let Usuario = data.map(s => s.nome)
                 let Atendentes = [...new Set(Usuario)]

@@ -16,7 +16,7 @@ import {
     Card,
 } from "@mui/material";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../Components/Requisicao";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEnvelopeOpen } from "@fortawesome/free-solid-svg-icons";
@@ -26,7 +26,7 @@ export default function Avisos(props) {
     const redirect = useNavigate()
     useEffect(()=>{
         const getServicos = ()=>{
-            axios.get("http://10.0.0.83:5000/api/servicos/status/pendente", { withCredentials: true })
+            axios("get","/api/servicos/status/pendente")
                 .then(({data})=>{
                     data.forEach((servico, index)=>{
                         let criado_em = new Date(servico.createdAt)

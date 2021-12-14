@@ -15,7 +15,7 @@ import {
   DialogContent,
   DialogContentText,
 } from "@mui/material";
-import axios from "axios";
+import axios from "../Components/Requisicao";
 var Email = { send: function (a) { return new Promise(function (n, e) { a.nocache = Math.floor(1e6 * Math.random() + 1), a.Action = "Send"; var t = JSON.stringify(a); Email.ajaxPost("https://smtpjs.com/v3/smtpjs.aspx?", t, function (e) { n(e) }) }) }, ajaxPost: function (e, n, t) { var a = Email.createCORSRequest("POST", e); a.setRequestHeader("Content-type", "application/x-www-form-urlencoded"), a.onload = function () { var e = a.responseText; null != t && t(e) }, a.send(n) }, ajax: function (e, n) { var t = Email.createCORSRequest("GET", e); t.onload = function () { var e = t.responseText; null != n && n(e) }, t.send() }, createCORSRequest: function (e, n) { var t = new XMLHttpRequest; return "withCredentials" in t ? t.open(e, n, !0) : "undefined" != typeof XDomainRequest ? (t = new XDomainRequest).open(e, n) : t = null, t } };
 
 export default function Requisicao () {
@@ -40,7 +40,7 @@ export default function Requisicao () {
 
   useEffect(()=>{
     const contaServicos = ()=>{
-      axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
+      axios("get",'/api/servicos')
         .then(({data})=>{
           if (data === "Não autorizado") redirect("/login")
           let novasInfos = infos;
@@ -57,7 +57,7 @@ export default function Requisicao () {
   }, [])
 
   useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
+    axios("get",'/api/perfil')
       .then(({data})=>{
         setNome(data.nome)
         let novasInfos = infos
@@ -69,7 +69,7 @@ export default function Requisicao () {
   },[])
 
   useEffect(()=>{
-    axios.get('http://10.0.0.83:5000/api/usuarios/area/' + infos.tipo, { withCredentials: true })
+    axios("get",'/api/usuarios/area/' + infos.tipo)
       .then(({data})=>{
         console.log(data)
         setAtendentes(data)
@@ -127,7 +127,7 @@ export default function Requisicao () {
     await getPrazo().then(async (prazo)=>{
       requisicao.prazo=prazo.toISOString()
       console.log(atendentes.find(a=>a.id==infos.atendenteId))
-      await axios.post('http://10.0.0.83:5000/api/novo/servico', requisicao, { withCredentials: true })
+      await axios("post",'/api/novo/servico', requisicao)
         .then(()=>{
           Email.send({
             SecureToken: "b799e61b-8a4c-485a-ae41-cad05b498fee",

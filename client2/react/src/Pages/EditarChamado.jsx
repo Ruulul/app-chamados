@@ -11,7 +11,7 @@ import {
   Input, 
   Button 
 } from "@mui/material";
-import axios from "axios";
+import axios from "../Components/Requisicao";
 
 export default function Requisicao () {
   const redirect = useNavigate()
@@ -34,7 +34,7 @@ export default function Requisicao () {
 
 
   useLayoutEffect(()=>{
-     axios.get('http://10.0.0.83:5000/api/usuarios/area/' + infos.tipo, { withCredentials: true })
+     axios("get",'/api/usuarios/area/' + infos.tipo)
       .then(({data})=>{
         setAtendentes(data)
         let novas_infos = {...infos}
@@ -46,7 +46,7 @@ export default function Requisicao () {
   },[infos.tipo])
 
   useEffect(()=>{
-     axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
+     axios("get",'/api/perfil')
       .then(({data})=>{
         setNome(data.nome)
       })
@@ -55,7 +55,7 @@ export default function Requisicao () {
 
   useEffect(()=>{
     console.log(idChamado)
-    axios.get("http://10.0.0.83:5000/api/servico/" + idChamado, { withCredentials: true })
+    axios("get","/api/servico/" + idChamado)
     .then(async ({data})=>{
     let chamado = data
     console.log("Puxando servico: ", data)
@@ -70,7 +70,7 @@ export default function Requisicao () {
       atendenteId: parseInt(chamado.atendenteId),
       status: chamado.status,
     })
-    axios.get("http://10.0.0.83:5000/api/usuario/" + chamado.atendenteId, { withCredentials: true })
+    axios("get","/api/usuario/" + chamado.atendenteId)
         .then(({data})=>{
             setAtendente(data.nome)
             console.log("Puxando atendente: ", infos)
@@ -120,7 +120,7 @@ export default function Requisicao () {
     await getPrazo().then(async (prazo)=>{
       if (typeof(infos.prazo) === "object")
       infos.prazo=prazo.toISOString()
-      await axios.post('http://10.0.0.83:5000/api/update/servico/' + idChamado, infos, { withCredentials: true })
+      await axios("post",'/api/update/servico/' + idChamado, infos)
         .then(res=>navigate('/servicos'))
         .catch(err=>console.log("Erro em salvar o chamado." + err))
     }).catch(console.log)

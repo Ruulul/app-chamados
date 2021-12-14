@@ -1,5 +1,5 @@
 import { Button, Grid, TextField, Stack } from "@mui/material";
-import axios from "axios";
+import axios from "../Components/Requisicao";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -25,7 +25,7 @@ export default function Registro() {
         event.preventDefault();
         const cadastro = {nome, sobrenome, email, senha};
         console.log({cadastro})
-        await axios.post("http://10.0.0.83:5000/api/novo/usuario", cadastro, { withCredentials: true })
+        await axios("post","/api/novo/usuario", cadastro)
             .then(({data})=>{
                 if (data === "Não autorizado")
                     redirect("/")
@@ -34,7 +34,7 @@ export default function Registro() {
         redirect("/")
     }
     useEffect(()=>{
-      axios.get('http://10.0.0.83:5000/api/perfil', { withCredentials: true })
+      axios("get", '/api/perfil')
         .then(({data})=>{
             console.log(data)
             if (data === "Não autorizado")

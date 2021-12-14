@@ -63,7 +63,9 @@ app.use(function (req, res, next) {
 app.get('/api/mensagem', (req, res) => {
   res.send({ express: 'Hello From Express' });
 });
-
+/* 
+Serviços
+*/
 app.post('/api/novo/servico', async (req, res) => {
   let servico = req.body
   let autorId = servico.autorId
@@ -236,6 +238,62 @@ app.get('/api/servicos/:tipo/:filtro', async (req, res) => {
     : res.send("Não autorizado")
 });
 
+app.get('/api/servico/:id', async (req, res) => {
+  req.session.valid ? prisma.chamado.findUnique({
+    where: {
+      id: parseInt(req.params.id)
+    }
+  }).then(
+    async (chamado) => {
+      let meta = Object.fromEntries((await prisma.metadadoChamado.findMany({ where: { chamado } })).map((md) => { return [md.nome, md.valor] }))
+      chamado.chat =
+        await prisma.mensagem
+          .findMany({
+            where: {
+              chamadoId: parseInt(req.params.id)
+            }
+          }
+          )
+      chamado = { ...chamado, ...meta }
+      res.send(chamado)
+    })
+    .catch((e) => res.status(500).send({ erro: "Falha em encontrar serviço " + req.params.id + `\n${e}` }))
+    : res.send("Não autorizado")
+})
+
+/*
+Usuários
+*/
+
+app.post('/api/novo/usuario', (req, res) => {
+  req.session.valid ? prisma.usuario.findMany({
+    where: {
+      email: req.body.email
+    }
+  }).then(async (usuario) => {
+    if (usuario.length !== 0) {
+      res.status(302).send("Email já registrado")
+      return
+    }
+    console.log(JSON.stringify(req.body))
+    req.body.senha = await bcrypt.hash(req.body.senha, 12)
+    return req.body
+  }, (err) => { res.status(500).send("Erro acessando o banco de dados") })
+    .then(async (data) => {
+      await prisma.usuario.create({
+        data: {
+          email: data.email,
+          senha: data.senha,
+          nome: data.nome,
+          sobrenome: data.sobrenome
+        }
+      })
+      res.status(200).send("Usuário criado com sucesso")
+      return
+    }, (err) => { res.status(500).send("Erro criando o usuário. \n" + err) })
+    : res.send("Não autorizado")
+})
+
 app.get('/api/usuarios/', async (req, res) => {
   req.session.valid ?
     prisma.usuario.findMany(
@@ -279,6 +337,18 @@ app.get('/api/usuarios/', async (req, res) => {
       )
     : res.send("Não autorizado")
 });
+
+app.get('/api/usuario/email/:email', (req, res) => {
+  req.session.valid ? prisma.usuario.findUnique({
+    where: {
+      email: req.params.email
+    }
+  }).then((usuario) => {
+    usuario !== "" ? res.send(usuario) : res.send("Usuário não encontrado")
+  }).catch((err) => {
+    res.status(500).send({ erro: "Falha em obter usuário " })
+  }) : res.send("Não autorizado")
+})
 
 app.get('/api/usuarios/:tipo/:filtro', async (req, res) => {
   req.session.valid ?
@@ -331,58 +401,6 @@ app.get('/api/usuarios/:tipo/:filtro', async (req, res) => {
     : res.send("Não autorizado")
 });
 
-app.get('/api/servico/:id', async (req, res) => {
-  req.session.valid ? prisma.chamado.findUnique({
-    where: {
-      id: parseInt(req.params.id)
-    }
-  }).then(
-    async (chamado) => {
-      let meta = Object.fromEntries((await prisma.metadadoChamado.findMany({ where: { chamado } })).map((md) => { return [md.nome, md.valor] }))
-      chamado.chat =
-        await prisma.mensagem
-          .findMany({
-            where: {
-              chamadoId: parseInt(req.params.id)
-            }
-          }
-          )
-      chamado = { ...chamado, ...meta }
-      res.send(chamado)
-    })
-    .catch((e) => res.status(500).send({ erro: "Falha em encontrar serviço " + req.params.id + `\n${e}` }))
-    : res.send("Não autorizado")
-})
-
-app.post('/api/novo/usuario', (req, res) => {
-  req.session.valid ? prisma.usuario.findMany({
-    where: {
-      email: req.body.email
-    }
-  }).then(async (usuario) => {
-    if (usuario.length !== 0) {
-      res.status(302).send("Email já registrado")
-      return
-    }
-    console.log(JSON.stringify(req.body))
-    req.body.senha = await bcrypt.hash(req.body.senha, 12)
-    return req.body
-  }, (err) => { res.status(500).send("Erro acessando o banco de dados") })
-    .then(async (data) => {
-      await prisma.usuario.create({
-        data: {
-          email: data.email,
-          senha: data.senha,
-          nome: data.nome,
-          sobrenome: data.sobrenome
-        }
-      })
-      res.status(200).send("Usuário criado com sucesso")
-      return
-    }, (err) => { res.status(500).send("Erro criando o usuário. \n" + err) })
-    : res.send("Não autorizado")
-})
-
 app.get('/api/usuario/:id', (req, res) => {
   req.session.valid ? prisma.usuario.findUnique({
     where: {
@@ -401,19 +419,132 @@ app.get('/api/usuario/:id', (req, res) => {
     res.status(500).send({ erro: "Falha em obter usuário " })
   }) : res.send("Não autorizado")
 })
+/*
+chat
+*/
+app.post('/api/novo/chat', (req, res) => {
+  let chat = req.body
+  let atendidoId = chat.atendidoId
+  let atendenteId = chat.atendenteId
+  let status = "pendente"
+  let assunto = chat.assunto
+  let descr = chat.descr
 
-app.get('/api/usuario/email/:email', (req, res) => {
-  req.session.valid ? prisma.usuario.findUnique({
-    where: {
-      email: req.params.email
-    }
-  }).then((usuario) => {
-    usuario !== "" ? res.send(usuario) : res.send("Usuário não encontrado")
-  }).catch((err) => {
-    res.status(500).send({ erro: "Falha em obter usuário " })
-  }) : res.send("Não autorizado")
+  req.session.valid ?
+    prisma.chat.create({
+      data: {
+        atendidoId,
+        atendenteId,
+        status,
+        metadados: {
+          createMany: {
+            data: Object.entries({
+              assunto, descr
+            }).map(md => ({ nome: md[0], valor: md[1] }))
+          }
+        }
+      }
+    })
+      .then(r => res.status(200).send(req.body))
+      .catch(err => res.status(500).send(err))
+    : res.send("Não autorizado")
 })
 
+app.post('/api/chat/:id/novo/mensagem', (req, res) => {
+  let mensagem = req.body
+  let chatId = req.params.id
+  let autorId = req.session.usuarioId
+
+  req.session.valid ?
+    prisma.mensagemChat.create({
+      chatId,
+      autorId,
+      mensagem
+    })
+      .then(r => res.status(200).send(req.body))
+      .catch(err => res.status(500).send(err))
+    : res.send("Não autorizado")
+})
+
+app.post('/api/update/chat/:id', (req, res) => {
+  let chatId = req.params.id
+  let novo_chat = req.body
+  let mensagens = novo_chat.mensagens
+  let status = novo_chat.status
+  let atendenteId = novo_chat.atendenteId
+  let metadados = Object.entries({
+    assunto: novo_chat.assunto,
+    descr: novo_chat.descr
+  }).map(md => ({ nome: md[0], valor: md[1] }))
+
+  req.session.valid ?
+    (prisma.chat.update({
+      where: {
+        id: chatId
+      },
+      data: {
+        status,
+        atendenteId,
+        mensagens: {
+          createMany: {
+            data: mensagens,
+            skipDuplicates: true
+          }
+        }
+      }
+    }),
+      ((() => {
+        for (let md of metadados)
+          prisma.metadadoChat.updateMany({
+            where: {
+              chatId,
+              nome: md.nome
+            },
+            data: {
+              valor: md.valor
+            }
+          })
+      })()),
+      (res.status(200).send(req.body)))
+    : res.send("Não autorizado")
+})
+
+app.get('/api/chat/:id/mensagens', (req, res) => {
+  if (req.session.valid)
+    prisma.mensagemChat.findMany({
+      where: {
+        chatId: req.params.id
+      }
+    }).then(mensagens=>res.status(200).send(mensagens))
+    .catch(err=>res.status(500).send(err))
+  else res.send("Não autorizado")
+})
+
+app.get('/api/chats/atendente/:atendenteId', (req, res) => {
+  if (req.session.valid)
+    prisma.chat.findMany({
+      where: {
+        atendenteId: req.params.atendenteId
+      }
+    }).then(chats=>res.status(200).send(chats))
+    .catch(err=>res.status(500).send(err))
+  else res.send("Não autorizado")
+})
+
+app.get('/api/chats/atendido/:atendidoId', (req, res) => {
+  if (req.session.valid)
+    prisma.chat.findMany({
+      where: {
+        atendidoId: req.params.atendidoId
+      }
+    }).then(chats=>res.status(200).send(chats))
+    .catch(err=>res.status(500).send(err))
+  else res.send("Não autorizado")
+})
+
+/*
+perfil e auth
+*/
 app.get('/api/perfil', async (req, res) => {
   req.session.valid ? await prisma.usuario.findUnique({ where: { id: req.session.usuarioId } })
     .then(usuario => {
