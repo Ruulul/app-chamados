@@ -6,10 +6,8 @@ import {
   useTheme,
   Paper,
   Typography,
-  createTheme,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import { indexOf } from "lodash";
 import { useMemo, useState  } from "react";
 
 const Donut = ({theme = undefined, angle = 0, label, value, size, ...props }) => {
@@ -135,6 +133,7 @@ const BarLabelled = ({ label, labels, size, ...props }) => {
 
 const RadialBar = ({ values, size, ...props }) => {
   const theme = useTheme();
+  console.log(useTheme)
   const useStyles = makeStyles(() => ({
     root: {
       display: "grid",
