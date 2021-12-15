@@ -32,7 +32,10 @@ const UpBar = (props) => {
               color={variant}
               onClick={async ()=>{
                 await axios("post", '/api/logout')
-                  .then(()=>redirect("/login"))
+                  .then(()=>{
+                    redirect("/login")
+                    window.location.reload()
+                  })
                   .catch((err)=>{console.log(err);return setVariant("error")})
               }}
               

@@ -296,7 +296,9 @@ const Home = () => {
           {agora[2]}
         </Typography>
       </Grid>
-      <Chat/>
+      <Chat sx={{
+        zIndex: 99
+      }}/>
     </Grid>
   );
 };

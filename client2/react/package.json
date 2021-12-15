@@ -8,6 +8,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@mui/icons-material": "^5.2.1",
     "popup-chat-react": "^1.0.5",
     "react": "^17.0.0",
     "react-dom": "^17.0.0"

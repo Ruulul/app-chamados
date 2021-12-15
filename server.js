@@ -424,17 +424,27 @@ chat
 */
 app.post('/api/novo/chat', (req, res) => {
   let chat = req.body
-  let atendidoId = chat.atendidoId
-  let atendenteId = chat.atendenteId
+  let atendidoId = req.session.usuarioId
+  let atendenteId = 1
   let status = "pendente"
   let assunto = chat.assunto
   let descr = chat.descr
 
+  console.log({ chat })
+
   req.session.valid ?
     prisma.chat.create({
       data: {
-        atendidoId,
-        atendenteId,
+        atendido: {
+          connect: {
+            id: atendidoId
+          }
+        },
+        atendente: {
+          connect: {
+            id: atendenteId
+          }
+        },
         status,
         metadados: {
           createMany: {
@@ -446,30 +456,39 @@ app.post('/api/novo/chat', (req, res) => {
       }
     })
       .then(r => res.status(200).send(req.body))
-      .catch(err => res.status(500).send(err))
+      .catch(err => {
+        console.log(err)
+        res.status(500).send(err)
+      })
     : res.send("Não autorizado")
 })
 
 app.post('/api/chat/:id/novo/mensagem', (req, res) => {
   let mensagem = req.body
-  let chatId = req.params.id
+  let chatId = parseInt(req.params.id)
   let autorId = req.session.usuarioId
-
+  delete mensagem.author
   req.session.valid ?
     prisma.mensagemChat.create({
-      chatId,
-      autorId,
-      mensagem
+      data: {
+        chatId,
+        autorId,
+        mensagem: JSON.stringify(
+          mensagem
+        )
+      }
     })
       .then(r => res.status(200).send(req.body))
-      .catch(err => res.status(500).send(err))
+      .catch(err => {
+        console.log(err)
+        res.status(500).send(err)
+      })
     : res.send("Não autorizado")
 })
 
 app.post('/api/update/chat/:id', (req, res) => {
   let chatId = req.params.id
   let novo_chat = req.body
-  let mensagens = novo_chat.mensagens
   let status = novo_chat.status
   let atendenteId = novo_chat.atendenteId
   let metadados = Object.entries({
@@ -480,19 +499,13 @@ app.post('/api/update/chat/:id', (req, res) => {
   req.session.valid ?
     (prisma.chat.update({
       where: {
-        id: chatId
+        id: parseInt(chatId)
       },
       data: {
         status,
-        atendenteId,
-        mensagens: {
-          createMany: {
-            data: mensagens,
-            skipDuplicates: true
-          }
-        }
+        atendenteId
       }
-    }),
+    }).catch(err=>console.log(err)),
       ((() => {
         for (let md of metadados)
           prisma.metadadoChat.updateMany({
@@ -503,7 +516,7 @@ app.post('/api/update/chat/:id', (req, res) => {
             data: {
               valor: md.valor
             }
-          })
+          }).catch(err=>console.log(err))
       })()),
       (res.status(200).send(req.body)))
     : res.send("Não autorizado")
@@ -513,40 +526,86 @@ app.get('/api/chat/:id/mensagens', (req, res) => {
   if (req.session.valid)
     prisma.mensagemChat.findMany({
       where: {
-        chatId: req.params.id
+        chatId: parseInt(req.params.id)
       }
-    }).then(mensagens=>res.status(200).send(mensagens))
-    .catch(err=>res.status(500).send(err))
+    }).then(mensagens => res.status(200).send(mensagens))
+      .catch(err => res.status(500).send(err))
   else res.send("Não autorizado")
 })
 
-app.get('/api/chats/atendente/:atendenteId', (req, res) => {
+app.get('/api/chats/atendente/:id', (req, res) => {
   if (req.session.valid)
     prisma.chat.findMany({
       where: {
-        atendenteId: req.params.atendenteId
+        atendenteId: parseInt(req.params.id)
+      },
+      select: {
+        id: true,
+        atendenteId: true,
+        atendidoId: true,
+        status: true,
+        mensagens: true,
+        metadados: true
       }
-    }).then(chats=>res.status(200).send(chats))
-    .catch(err=>res.status(500).send(err))
+    }).then(chats => {
+      res.status(200).send(chats)
+    })
+      .catch(err => {
+        console.log(err)
+        res.status(500).send(err)
+      })
   else res.send("Não autorizado")
 })
 
-app.get('/api/chats/atendido/:atendidoId', (req, res) => {
+app.get('/api/chats/atendido/:id', (req, res) => {
   if (req.session.valid)
     prisma.chat.findMany({
       where: {
-        atendidoId: req.params.atendidoId
+        atendidoId: parseInt(req.params.id)
+      },
+      select: {
+        id: true,
+        atendenteId: true,
+        atendidoId: true,
+        status: true,
+        mensagens: true,
+        metadados: true
       }
-    }).then(chats=>res.status(200).send(chats))
-    .catch(err=>res.status(500).send(err))
+    }).then(chats => res.status(200).send(chats))
+      .catch(err => res.status(500).send(err))
   else res.send("Não autorizado")
 })
 
+app.get('/api/chats/pendentes', (req, res) => {
+  req.session.valid ? (
+    (prisma.usuario
+      .findUnique({
+        where: {
+          id: req.session.usuarioId
+        },
+        select: {
+          metadados: true
+        }
+      })
+    ).then(usuario => {
+      if (usuario.metadados.find(md => md.nome == "tipo" && md.valor == "suporte"))
+        prisma.chat.findMany({
+          where: {
+            atendenteId: 1
+          },
+          select: {
+            id: true, atendenteId: true, mensagens: true, atendidoId: true, status: true, metadados: true
+          }
+        })
+          .then(chats => res.send(chats))
+    })
+  ) : res.send("Não autorizado")
+})
 /*
 perfil e auth
 */
 app.get('/api/perfil', async (req, res) => {
-  req.session.valid ? await prisma.usuario.findUnique({ where: { id: req.session.usuarioId } })
+  req.session.valid ? await prisma.usuario.findUnique({ where: { id: req.session.usuarioId }, select: {id: true, nome: true, sobrenome: true, metadados: true, email: true} })
     .then(usuario => {
       delete usuario.senha
       res.send(usuario)
@@ -621,15 +680,15 @@ app.post('/api/alterasenha', async (req, res) => {
 })
 
 app.post('/api/logout', async (req, res) => {
-  req.session.destroy((err) => { if (!err) { res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso") } else { res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.") } })
-  //try {
-  //req.session.valid = false
-  //req.session.save()
-  //res.status(200).send("OK")
-  //}  catch (e) {
-  //  console.log("Falha em logout. \n" + e)
-  //  res.status(500).send("Error")
-  //}
+  //req.session.destroy((err) => { if (!err) { res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso") } else { res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.") } })
+  try {
+  req.session.valid = false
+  req.session.save()
+  res.status(200).send("OK")
+  }  catch (e) {
+    console.log("Falha em logout. \n" + e)
+    res.status(500).send("Error")
+  }
 })
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
