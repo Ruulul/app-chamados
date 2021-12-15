@@ -503,14 +503,14 @@ app.post('/api/update/chat/:id', (req, res) => {
       },
       data: {
         status,
-        atendenteId
+        atendenteId: parseInt(atendenteId)
       }
     }).catch(err=>console.log(err)),
       ((() => {
         for (let md of metadados)
           prisma.metadadoChat.updateMany({
             where: {
-              chatId,
+              chatId: parseInt(chatId),
               nome: md.nome
             },
             data: {

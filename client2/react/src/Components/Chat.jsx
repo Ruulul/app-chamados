@@ -154,13 +154,6 @@ function Demo(props) {
   }
 
   function onClick() {
-    dispatch({
-      type: "state",
-      payload: {
-        field: "newMessagesCount",
-        value: 0,
-      },
-    });
     dispatch({ type: "closeChat" });
   }
 

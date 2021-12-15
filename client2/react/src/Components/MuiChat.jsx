@@ -138,11 +138,6 @@ export default function Chat({ chats, createChat, openChat, ...props }) {
           </Fade>
         )}
       </Popper>
-      <ClickAwayListener
-        onClickAway={() => {
-          open(false);
-        }}
-      >
         <Fab
           {...props}
           onClick={(event) => {
@@ -157,7 +152,6 @@ export default function Chat({ chats, createChat, openChat, ...props }) {
             <MarkUnreadChatAlt />
           ) : undefined}
         </Fab>
-      </ClickAwayListener>
     </>
   );
 }

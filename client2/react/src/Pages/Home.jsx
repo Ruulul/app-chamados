@@ -7,12 +7,12 @@ import {
   Divider,
   Stack,
   CardMedia,
+  CircularProgress,
 } from "@mui/material";
 import axios from "../Components/Requisicao";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Chat from "../Components/Chat";
-import MChat from "../Components/MuiChat";
 
 /* SmtpJS.com - v3.0.0 */
 var Email = {
@@ -181,6 +181,8 @@ const Home = () => {
   //},[])
 
   return (
+    nome == "Carregando..." ?
+    <CircularProgress/> :
     <Grid
       container
       item
@@ -199,7 +201,7 @@ const Home = () => {
         md={6}
         lg={4}
         xl={3}
-        sx={{ padding: 3, marginTop: 3, zIndex: 1 }}
+        sx={{ padding: 3, marginTop: 3}}
       >
         <Grid item xs={12}>
           <Stack
@@ -281,7 +283,7 @@ const Home = () => {
         component={Card}
         xs={2}
         elevation={5}
-        sx={{ padding: 0, maxHeight: 250, margin: 10, marginTop: 3, zIndex: 1 }}
+        sx={{ padding: 0, maxHeight: 250, margin: 10, marginTop: 3 }}
       >
         <Typography
           align="center"
@@ -296,9 +298,7 @@ const Home = () => {
           {agora[2]}
         </Typography>
       </Grid>
-      <Chat sx={{
-        zIndex: 99
-      }}/>
+      <Chat/>
     </Grid>
   );
 };
