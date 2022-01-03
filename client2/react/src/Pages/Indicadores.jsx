@@ -87,45 +87,39 @@ const IndicadoresMui = (props) => {
 
   const values_abertos_tipo = tiposA.map((tipo) => ({
     label: tipo,
-    value: Math.floor(
+    value:
       (100 * servicos_abertos.filter((s) => s.tipo === tipo).length) /
         servicos_abertos.length
-    ),
   }));
   const values_pendentes_tipo = tiposP.map((tipo) => ({
     label: tipo,
-    value: Math.floor(
+    value:
       (100 * servicos_pendentes.filter((s) => s.tipo === tipo).length) /
         servicos_pendentes.length
-    ),
   }));
   const values_resolvidos_tipo = tiposR.map((tipo) => ({
     label: tipo,
-    value: Math.floor(
+    value: 
       (100 * servicos_resolvidos.filter((s) => s.tipo === tipo).length) /
         servicos_resolvidos.length
-    ),
   }));
   const values_abertos_departamento = departamentosA.map((dep) => ({
     label: dep,
-    value: Math.floor(
+    value: 
       (100 * servicos_abertos.filter((s) => s.departamento === dep).length) /
         servicos_abertos.length
-    ),
   }));
   const values_pendentes_departamento = departamentosP.map((dep) => ({
     label: dep,
-    value: Math.floor(
+    value:
       (100 * servicos_pendentes.filter((s) => s.departamento === dep).length) /
         servicos_pendentes.length
-    ),
   }));
   const values_resolvidos_departamento = departamentosR.map((dep) => ({
     label: dep,
-    value: Math.floor(
+    value: 
       (100 * servicos_resolvidos.filter((s) => s.departamento === dep).length) /
         servicos_resolvidos.length
-    ),
   }));
 
   function setarServicosAbertos(servicos) {
@@ -208,7 +202,7 @@ const IndicadoresMui = (props) => {
                     key={i}
                     variant="subtitle1"
                     sx={{ color: color_color }}
-                  >{`${a.label}: ${a.value}%`}</Typography>
+                  >{`${a.label}: ${Math.floor(a.value)}%`}</Typography>
                 );
               })}
               <Typography key={4} variant="h5">
@@ -231,7 +225,7 @@ const IndicadoresMui = (props) => {
                     key={i}
                     variant="subtitle1"
                     sx={{ color: color_color }}
-                  >{`${a.label}: ${a.value}%`}</Typography>
+                  >{`${a.label}: ${Math.floor(a.value)}%`}</Typography>
                 );
               })}
             </Card>
@@ -261,7 +255,7 @@ const IndicadoresMui = (props) => {
                     key={i}
                     variant="subtitle1"
                     sx={{ color: color_color }}
-                  >{`${a.label}: ${a.value}%`}</Typography>
+                  >{`${a.label}: ${Math.floor(a.value)}%`}</Typography>
                 );
               })}
               <Typography key={4} variant="h5">
@@ -284,7 +278,7 @@ const IndicadoresMui = (props) => {
                     key={i}
                     variant="subtitle1"
                     sx={{ color: color_color }}
-                  >{`${a.label}: ${a.value}%`}</Typography>
+                  >{`${a.label}: ${Math.floor(a.value)}%`}</Typography>
                 );
               })}
             </Card>
@@ -314,7 +308,7 @@ const IndicadoresMui = (props) => {
                     key={i}
                     variant="subtitle1"
                     sx={{ color: color_color }}
-                  >{`${a.label}: ${a.value}%`}</Typography>
+                  >{`${a.label}: ${Math.floor(a.value)}%`}</Typography>
                 );
               })}
               <Typography key={4} variant="h5">
@@ -337,7 +331,7 @@ const IndicadoresMui = (props) => {
                     key={i}
                     variant="subtitle1"
                     sx={{ color: color_color }}
-                  >{`${a.label}: ${a.value}%`}</Typography>
+                  >{`${a.label}: ${Math.floor(a.value)}%`}</Typography>
                 );
               })}
             </Card>

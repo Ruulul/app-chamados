@@ -1,9 +1,20 @@
-import { Typography, Alert, Button, Grid, TextField, Stack, CircularProgress, Fade, Box } from "@mui/material";
+import { 
+	Typography, 
+	Alert, 
+	Button, 
+	Grid, 
+	TextField, 
+	Stack, 
+	CircularProgress, 
+	Fade, 
+	Box,
+	CardMedia	
+	} from "@mui/material";
 import axios from "../Components/Requisicao";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const burl = "http://10.0.0.83:5000"
+const burl = "http://10.0.0.5:5000"
 
 export default function Login() {
     const [enviando, setEnviando] = useState(false)
@@ -36,15 +47,25 @@ export default function Login() {
       <Grid container direction={{xs: "column", md: "row"}} width="100%">
         <Grid item component="form" onSubmit={onSubmit} xs={12} md={10} lg={4} minHeight={{xs:1/2, md: 1}} >
           <Stack spacing={3} mr={15} mb={5} ml={5} sx={{placeContent: "center"}}>
-              <Typography variant="h4" component="h1" mt={5} sx={{placeSelf: "center"}} fontFamily='Road Rage'>Help Vase</Typography>
-              <Box component="img" src={burl + "/images/suporte.jpg"} sx={{width: 1, height: 1, borderRadius: 4}} />
-                <TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
+              <Typography variant="h2" component="h1" mt={5} sx={{placeSelf: "center", fontWeigth: 100}} fontFamily="Montserrat, sans-serif">Gold Seed</Typography>
+				<Stack direction="row" justifyContent="space-evenly" sx={{"& CardMedia":{margin: "auto"}}}>
+					<CardMedia image="http://10.0.0.5:5000/images/logo_ouro_branco.png" 
+					sx={{height: 150, width: 150}}/>
+					<CardMedia image="http://10.0.0.5:5000/images/logo_sementes_mana.png" 
+					sx={{height: 150, width: 150}}/>
+				</Stack>
+				<TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
                 <TextField label="senha" name="senha" type="password"onChange={onChangeSenha} required/>
                 {error ? <Alert severity="error">{error + "."}</Alert> : undefined}
                 {!enviando ? 
                 <Button 
                     type="submit"
-                    variant="contained">
+                    variant="contained"
+					sx={{
+						width: "fit-content",
+						paddingX: 2
+					}}
+				>
                     Acessar
                 </Button> : <CircularProgress sx={{placeSelf: "center"}} />}
             </Stack>

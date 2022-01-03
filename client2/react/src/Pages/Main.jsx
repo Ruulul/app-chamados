@@ -10,11 +10,10 @@ export default function Main() {
           <Grid container item xs={12} justifyContent="center">
             <UpBar />
           </Grid>
-          <Grid item xs={0} md={0} />
-          <Grid item xs={12} md={1}>
+          <Grid item display="grid" xs={12} lg={1}>
             <SideBar />
           </Grid>
-          <Grid item sx={{ padding: 0 }} xs={24} md={10.8}>
+          <Grid item sx={{ padding: 0 }} xs={24} md={11}>
             <Divider sx={
               {
                 position: "absolute", 

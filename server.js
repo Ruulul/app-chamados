@@ -43,7 +43,7 @@ app.use(express.static('./public/'))
 app.use(function (req, res, next) {
 
   // Website you wish to allow to connect
-  res.setHeader('Access-Control-Allow-Origin', 'http://10.0.0.83:3000');
+  res.setHeader('Access-Control-Allow-Origin', 'http://10.0.0.5:3000');
 
   // Request methods you wish to allow
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
@@ -88,7 +88,8 @@ app.post('/api/novo/servico', async (req, res) => {
                 prioridade: servico.prioridade,
                 tipo: servico.tipo,
                 atendenteId: servico.atendenteId,
-                atendimento: String(false)
+                atendimento: String(false),
+				subCategoria: servico.subCategoria
               }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } })
             }
           }
@@ -159,82 +160,147 @@ app.post('/api/update/servico/:id', async (req, res) => {
 
 app.get('/api/servicos', async (req, res) => {
   req.session.valid ?
-    prisma.chamado
-      .findMany({
-        select: {
-          id: true,
-          autorId: true,
-          metadados: true,
-          chat: true,
-          assunto: true,
-          createdAt: true,
-          prazo: true,
-          updatedAt: true
-        }
-      })
-      .then((data) => {
-        let Metas = [];
-        for (const [index, chamado] of data.entries())
-          Metas[index] =
-            Object.fromEntries(
-              chamado.metadados.map(
-                (md) => {
-                  return [md.nome, md.valor]
-                }
-              )
-            )
-        res.send(data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } }))
-      }
-      ).catch("Ocorreu um erro no banco de dados")
+	prisma.usuario.findUnique({where: {id: req.session.usuarioId}, select:{metadados: true}})
+	.then((usuario)=>{
+		if (usuario?.metadados?.find(md=>md.nome=="tipo" && md.valor=="suporte"))
+			prisma.chamado
+			.findMany({
+				select: {
+					id: true,
+					autorId: true,
+					metadados: true,
+					chat: true,
+					assunto: true,
+					createdAt: true,
+					prazo: true,
+					updatedAt: true
+				}
+			})
+			.then((data) => {
+				let Metas = [];
+				for (const [index, chamado] of data.entries())
+				Metas[index] =
+					Object.fromEntries(
+						chamado.metadados.map(
+							(md) => {
+							return [md.nome, md.valor]
+							}
+						)
+					)
+				res.send(data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } }))
+			})
+			.catch("Ocorreu um erro no banco de dados")
+		else
+			prisma.chamado
+			.findMany({
+				where: {
+					autorId: req.session.usuarioId
+				},
+				select: {
+					id: true,
+					autorId: true,
+					metadados: true,
+					chat: true,
+					assunto: true,
+					createdAt: true,
+					prazo: true,
+					updatedAt: true
+				}
+			})
+			.then(data => {
+				let Metas = [];
+				for (const [index, chamado] of data.entries())
+					Metas[index] =
+						Object.fromEntries(
+							chamado.metadados.map(
+								md =>
+									[md.nome, md.valor]
+							)
+						)
+				res.send(data.map((chamado,index)=> {delete chamado.metadados; return {...chamado, ...Metas[index]}}))
+			})
+	})
+	.catch((error)=>res.status(500).send({error}))
     : res.send("Não autorizado")
 });
 
 app.get('/api/servicos/:tipo/:filtro', async (req, res) => {
   req.session.valid ?
-    prisma.chamado.findMany(
-      {
-        where: {
-          metadados: {
-            some: {
-              nome: req.params.tipo,
-              valor: req.params.filtro
-            },
-          }
-        },
-        select: {
-          id: true,
-          autorId: true,
-          metadados: true,
-          chat: true,
-          assunto: true,
-          createdAt: true,
-          prazo: true,
-          updatedAt: true
-        }
-      }
-    )
-      .then(
-        (data) => {
-          let Metas = [];
-          data = data.filter(({ id }) => id > 3)
-          for (const [index, chamado] of data.entries())
-            Metas[index] =
-              Object.fromEntries(
-                chamado.metadados.map(
-                  (md) => {
-                    return [md.nome, md.valor]
-                  }
-                )
-              )
-          res.send(
-            data.map(
-              (chamado, index) => {
-                delete chamado.metadados; return { ...chamado, ...Metas[index] }
-              }
-            )
-          )
-        }
-      )
+	prisma.usuario.findUnique({where: {id: req.session.usuarioId}, select:{metadados: true}})
+	.then((usuario)=>{
+		if (usuario?.metadados?.find(md=>md.nome=="tipo" && md.valor=="suporte"))
+			prisma.chamado
+			.findMany({
+				where: {
+					metadados:{
+						some: {
+							nome: req.params.tipo,
+							valor: req.params.filtro
+						}
+					}
+				},
+				select: {
+					id: true,
+					autorId: true,
+					metadados: true,
+					chat: true,
+					assunto: true,
+					createdAt: true,
+					prazo: true,
+					updatedAt: true
+				}
+			})
+			.then((data) => {
+				let Metas = [];
+				for (const [index, chamado] of data.entries())
+				Metas[index] =
+					Object.fromEntries(
+						chamado.metadados.map(
+							(md) => {
+							return [md.nome, md.valor]
+							}
+						)
+					)
+				res.send(data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } }))
+			})
+			.catch("Ocorreu um erro no banco de dados")
+		else
+			prisma.chamado
+			.findMany({
+				where: {
+					autorId: req.session.usuarioId,
+					metadados:{
+						some: {
+							nome: req.params.tipo,
+							valor: req.params.filtro
+						}
+					}
+				},
+				select: {
+					id: true,
+					autorId: true,
+					metadados: true,
+					chat: true,
+					assunto: true,
+					createdAt: true,
+					prazo: true,
+					updatedAt: true
+				}
+			})
+			.then(data => {
+				let Metas = [];
+				for (const [index, chamado] of data.entries())
+					Metas[index] =
+						Object.fromEntries(
+							chamado.metadados.map(
+								md =>
+									[md.nome, md.valor]
+							)
+						)
+				res.send(data.map((chamado,index)=> {delete chamado.metadados; return {...chamado, ...Metas[index]}}))
+			})
+	})
+	.catch((error)=>res.status(500).send({error}))
     : res.send("Não autorizado")
 });
 
@@ -259,6 +325,119 @@ app.get('/api/servico/:id', async (req, res) => {
     })
     .catch((e) => res.status(500).send({ erro: "Falha em encontrar serviço " + req.params.id + `\n${e}` }))
     : res.send("Não autorizado")
+})
+
+/*
+Categorias
+*/
+
+app.get('/api/servicos/categorias/:tipo', async (req,res)=>{
+	console.log(req.params)
+	req.session.valid ?
+	prisma.categoria.findMany({
+		where:{
+			tipo: req.params.tipo
+		}
+	})
+	.then(categorias=>res.send(categorias))
+	.catch(err=>{
+		console.log(error), 
+		res
+			.status(500)
+			.send({error})
+		}
+	) : res.send("Não autorizado")
+})
+
+app.get('/api/servicos/categorias', async (req, res)=>{
+	prisma.categoria.findMany({
+	})
+	.then(categorias=>res.send(categorias))
+	.catch(err=>{
+		console.log(error), 
+		res
+			.status(500)
+			.send({error})
+		}
+	)})
+
+app.post('/api/servicos/novo/subcategoria/', async (req, res) =>{
+	let sub = req.body
+	let usuario = await prisma
+		.usuario
+		.findUnique({
+			where:{
+				id: req.session.usuarioId
+			}, 
+			select:{
+				metadados: true
+			}
+		})
+	req.session.valid ?
+		usuario.metadados.find(md=>md.nome=="tipo"&&md.valor=="suporte") ?
+		prisma.categoria.create({
+			data: {
+				tipo: sub.tipo,
+				categoria: sub.newCategoria
+			}
+		})
+		.then(r=>res.status(200).send("OK" + r))
+		.catch(error=>res.status(505).send({error})) : res.send("Não autorizado")
+	: res.send("Não autorizado")
+})
+
+app.post('/api/servicos/editar/subcategoria/:c/:sc', async (req, res) =>{
+	let sub = req.body
+	let usuario = await prisma
+		.usuario
+		.findUnique({
+			where:{
+				id: req.session.usuarioId
+			}, 
+			select:{
+				metadados: true
+			}
+		}).catch(error=>console.log(error))
+	req.session.valid && usuario ?
+		usuario.metadados.find(md=>md.nome=="tipo"&&md.valor=="suporte") ?
+		prisma.categoria.updateMany({
+			where: {
+				tipo: req.params.c,
+				categoria: req.params.sc
+			},
+			data: {
+				tipo: sub.tipo,
+				categoria: sub.newCategoria
+			}
+		})
+		.then(r=>res.status(200).send("OK" + JSON.stringify(r)))
+		.catch(error=>res.status(505).send({error})) : res.send("Não autorizado")
+	: res.send("Não autorizado")
+})
+
+app.post('/api/servicos/excluir/subcategoria/:c/:sc', async (req, res) =>{
+	let sub = req.body
+	let usuario = await prisma
+		.usuario
+		.findUnique({
+			where:{
+				id: req.session.usuarioId
+			}, 
+			select:{
+				metadados: true
+			}
+		})
+	req.session.valid ?
+		usuario.metadados.find(md=>md.nome=="tipo"&&md.valor=="suporte") ?
+		prisma.categoria.deleteMany({
+			where: {
+				tipo: req.params.c,
+				categoria: req.params.sc
+			}
+		})
+		.then(r=>res.status(200).send("OK" + r))
+		.catch(error=>res.status(505).send({error})) : res.send("Não autorizado")
+	: res.send("Não autorizado")
 })
 
 /*
@@ -464,6 +643,7 @@ app.post('/api/novo/chat', (req, res) => {
 })
 
 app.post('/api/chat/:id/novo/mensagem', (req, res) => {
+  console.log("Nova mensagem")
   let mensagem = req.body
   let chatId = parseInt(req.params.id)
   let autorId = req.session.usuarioId
@@ -483,7 +663,8 @@ app.post('/api/chat/:id/novo/mensagem', (req, res) => {
         console.log(err)
         res.status(500).send(err)
       })
-    : res.send("Não autorizado")
+    : (console.log("Não autorizado"),
+      res.send("Não autorizado"))
 })
 
 app.post('/api/update/chat/:id', (req, res) => {
@@ -505,7 +686,7 @@ app.post('/api/update/chat/:id', (req, res) => {
         status,
         atendenteId: parseInt(atendenteId)
       }
-    }).catch(err=>console.log(err)),
+    }).catch(err => console.log(err)),
       ((() => {
         for (let md of metadados)
           prisma.metadadoChat.updateMany({
@@ -516,7 +697,7 @@ app.post('/api/update/chat/:id', (req, res) => {
             data: {
               valor: md.valor
             }
-          }).catch(err=>console.log(err))
+          }).catch(err => console.log(err))
       })()),
       (res.status(200).send(req.body)))
     : res.send("Não autorizado")
@@ -598,6 +779,7 @@ app.get('/api/chats/pendentes', (req, res) => {
           }
         })
           .then(chats => res.send(chats))
+	  else res.send([{id: 0, atendenteId: 0,  metadados: [{nome:"assunto",valor: "Não autorizado"}, {nome:"descr", valor:"Você não é suporte"}]}])
     })
   ) : res.send("Não autorizado")
 })
@@ -605,7 +787,7 @@ app.get('/api/chats/pendentes', (req, res) => {
 perfil e auth
 */
 app.get('/api/perfil', async (req, res) => {
-  req.session.valid ? await prisma.usuario.findUnique({ where: { id: req.session.usuarioId }, select: {id: true, nome: true, sobrenome: true, metadados: true, email: true} })
+  req.session.valid ? await prisma.usuario.findUnique({ where: { id: req.session.usuarioId }, select: { id: true, nome: true, sobrenome: true, metadados: true, email: true } })
     .then(usuario => {
       delete usuario.senha
       res.send(usuario)
@@ -682,13 +864,57 @@ app.post('/api/alterasenha', async (req, res) => {
 app.post('/api/logout', async (req, res) => {
   //req.session.destroy((err) => { if (!err) { res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso") } else { res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.") } })
   try {
-  req.session.valid = false
-  req.session.save()
-  res.status(200).send("OK")
-  }  catch (e) {
+    req.session.valid = false
+    req.session.save()
+    res.status(200).send("OK")
+  } catch (e) {
     console.log("Falha em logout. \n" + e)
     res.status(500).send("Error")
   }
+})
+
+/*
+misc
+*/
+
+app.get('/api/monitoring', async (req, res)=>{
+	try {
+	prisma.usuario.findMany({
+		where: {
+			metadados: {
+				some: {
+					nome: "tipo",
+					valor: "suporte"
+				}
+			}
+		},
+		select: {
+			nome: true,
+			sobrenome: true,
+			id: true,
+		}
+	})
+	.then(atendentes=>{
+		prisma.chamado.findMany({
+			include: {
+				metadados: true
+			}
+		})
+		.then(chamados=>{
+		res.send({atendentes, chamados})
+		})
+		.catch(err=>{
+			console.log("Error at fetching chamados: ", err)
+			res.status(500).send("Error at fetching chamados")
+		})
+	})
+	.catch(err=>{
+		console.log("Error at fetching atendentes: ", err)
+		res.status(500).send("Error at fetching atendentes")
+	})
+	} catch(e) {
+		console.log(e)
+	}
 })
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

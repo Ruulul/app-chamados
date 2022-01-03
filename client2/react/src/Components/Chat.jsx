@@ -2,13 +2,16 @@ import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Launcher } from "popup-chat-react";
 import Chat from "./MuiChat";
 import req from "./Requisicao";
-import { CircularProgress } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 
-function reducer(state, action) {
+function reducer(c_state, action) {
+  let state = {...c_state}
   switch (action.type) {
     case "openChat": {
+      console.log("aaa")
       state.chatAberto = action.payload;
       state.isOpen = true;
+      console.log("bbb")
       return state;
     }
     case "closeChat": {
@@ -18,20 +21,10 @@ function reducer(state, action) {
     }
     case "chatsAtendente": {
       state.chats.atendente = action.payload;
-      //let chat = state.chats.atendente.find(chat=>chat.id == state.chatAberto)
-      //if (!chat) return state
-      //let mensagens = chat.mensagens
-      //mensagens = mensagens.map(m=>{let M = JSON.parse(M.mensagem); M.author = m.autorId == state.id ? "me" : "them"; return M})
-      //state.messageList = mensagens
       return state;
     }
     case "chatsAtendido": {
       state.chats.atendido = action.payload;
-      //let chat = state.chats.atendido.find(chat=>chat.id == state.chatAberto)
-      //if (!chat) return state
-      //let mensagens = chat.mensagens
-      //mensagens = mensagens.map(m=>{let M = JSON.parse(M.mensagem); M.author = m.autorId == state.id ? "me" : "them"; return M})
-      //state.messageList = mensagens
       return state;
     }
     case "createChat": {
@@ -43,8 +36,9 @@ function reducer(state, action) {
     case "messageSent": {
       console.log(action.payload);
       req("post", `/api/chat/${state.chatAberto}/novo/mensagem`, action.payload)
-        .then(({ data: res }) => console.log("Yay!\n" + JSON.stringify(res)))
-        .catch((err) => console.log(err));
+        .then(({ data: res }) => console.log("Yay!\n", res))
+        .catch((err) => console.log(err))
+		.finally(()=>console.log("Ufa"));
       return state;
     }
     case "updateChat": {
@@ -54,15 +48,12 @@ function reducer(state, action) {
         atendidoId: 0,
       };
       let mensagens = [];
-      console.log("updating chat in");
       for (let chats of Object.values(state.chats)) {
-        let a = chats.find((chat) => chat.id == state.chatAberto);
-        a ? console.log(a.mensagens) : undefined;
-        chat = a ? a : chat;
-        mensagens = a ? a.mensagens : mensagens;
+        let chat = chats.find((chat) => chat.id == state.chatAberto);
+        mensagens = chat ? chat.mensagens : mensagens;
       }
       if (!chat) return state;
-      console.log(chat);
+      //console.log(chat);
       if (!mensagens) return state;
       mensagens = mensagens.map((m) => {
         let M = JSON.parse(m.mensagem);
@@ -94,8 +85,12 @@ function reducer(state, action) {
       req("post", "/api/update/chat/" + chat.id, chat);
       return state;
     }
+	default: {
+	  console.log("I do not understand")
+	  return state
+	}
   }
-  return state;
+  console.log("Isso não devia acontecer")
 }
 
 const initialState = {
@@ -119,17 +114,18 @@ function Demo(props) {
       let { data: perfil } = await getPerfil();
       dispatch({ type: "perfil", payload: perfil });
       let getChats = async () => {
-        await req("get", "/api/chats/atendente/" + perfil.id)
+        console.log("Perfil: ", perfil)
+        req("get", "/api/chats/atendente/" + perfil.id)
           .then(({ data: payload }) => {
             dispatch({ type: "chatsAtendente", payload });
           })
           .catch((err) => console.log(err));
-        await req("get", "/api/chats/atendido/" + perfil.id)
+        req("get", "/api/chats/atendido/" + perfil.id)
           .then(({ data: payload }) => {
             dispatch({ type: "chatsAtendido", payload });
           })
           .catch((err) => console.log(err));
-        await req("get", "api/chats/pendentes")
+        req("get", "api/chats/pendentes")
           .then(({ data: payload }) =>
             dispatch({ type: "chatsPendentes", payload })
           )
@@ -137,13 +133,14 @@ function Demo(props) {
       };
       getChats().then(() => console.log(state));
     };
-    let interval = setInterval(getChats, 1000);
+	getChats();
+    let interval = setInterval(getChats, 5000);
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     let updateChat = () => {
-      if (state.isOpen) dispatch({ type: "updateChat" });
+		dispatch({ type: "updateChat" });
     };
     let interval = setInterval(updateChat, 100);
     return () => clearInterval(interval);
@@ -153,7 +150,7 @@ function Demo(props) {
     dispatch({ type: "messageSent", payload: message });
   }
 
-  function onClick() {
+  function closeChat() {
     dispatch({ type: "closeChat" });
   }
 
@@ -171,7 +168,7 @@ function Demo(props) {
     <>
       {state.isOpen ? (
         <Launcher
-        {...props}
+          {...props}
           agentProfile={{
             teamName: "Suporte",
             imageUrl:
@@ -180,12 +177,12 @@ function Demo(props) {
           onMessageWasSent={onMessageWasSent}
           messageList={state.messageList}
           newMessagesCount={state.newMessagesCount}
-          onClick={onClick}
+          onClick={closeChat}
           isOpen
           showEmoji
           style={{
             ...props.sx,
-            position: "absolute",
+            position: "fixed",
             bottom: 0,
             right: 0,
             margin: 5,
@@ -193,7 +190,7 @@ function Demo(props) {
           placeholder="Escreva sua mensagem aqui"
         />
       ) : (
-        <>
+        <Box>
           <Chat
             {...props}
             sx={{
@@ -206,24 +203,26 @@ function Demo(props) {
             chats={state.chats}
             openChat={openChat}
             createChat={createChat}
+            closeChat={closeChat}
             variant="mine"
           />{
-            state.perfil && state.perfil.metadados.find(md=>md.nome=="tipo") && state.perfil.metadados.find(md=>md.nome=="tipo").valor == "suporte" ?
-          <Chat
-          {...props}
-            sx={{
-              ...props.sx,
-              position: "fixed",
-              bottom: 0,
-              right: 100,
-              margin: 5,
-            }}
-            chats={state.chats.pendente}
-            openChat={connectChat}
-            createChat={createChat}
-            variant="pendent"
-          /> : undefined}
-        </>
+            state.perfil && state.perfil.metadados.find(md => md.nome == "tipo" && md.valor == "suporte") ?
+              <Chat
+                {...props}
+                sx={{
+                  ...props.sx,
+                  position: "fixed",
+                  bottom: 0,
+                  right: 100,
+                  margin: 5,
+                }}
+                chats={state.chats.pendente}
+                openChat={connectChat}
+                createChat={createChat}
+                closeChat={closeChat}
+                variant="pendent"
+              /> : undefined}
+        </Box>
       )}
     </>
   ) : (

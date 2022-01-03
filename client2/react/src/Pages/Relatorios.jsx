@@ -131,7 +131,8 @@ const Relatorios = (props) => {
 
     return (
         <Grid container >
-            <Grid item>
+            <Grid item container>
+			<Grid item>
                 <ButtonGroup
                     disableElevation
                     orientation="vertical"
@@ -157,6 +158,10 @@ const Relatorios = (props) => {
                             Adicionar filtro
                         </Button>
                     </ClickAwayListener>
+                    <Button
+                        onClick={() => geraRelatorio()}>
+                        Gerar Relatório
+                    </Button>
                     <Menu
                         open={popOpen}
                         anchorEl={anchorEl}
@@ -175,11 +180,26 @@ const Relatorios = (props) => {
                         onClick={() => setFiltros([])}>
                         Limpa filtros
                     </Button>
-                    <Button
-                        onClick={() => geraRelatorio()}>
-                        Gerar Relatório
-                    </Button>
                 </ButtonGroup>
+			</Grid>
+			<Grid item>
+			<Stack  margin={5}>
+				<Typography variant="h5">
+					Instruções:
+				</Typography>
+				<Stack margin={2}>
+					<Typography>
+						1. Escolha os filtros<br/>&emsp;&emsp;(Nenhum filtro selecionará todos os chamados dentro do sistema)
+					</Typography>
+					<Typography>
+						2. Clique em "Gerar Relatório"
+					</Typography>
+					<Typography>
+						3. Clique em "Imprimir"
+					</Typography>
+				</Stack>
+			</Stack>
+			</Grid>
             </Grid>
             <Grid item container padding={3} spacing={3} direction="row">
                 {filtrosAtivos
@@ -248,6 +268,8 @@ const Relatorios = (props) => {
                                         (filtro) => 
                                         filtro.tipo === "Atendente" ? 
                                         `Atendente: ${atendentes.find(e => e.id == filtro.valor).nome}` : 
+										filtro.tipo.includes("Data") ?
+										`${filtro.tipo}: ${(new Date(filtro.valor)).toLocaleDateString()}` :
                                         `${filtro.tipo}: ${filtro.valor}`
                                     ).join('\n')
                                 ,20, 25)
@@ -256,7 +278,7 @@ const Relatorios = (props) => {
 
                                 while (not_yet) {
                                 doc.setFontSize(12);
-                                (["Assunto", "Descrição", "", "", "Categoria", "Departamento", "ID"])
+                                (["Assunto", "Descrição", "", "Categoria", "Sub-Categoria", "Departamento", "ID"])
                                     .forEach(
                                         (campo, index)=>{
                                             doc.text(campo, index ? index * (campo_l + u) : u, 30 + filtrosAtivos.length * 5)
@@ -287,11 +309,12 @@ const Relatorios = (props) => {
                                             //    atendentes.find(e => e.id == servico.atendenteId).nome : 
                                             //    "Não encontrado", 3 * (campo_l + u), yo);
                                             doc.text(
-                                                doc.splitTextToSize(servico.chat[0].mensagem, 90).length <= 2 ?
-                                                doc.splitTextToSize(servico.chat[0].mensagem, 90) :
-                                                [doc.splitTextToSize(servico.chat[0].mensagem, 90)[0] + '...', '...' + doc.splitTextToSize(servico.chat[0].mensagem, 90).at(-1)]
+                                                doc.splitTextToSize(servico.chat[0].mensagem, 60).length <= 2 ?
+                                                doc.splitTextToSize(servico.chat[0].mensagem, 60) :
+                                                [doc.splitTextToSize(servico.chat[0].mensagem, 60)[0] + '...', '...' + doc.splitTextToSize(servico.chat[0].mensagem, 60).at(-1)]
                                                 , 1 * (campo_l + u), yo)
-                                            doc.text(servico.tipo, 4 * (campo_l + u), yo)
+                                            doc.text(servico.tipo, 3 * (campo_l + u), yo)
+                                            doc.text(servico.subCategoria ? servico.subCategoria : "Não definido", 4 * (campo_l + u), yo)
                                             doc.text(servico.departamento, 5 * (campo_l + u), yo)
                                             doc.text(String(servico.id), 6 * (campo_l + u), yo)
                                             doc.line(10, yo + 6, 200, yo + 6)
@@ -355,6 +378,9 @@ const Relatorios = (props) => {
                                             Categoria
                                         </TableCell>
                                         <TableCell>
+                                            Sub-Categoria
+                                        </TableCell>
+                                        <TableCell>
                                             Departamento
                                         </TableCell>
                                         <TableCell>
@@ -402,6 +428,11 @@ const Relatorios = (props) => {
                                                 <TableCell>
                                                     <Typography>
                                                         {r.tipo}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography>
+                                                        {r.subCategoria ? r.subCategoria : "Não definido"}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell>

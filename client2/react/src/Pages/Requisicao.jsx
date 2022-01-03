@@ -30,12 +30,14 @@ export default function Requisicao () {
     tipo: "Infraestrutura",
     chat: [{ autorId: undefined, mensagem: "" }],
     id: undefined,
+	subCategoria: undefined,
     atendenteId: undefined,
     status: "pendente",
   });
   const [, forceUpdate] = useState({})
   const [nome, setNome] = useState(undefined)
   const [atendentes, setAtendentes] = useState([])
+  const [categorias, setCategorias] = useState([])
   const navigate = useNavigate()
 
   useEffect(()=>{
@@ -55,6 +57,22 @@ export default function Requisicao () {
       clearInterval(interval)
     }
   }, [])
+  
+  useEffect(()=>{
+	  console.log(`/api/servicos/categorias/${infos.tipo}`)
+	  axios('get','/api/servicos/categorias/') //+ infos.tipo)
+		.then(
+			({data: categorias})=>{
+				console.log(categorias.filter(c=>c.tipo==infos.tipo));
+				setCategorias(categorias.filter(c=>c.tipo==infos.tipo));
+				let new_infos = {...infos}; 
+				new_infos.subCategoria = categorias.filter(c=>c.tipo==infos.tipo)[0].categoria; 
+				setInfos(new_infos)
+				console.log(new_infos)
+			}
+		)
+		.catch(err=>console.log(err))
+  },[infos.tipo])
 
   useEffect(()=>{
     axios("get",'/api/perfil')
@@ -89,10 +107,6 @@ export default function Requisicao () {
       novas_infos[event.target.name] = prioridades.indexOf(event.target.value) + 1;
     } else if (event.target.name === "mensagem")
       novas_infos.chat[0].mensagem = event.target.value;
-    else if (event.target.name === "autor") {
-    //  novas_infos.chat[0].autor = event.target.value;
-    //  novas_infos[event.target.name] = event.target.value;
-    }
     else novas_infos[event.target.name] = [event.target.value][0];
     console.log(infos)
     setInfos(novas_infos)
@@ -130,9 +144,9 @@ export default function Requisicao () {
       await axios("post",'/api/novo/servico', requisicao)
         .then(()=>{
           Email.send({
-            SecureToken: "b799e61b-8a4c-485a-ae41-cad05b498fee",
+            SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
             To: atendentes.find(a=>a.id==infos.atendenteId).email,
-            From: "vamjunior01@gmail.com",
+            From: "suporte.ti@ourobrancoagronegocios.com.br",
             Subject: "Chamado aberto",
             Body: 
             `Um chamado acaba de ser aberto <br/>
@@ -194,6 +208,17 @@ export default function Requisicao () {
                 Desenvolvimento
               </option>,
               </NativeSelect>
+			  {categorias.filter(c=>c.tipo == infos.tipo).length > 0 ? <>
+			  <InputLabel>
+				Categoria:
+			  </InputLabel>
+			  <NativeSelect
+				name="subCategoria"
+				onChange={handleChange}
+			  >
+				{categorias.map((categoria,key)=><option key={key}>{categoria.categoria}</option>)}
+			  </NativeSelect>
+			  </> : undefined}
               <InputLabel>Atendente: </InputLabel>
               <NativeSelect
                 name="atendente"

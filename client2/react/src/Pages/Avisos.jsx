@@ -65,11 +65,11 @@ export default function Avisos(props) {
                     servicos.sort(
                         (a, b)=>a.prazo.getTime() - b.prazo.getTime()
                         ).map(
-                            (servico)=>{
+                            (servico, key)=>{
                                 let tempo_restante = servico.prazo.getTime() - (Date.now())
                                 let duracao_prazo = (servico.prazo.getTime() - (servico.criado_em.getTime()))
                                 let percentual_faltante = (tempo_restante/duracao_prazo);
-                                return <TableRow>
+                                return <TableRow {...{key}}>
                                 <TableCell>
                                     <Button 
                                         variant="contained"

@@ -99,16 +99,16 @@ export default function Chamado() {
     <Grid container direction={{ xs: "column", sm: "row" }} spacing={3}>
       <Grid item xs={6}>
         <Card>
-          <Typography variant="h4" m={2}>
-            Chamado Número {infos.id}
+          <Typography variant="h4" mt={2} ml={2} sx={{display:"grid-inline"}}>
+            Chamado Número {infos.id} {" "}
             <Box
               component="span"
               sx={{
                 backgroundColor: "lightblue",
-                padding: 0.7,
+				margin: "auto",
+                padding: 0.8,
                 borderRadius: 2,
                 fontSize: 15,
-                margin: 3,
               }}
               onClick={() => {
                 redirect("/chamado/" + infos.id + "/editar");
@@ -145,9 +145,9 @@ export default function Chamado() {
                 ({ data }) => {
                   console.log(data);
                   Email.send({
-                    SecureToken: "b799e61b-8a4c-485a-ae41-cad05b498fee",
+                    SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
                     To: data.email,
-                    From: "vamjunior01@gmail.com",
+                    From: "suporte.ti@ourobrancoagronegocios.com.br",
                     Subject: `Chamado sobre "${novasInfos.assunto}" modificado`,
                     Body: `O chamado de id ${novasInfos.id} teve seu status modificado para ${novasInfos.status}.`,
                   }).then(console.log);

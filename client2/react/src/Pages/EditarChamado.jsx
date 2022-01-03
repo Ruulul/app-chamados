@@ -1,4 +1,4 @@
-import {useEffect, useLayoutEffect, useState} from "react"
+import {useEffect, useLayoutEffect, useReducer} from "react"
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { 
   Box, 
@@ -13,76 +13,129 @@ import {
 } from "@mui/material";
 import axios from "../Components/Requisicao";
 
-export default function Requisicao () {
+function reducer(state, action) {
+	let new_state = {...state};
+	switch(action.type) {
+		case "setNome": {
+			new_state.nome = action.payload;
+			return new_state;
+		}
+		case "setAtendentes": {
+			new_state.atendentes = action.payload;
+			return new_state;
+		}
+		case "setAtendente": {
+			new_state.infos.atendenteId = action.payload.id
+			new_state.atendente = action.payload.nome
+			return new_state;
+		}
+		case "setInfos": {
+			new_state.infos = {...new_state.infos, ...action.payload}
+			return new_state;
+		}
+		case "setCategorias": {
+			new_state.categorias = action.payload
+			return new_state;
+		}
+	}
+}
+
+const initialState = {
+	infos: {
+		departamento: "Contábil",
+		prioridade: 1,
+		anexo: undefined,
+		assunto: "",
+		autorId: undefined,
+		tipo: "Infraestrutura",
+		subCategoria: "Impressora",
+		id: undefined,
+		atendenteId: undefined,
+		status: "pendente"
+	},
+	nome: undefined,
+	atendentes: [],
+	atendente: undefined,
+	categorias: []
+  }
+
+export default function EditarChamado () {
   const redirect = useNavigate()
   const idChamado = useParams().id
-  const [infos, setInfos] = useState({
-    departamento: "Contábil",
-    prioridade: 1,
-    anexo: undefined,
-    assunto: "",
-    autorId: undefined,
-    tipo: "Infraestrutura",
-    id: undefined,
-    atendenteId: undefined,
-    status: "pendente",
-  });
-  const [nome, setNome] = useState(undefined)
-  const [atendentes, setAtendentes] = useState([])
-  const [atendente, setAtendente] = useState(undefined)
   const navigate = useNavigate()
+  
+  const [state, dispatch] = useReducer(reducer, initialState)
 
 
   useLayoutEffect(()=>{
-     axios("get",'/api/usuarios/area/' + infos.tipo)
-      .then(({data})=>{
-        setAtendentes(data)
-        let novas_infos = {...infos}
-        novas_infos.atendenteId = data[0].id
-        novas_infos.atendente = data[0].nome
-        console.log("Atualizando atendentes: ", infos, " para ", novas_infos)
-        setInfos(novas_infos)
-      }).catch(err=>{console.log("Erro obtendo atendentes. \n" + err); setAtendentes([{nome: "Sem atendentes nessa categoria"}])})
-  },[infos.tipo])
+     axios("get",'/api/usuarios/area/' + state.infos.tipo)
+      .then(
+		({data: payload})=>{
+			dispatch({type:"setAtendentes", payload});
+			dispatch({type:"setAtendente", payload:payload[0]});
+		}
+	  )
+	  .catch(
+		err=>{
+			console.log("Erro obtendo atendentes. \n" + err); 
+			dispatch({
+				type:"setAtendentes", 
+				payload:[
+					{nome: "Sem atendentes nessa categoria"}
+				]
+			  }
+			)
+		}
+	  )
+    },[state.infos.tipo])
 
   useEffect(()=>{
      axios("get",'/api/perfil')
       .then(({data})=>{
-        setNome(data.nome)
+	  dispatch({type:"setNome", payload:data.nome})
       })
-      .catch(err=>{console.log("Erro obtendo nome");setNome("Falha obtendo nome")})
+      .catch(err=>{console.log("Erro obtendo nome");
+	  dispatch({type:"setNome", payload:"Erro obtendo nome"})})
   },[])
 
   useEffect(()=>{
     console.log(idChamado)
     axios("get","/api/servico/" + idChamado)
-    .then(async ({data})=>{
-    let chamado = data
-    console.log("Puxando servico: ", data)
-    setInfos({
-      departamento: chamado.departamento,
-      prioridade: chamado.prioridade,
-      anexo: chamado.anexo,
-      assunto: chamado.assunto,
-      autorId: chamado.autorId,
-      tipo: chamado.tipo,
-      id: chamado.id,
-      atendenteId: parseInt(chamado.atendenteId),
-      status: chamado.status,
-    })
-    axios("get","/api/usuario/" + chamado.atendenteId)
-        .then(({data})=>{
-            setAtendente(data.nome)
-            console.log("Puxando atendente: ", infos)
-        })
-  })
-  .catch(err=>console.log(err));
-},[infos.id])
+		.then(async ({data : chamado})=>{
+			console.log("Puxando servico: ", chamado)
+			dispatch({type:"setInfos", payload:chamado});
+			axios("get","/api/usuario/" + chamado.atendenteId)
+				.then(({data : payload})=>{
+					dispatch({type:"setAtendente", payload})
+					console.log("Puxando atendente: ", state.infos)
+					}
+				);
+			}
+		)
+		.catch(err=>console.log(err));
+},[state.infos.id])
+  
+  useEffect(()=>{
+	  console.log(`/api/servicos/categorias/${state.infos.tipo}`)
+	  axios('get','/api/servicos/categorias/') //+ infos.tipo)
+		.then(
+			({data: categorias})=>{
+				console.log(categorias.filter(c=>c.tipo==state.infos.tipo));
+				dispatch({type:"setCategorias", payload: categorias.filter(c=>c.tipo==state.infos.tipo)});
+				let new_infos = {...state.infos}; 
+				new_infos.subCategoria = categorias.filter(c=>c.tipo==state.infos.tipo)[0].categoria
+				dispatch({type: "setInfos", payload: new_infos})
+				console.log(new_infos)
+			}
+		)
+		.catch(err=>console.log(err))
+  },[state.infos.tipo])
 
   function handleChange(event) {
-    let novas_infos = {...infos}
+    let novas_infos = {...state.infos}
+	console.log(event.target, event.target.value)
     if (event.target.name === "atendente") {
-      novas_infos.atendenteId = atendentes[(atendentes.map((atendente)=>{return atendente.nome})).indexOf(event.target.value)].id
+      novas_infos.atendenteId = state.atendentes[(state.atendentes.map((atendente)=>{return atendente.nome})).indexOf(event.target.value)].id
       novas_infos.atendente = event.target.value
     }
     else if (event.target.name === "prioridade") {
@@ -91,7 +144,7 @@ export default function Requisicao () {
     }
     else novas_infos[event.target.name] = [event.target.value][0];
     console.log(novas_infos)
-    setInfos(novas_infos)
+    dispatch({type:"setInfos", payload:novas_infos})
     console.log("Infos atualizadas")
   }
 
@@ -120,7 +173,7 @@ export default function Requisicao () {
     await getPrazo().then(async (prazo)=>{
       if (typeof(infos.prazo) === "object")
       infos.prazo=prazo.toISOString()
-      await axios("post",'/api/update/servico/' + idChamado, infos)
+      await axios("post",'/api/update/servico/' + idChamado, state.infos)
         .then(res=>navigate('/servicos'))
         .catch(err=>console.log("Erro em salvar o chamado." + err))
     }).catch(console.log)
@@ -142,16 +195,16 @@ export default function Requisicao () {
                     <Grid item xs={4}>
                     <Stack component={Card} alignItems="left" width="fit-content" p={5} pt={3} spacing={1}>
                       <Typography>
-                        {nome === undefined ? "Carregando..." : ("Olá, " + nome)}
+                        {state.nome === undefined ? "Carregando..." : ("Olá, " + state.nome)}
                       </Typography>
                       <Typography variant="h5">
-                        {infos.id === undefined ?  "Carregando..." : ("Ticket nº " + infos.id)}
+                        {state.infos.id === undefined ?  "Carregando..." : ("Ticket nº " + state.infos.id)}
                       </Typography>
                       <Typography>
-                        {atendente === undefined ? "Carregando..." : ("Designado para: " + atendente)}
+                        {state.atendente === undefined ? "Carregando..." : ("Designado para: " + state.atendente)}
                       </Typography>
                       <Typography variant="h5">
-                        {infos.assunto === undefined ? "Carregando..." : infos.assunto}
+                        {state.infos.assunto === undefined ? "Carregando..." : state.infos.assunto}
                       </Typography>
                     </Stack>
                     </Grid>
@@ -160,18 +213,23 @@ export default function Requisicao () {
                           <Typography variant="h6">
                               Dados a serem enviados
                           </Typography>
-                          {infos ? 
-                          Object.entries(infos)
+                          {state.infos ? 
+                          Object.entries(state.infos)
                           .filter(info=>
                             info[0]=="departamento" || 
                             info[0] == "prioridade" || 
                             info[0] == "departamento" ||
                             info[0] == "tipo" ||
+							info[0] == "subCategoria" ||
                             info[0] == "atendente")
                           .map(info=><Typography>
                             {info[0] == "prioridade" 
                             ? "Urgência" 
-                            : `${info[0][0].toUpperCase()}${info[0].slice(1)}`}: {" "} 
+                            : info[0] == "subCategoria" 
+							? "Sub-Categoria"
+							: info[0] == "tipo"
+							? "Categoria"
+							: `${info[0][0].toUpperCase()}${info[0].slice(1)}`}: {" "} 
                             {info[0] == "prioridade"
                             ? `${["Baixa", "Média", "Alta", "Urgente"][parseInt(info[1]) - 1]}`
                             : info[1]}</Typography>) 
@@ -179,11 +237,11 @@ export default function Requisicao () {
                       </Stack>
                       </Grid>
                     </Grid>
-                  <InputLabel>Tipo do Chamado: </InputLabel>
+                  <InputLabel>Categoria: </InputLabel>
                   <NativeSelect
                 name="tipo"
                 onChange={handleChange}
-                value={infos.tipo}
+                value={state.infos.tipo}
               >
               <option key={1} name="infra">
                 Infraestrutura
@@ -195,14 +253,24 @@ export default function Requisicao () {
                 Desenvolvimento
               </option>,
                   </NativeSelect>
+			  <InputLabel>
+				Sub-Categoria:
+			  </InputLabel>
+			  <NativeSelect
+				name="subCategoria"
+				onChange={handleChange}
+				value={state.infos.subCategoria}
+			  >
+				{state.categorias.map((categoria,key)=><option key={key}>{categoria.categoria}</option>)}
+			  </NativeSelect>
                   <InputLabel>Atendente: </InputLabel>
                   <NativeSelect
                 name="atendente"
                 onChange={handleChange}
                 onClick={handleChange}
-                value={infos.atendente}
+                value={state.infos.atendente}
               >
-                {atendentes.map((atendente, i)=>{
+                {state.atendentes.map((atendente, i)=>{
                   return <option key={i} name="atendente">{atendente.nome}</option>
                 })}
                   </NativeSelect>
@@ -210,7 +278,7 @@ export default function Requisicao () {
                   <NativeSelect
                 name="departamento"
                 onChange={handleChange}
-                value={infos.departamento}
+                value={state.infos.departamento}
               >
               <option key={1} name="contabil">
                 Contábil
@@ -246,7 +314,7 @@ export default function Requisicao () {
                 type="dropdown"
                 label="Prioridade: "
                 onChange={handleChange}
-                value={["🟩Baixa", "🟧Média", "🟥Alta", "⬛Urgente"][infos.prioridade-1]}
+                value={["🟩Baixa", "🟧Média", "🟥Alta", "⬛Urgente"][state.infos.prioridade-1]}
               >
                 <option name="1" style={{}}>🟩Baixa</option>
                 <option name="2" style={{}}>🟧Média</option>
@@ -259,7 +327,7 @@ export default function Requisicao () {
                 name="anexo"
                 type="file"
                 onChange={handleChange}
-                    value={infos.anexo}
+                    value={state.infos.anexo}
                   />
                 </Stack>
             </Grid>

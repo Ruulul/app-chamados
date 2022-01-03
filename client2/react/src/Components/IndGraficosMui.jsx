@@ -11,8 +11,6 @@ import { makeStyles } from "@mui/styles";
 import { useMemo, useState  } from "react";
 
 const Donut = ({theme = undefined, angle = 0, label, value, size, ...props }) => {
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   return (
     <CircularProgress
       size={`${size}%`}
@@ -26,37 +24,13 @@ const Donut = ({theme = undefined, angle = 0, label, value, size, ...props }) =>
         zIndex: -1,
         position: "relative",
       }}
-      onPointerEnter={() => {
-        setOpen(true);
-      }}
-      onPointerLeave={() => {
-        setOpen(false);
-      }}
-      onPointerMove={(event) => {
-        setPosition({ x: event.clientX, y: event.clientY });
-      }}
     >
-      <Paper
-        sx={{
-          width: "fit-content",
-          padding: 2,
-          display: open ? "inherit" : "none",
-          position: "fixed",
-          left: position.x,
-          top: position.y,
-          zIndex: 1,
-        }}
-      >
-        <Typography>{`${label}: ${value}%`}</Typography>
-      </Paper>
     </CircularProgress>
   );
 };
 
 const Bar = ({ label, size, ...props }) => {
   const theme = useTheme();
-  const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
 
   const useStyles = makeStyles(() => ({
     root: {
@@ -68,35 +42,12 @@ const Bar = ({ label, size, ...props }) => {
   const classes = useStyles();
 
   return (
-    <>
       <LinearProgress
         variant="determinate"
         {...props}
         sx={{ ...props.sx, height: 10, width: `${size}%` }}
         classes={{ root: classes.root }}
-        onPointerEnter={() => {
-          setOpen(true);
-        }}
-        onPointerLeave={() => {
-          setOpen(false);
-        }}
-        onPointerMove={(event) => {
-          setPosition({ x: event.clientX, y: event.clientY });
-        }}
       />
-      <Paper
-        sx={{
-          width: "fit-content",
-          padding: 2,
-          display: open ? "inherit" : "none",
-          position: "fixed",
-          top: position.y,
-          left: position.x,
-        }}
-      >
-        <Typography>{`${label}: ${props.value}%`}</Typography>
-      </Paper>
-    </>
   );
 };
 
@@ -133,7 +84,6 @@ const BarLabelled = ({ label, labels, size, ...props }) => {
 
 const RadialBar = ({ values, size, ...props }) => {
   const theme = useTheme();
-  console.log(useTheme)
   const useStyles = makeStyles(() => ({
     root: {
       display: "grid",
@@ -176,12 +126,13 @@ const RadialBar = ({ values, size, ...props }) => {
         //let size = 100 - (index / values.length) * 100;
         //let thickness =
         //  (15 / values.length) / (1 - index * (1 / values.length));
-        let size = 100
+		let size = 100
         let thickness = 8
         let color_factor = (index / (values.length - 1)) * 195;
         let color_color = `rgb(${195 - color_factor}, ${
           195 - color_factor
         }, ${color_factor})`;
+		let rotate_value = `${values.slice(0, index).reduce((pv, co)=>pv+co.value, 0)/100 * 360}deg`
         return (
           <Box key={index} className={classes.circle}>
             <Donut
@@ -192,7 +143,8 @@ const RadialBar = ({ values, size, ...props }) => {
                 thickness,
                 sx: {
                     '& .MuiCircularProgress-svg': {
-                        rotate: `${values.slice(0, index).reduce((pv, co)=>pv+co.value, 0)/100 * 360}deg`,
+                        //rotate: rotate_value,
+						transform: `rotate(${rotate_value})`,
                         color: color_color
                     },
                 }

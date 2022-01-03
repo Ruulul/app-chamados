@@ -14,6 +14,7 @@ import {
 import { Link } from "react-router-dom";
 
 const TabelaServicos = (props) => {
+  console.log(props.servicos.at(-1))
   return (
       <Table>
         <TableHead>
@@ -22,6 +23,7 @@ const TabelaServicos = (props) => {
             <TableCell align="right">Urgência</TableCell>
             <TableCell align="right">Assunto</TableCell>
             <TableCell align="right">Departamento</TableCell>
+            <TableCell align="right">Categoria</TableCell>
             <TableCell align="right">Status</TableCell>
           </TableRow>
         </TableHead>
@@ -42,6 +44,7 @@ const TabelaServicos = (props) => {
                       <TableCell align="right">{(["Baixa", "Média", "Alta", "Urgente"])[s.prioridade - 1]}</TableCell>
                       <TableCell align="right">{s.assunto}</TableCell>
                       <TableCell align="right">{s.departamento}</TableCell>
+                      <TableCell align="right">{s?.subCategoria || "Não definido"}</TableCell>
                       <TableCell align="right">{s.status}</TableCell>
                     </TableRow>);
               }

@@ -10,10 +10,10 @@ import {
   Fade,
   TextField,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
+//import AddIcon from "@mui/icons-material/Add";
 import { useState } from "react";
 
-import { Comment as CommentIcon, MarkUnreadChatAlt } from "@mui/icons-material";
+//import { Comment as CommentIcon, MarkUnreadChatAlt } from "@mui/icons-material";
 
 const color1 = "#6261a3";
 const color2 = "#E0CA8E";
@@ -22,7 +22,7 @@ const corAtendente = "#EEE";
 const corAtendido = "#666";
 const corPendente = "#AAA";
 
-export default function Chat({ chats, createChat, openChat, ...props }) {
+export default function Chat({ chats, createChat, openChat, closeChat, ...props }) {
   const [anchorEl, setAnchor] = useState(undefined);
   const [isOpen, open] = useState(false);
   const [criarChat, criaChat] = useState(false);
@@ -31,113 +31,123 @@ export default function Chat({ chats, createChat, openChat, ...props }) {
     criaChat(true);
   }
   return (
-    <>
-      <Popper open={isOpen} anchorEl={anchorEl} placement="top-end" transition>
-        {({ TransitionProps }) => (
-          <Fade {...TransitionProps}>
-            <Box
-              sx={{
-                borderRadius: 5,
-                marginY: 2,
-                zIndex: 2,
-                backgroundColor: color2,
-                display: "grid",
-              }}
-            >
-              {!criarChat ? (
-                <Stack justifyContent="space-between">
-                  <Box>
-                    <Typography
-                      sx={{
-                        backgroundColor: color1,
-                        paddingX: 10,
-                        paddingBottom: 1,
-                        paddingTop: 2,
-                        borderRadius: "20px 20px 0 0",
-                        color: "whitesmoke",
-                      }}
-                    >
-                      Chats
-                    </Typography>
-                  </Box>
-                  <Box p={1}>
-                    <Stack spacing={3} pb={6}>
-                      {props.variant == "mine"
-                        ? chats
-                          ? chats.atendido.slice(0, 5).map((chat, key) =>
+    <ClickAwayListener onClickAway={() => {open(false); closeChat()}} {...props} sx={{display: "fixed", ...props.sx}}>
+      <Box>
+        <Popper open={isOpen} anchorEl={anchorEl} placement="top-end" transition>
+          {({ TransitionProps }) => (
+            <Fade {...TransitionProps}>
+              <Box
+                sx={{
+                  borderRadius: 5,
+                  marginY: 2,
+                  zIndex: 2,
+                  backgroundColor: color2,
+                  display: "grid",
+                }}
+              >
+                {!criarChat ? (
+                  <Stack justifyContent="space-between">
+                    <Box>
+                      <Typography
+                        sx={{
+                          backgroundColor: color1,
+                          paddingX: 10,
+                          paddingBottom: 1,
+                          paddingTop: 2,
+                          borderRadius: "20px 20px 0 0",
+                          color: "whitesmoke",
+                        }}
+                      >
+                        Chats
+                      </Typography>
+                    </Box>
+                    <Box p={1}>
+                      <Stack spacing={3} pb={6}>
+                        {props.variant == "mine"
+                          ? chats
+                            ? chats.atendido.slice(0, 5).map((chat, key) =>
                               Mensagem({
                                 theme,
                                 chat,
                                 posicao: "atendido",
                                 key,
                                 onClick: () => {
+                                  console.log("Clicked!")
                                   openChat(chat.id);
                                 },
                               })
                             )
-                          : console.log("Chats undefined")
-                        : undefined}
-                      {props.variant == "mine"
-                        ? chats
-                          ? chats.atendente.slice(0, 5).map((chat, key) =>
+                            : console.log("Chats undefined")
+                          : undefined}
+                        {props.variant == "mine"
+                          ? chats
+                            ? chats.atendente.slice(0, 5).map((chat, key) =>
                               Mensagem({
                                 theme,
                                 chat,
                                 posicao: "atendente",
                                 key,
                                 onClick: () => {
+                                  console.log("Clicked!")
                                   openChat(chat.id);
                                 },
                               })
                             )
-                          : console.log("Chats undefined")
-                        : undefined}
-                      {props.variant == "pendent"
-                        ? chats
-                          ? (console.log("Chats pendentes: ", chats),
-                            chats.map((chat, key) =>
-                              Mensagem({
-                                theme,
-                                chat,
-                                posicao: "pendente",
-                                key,
-                                onClick: () => {
-                                  openChat(chat.id);
-                                },
-                              })
-                            ))
-                          : console.log("Chats undefined")
-                        : undefined}
-                      <AddIcon
-                        onClick={addChat}
-                        sx={{
-                          backgroundColor: color1,
-                          width: 35,
-                          height: 35,
-                          borderRadius: 5,
-                          position: "absolute",
-                          bottom: 25,
-                          right: 20,
-                          color: "whitesmoke",
-                        }}
-                      />
-                    </Stack>
-                  </Box>
-                </Stack>
-              ) : (
-                <DefineChat
-                  {...{
-                    createChat,
-                    goBack: () => {
-                      criaChat(false);
-                    },
-                  }}
-                />
-              )}
-            </Box>
-          </Fade>
-        )}
-      </Popper>
+                            : console.log("Chats undefined")
+                          : undefined}
+                        {props.variant == "pendent"
+                          ? chats
+                            ? (console.log("Chats pendentes: ", chats),
+                              chats.map((chat, key) =>
+                                Mensagem({
+                                  theme,
+                                  chat,
+                                  posicao: "pendente",
+                                  key,
+                                  onClick: () => {
+                                    console.log("Clicked!")
+                                    openChat(chat.id);
+                                  },
+                                })
+                              ))
+                            : console.log("Chats undefined")
+                          : undefined}
+                        <Typography
+                          onClick={addChat}
+                          sx={{
+                            backgroundColor: color1,
+                            width: 35,
+                            height: 35,
+                            borderRadius: 5,
+                            position: "absolute",
+                            bottom: 25,
+                            right: 20,
+                            color: "whitesmoke",
+                            display: "grid"
+                          }}
+                        >
+                          <Typography
+                            sx={{ margin: "auto" }}>
+                            Add
+                          </Typography>
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  </Stack>
+                ) : (
+                  <DefineChat
+                    {...{
+                      createChat,
+                      goBack: () => {
+                        criaChat(false);
+                      },
+                    }}
+                  />
+                )}
+              </Box>
+            </Fade>
+          )}
+        </Popper>
         <Fab
           {...props}
           onClick={(event) => {
@@ -146,18 +156,19 @@ export default function Chat({ chats, createChat, openChat, ...props }) {
             open((o) => !o);
           }}
         >
-          {props.variant == "mine" ? (
-            <CommentIcon />
-          ) : props.variant == "pendent" ? (
-            <MarkUnreadChatAlt />
-          ) : undefined}
+          {//props.variant == "mine" ? (
+            // <CommentIcon />
+            //)// : props.variant == "pendent" ? (
+            // <MarkUnreadChatAlt />
+            //)// : undefined
+          }
         </Fab>
-    </>
+      </Box>
+    </ClickAwayListener>
   );
 }
 
 function Mensagem({ theme, chat, posicao, ...props }) {
-  console.log(chat);
   return (
     <Typography
       key={props.key}
@@ -166,10 +177,10 @@ function Mensagem({ theme, chat, posicao, ...props }) {
           posicao == "atendente"
             ? corAtendente
             : posicao == "atendido"
-            ? corAtendido
-            : posicao == "pendente"
-            ? corPendente
-            : theme.palette.warning.dark,
+              ? corAtendido
+              : posicao == "pendente"
+                ? corPendente
+                : theme.palette.warning.dark,
         padding: 1,
         marginX: 2,
         borderRadius: 3,
@@ -211,32 +222,32 @@ function DefineChat({ createChat, goBack }) {
   };
   return (
     <ClickAwayListener onClickAway={goBack}>
-    <Stack component="form" sx={{ "& *": { padding: 1 } }} {...{ onSubmit }}>
-      <TextField
-        required
-        name="assunto"
-        label="Assunto"
-        {...{ onChange }}
-        value={assunto}
-      />
-      <TextField
-        required
-        name="descr"
-        label="Descrição"
-        multiline
-        minRows={5}
-        {...{ onChange }}
-        value={descr}
-      />
-      <Button
-        {...{ disabled }}
-        sx={{ margin: "auto", backgroundColor: color1 }}
-        type="submit"
-        variant="contained"
-      >
-        Enviar
-      </Button>
-    </Stack>
+      <Stack component="form" sx={{ "& *": { padding: 1 } }} {...{ onSubmit }}>
+        <TextField
+          required
+          name="assunto"
+          label="Assunto"
+          {...{ onChange }}
+          value={assunto}
+        />
+        <TextField
+          required
+          name="descr"
+          label="Descrição"
+          multiline
+          minRows={5}
+          {...{ onChange }}
+          value={descr}
+        />
+        <Button
+          {...{ disabled }}
+          sx={{ margin: "auto", backgroundColor: color1 }}
+          type="submit"
+          variant="contained"
+        >
+          Enviar
+        </Button>
+      </Stack>
     </ClickAwayListener>
   );
 }

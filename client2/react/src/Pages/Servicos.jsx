@@ -8,7 +8,7 @@ import {
     NativeSelect,
     Typography
 } from "@mui/material";
-import axios from "axios";
+import axios from "../Components/Requisicao";
 import { useNavigate } from "react-router-dom";
 
 export default function servicosStatus() {
@@ -20,12 +20,12 @@ export default function servicosStatus() {
     const redirect = useNavigate()
     useEffect(()=>{
       let getServicos = () => filtroStatus === "todos" ?
-      axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
+      axios("get", '/api/servicos')
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosStatus(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
-    : axios.get('http://10.0.0.83:5000/api/servicos/status/' + filtroStatus, { withCredentials: true })
+    : axios("get",'/api/servicos/status/' + filtroStatus)
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosStatus(res.data)
@@ -39,12 +39,12 @@ export default function servicosStatus() {
     }, [filtroStatus])
     useEffect(()=>{
       let getServicos = ()=>filtroTipo === "todos" ?
-      axios.get('http://10.0.0.83:5000/api/servicos', { withCredentials: true })
+      axios("get",'/api/servicos')
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosTipo(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
-    : axios.get('http://10.0.0.83:5000/api/servicos/tipo/' + filtroTipo, { withCredentials: true })
+    : axios("get",'/api/servicos/tipo/' + filtroTipo)
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosTipo(res.data)

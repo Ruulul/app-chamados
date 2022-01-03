@@ -6,7 +6,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom"
 
-import { Grid, Button } from "@mui/material";
+import { Box, Grid, Button, Typography, CardMedia } from "@mui/material";
 import Stack from "@mui/material/Stack";
 import axios from "./Requisicao";
 import { useNavigate } from "react-router-dom"
@@ -16,9 +16,8 @@ const UpBar = (props) => {
     const [variant, setVariant] = useState("secondary")
     return (
       <Grid container>
-        <Grid item xs={5} />
         <Grid item xs={7}>
-          <Stack spacing={2} direction="row" pt={1} pr={4} justifyContent="space-between">
+          <Stack spacing={2} direction="row" ml={1} pt={1} pr={4} justifyContent="space-between">
             <Button
               variant="contained"
               color="primary"
@@ -27,6 +26,9 @@ const UpBar = (props) => {
             >
               <FontAwesomeIcon icon={faPlusCircle} />
             </Button>
+			<Typography component="h1" variant="h4" fontFamily="Major Mono Display, monospace" sx={{fontWeigth: 100}}>
+				help desk
+			</Typography>
             <Button
               variant="contained"
               color={variant}
@@ -34,7 +36,6 @@ const UpBar = (props) => {
                 await axios("post", '/api/logout')
                   .then(()=>{
                     redirect("/login")
-                    window.location.reload()
                   })
                   .catch((err)=>{console.log(err);return setVariant("error")})
               }}
@@ -56,3 +57,8 @@ const UpBar = (props) => {
   }
 
 export default UpBar;
+
+			//<Typography component="h1" variant="h2">
+			//	Help Desk
+			//</Typography>
+			
