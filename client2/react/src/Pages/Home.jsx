@@ -113,7 +113,7 @@ const Home = () => {
   useEffect(() => {
     const getServicos = () => {
       axios(
-        "get", "/api/servicos/status/pendente")
+        "get", "/api/servicos/status/pendente", 1500)
         .then(({ data }) => {
           if (data === "Não autorizado") redirect("/login");
           let novaContagem = {
@@ -154,13 +154,13 @@ const Home = () => {
           setContagem(novaContagem);
           setPrazo(novoPrazo);
         })
-        .catch((err) => console.error("Erro obtendo serviços.\n" + err));
+        .catch((err)=><Typography>{"Erro obtendo serviços.\n" + err}</Typography>);
       return () => {
         setServicos(undefined);
       };
     };
     getServicos();
-    let interval = setInterval(getServicos, 500);
+    let interval = setInterval(getServicos, 2000);
     return () => {
       clearInterval(interval);
     };
@@ -243,7 +243,7 @@ function Avatares(props) {
 				{...props}
 				/>
 			}))
-		.catch(err=>setAvatares(<Typography {...props.err}>{err}</Typography>))
+		.catch(err=>setAvatares(<Typography {...props.err}>{err.message}</Typography>))
 	}
 	useEffect(()=>{
 		let interval = setInterval(async()=>{
@@ -252,7 +252,7 @@ function Avatares(props) {
 			}catch(e) {
 				setAvatares(<Typography {...props.err}>{e}</Typography>)
 			}
-		}, 1000)
+		}, 2000)
 		return ()=> clearInterval(interval)
 	}, [])
 	return avatares ? avatares : <CircularProgress sx={{mt: "20vh"}}/>

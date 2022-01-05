@@ -52,7 +52,7 @@ export default function Requisicao () {
         })
         .catch((err)=>{console.log('Erro obtendo serviços. ' + err)})
     }
-    let interval = setInterval(contaServicos, 500)
+    let interval = setInterval(contaServicos, 2000)
     return ()=>{
       clearInterval(interval)
     }

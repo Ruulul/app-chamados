@@ -84,7 +84,7 @@ export default function Chamado() {
         });
     };
     getInfos();
-    let interval = setInterval(getInfos, 500);
+    let interval = setInterval(getInfos, 2000);
     return () => {
       clearInterval(interval);
     };
