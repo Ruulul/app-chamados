@@ -17,7 +17,7 @@ const UpBar = (props) => {
     return (
       <Grid container>
         <Grid item xs={7}>
-          <Stack spacing={2} direction="row" ml={1} pt={1} pr={4} justifyContent="space-between">
+          <Stack spacing={2} size="small" direction="row" ml={1} pt={1} pr={4} justifyContent="space-between">
             <Button
               variant="contained"
               color="primary"
@@ -30,6 +30,7 @@ const UpBar = (props) => {
 				help desk
 			</Typography>
             <Button
+              size="small"
               variant="contained"
               color={variant}
               onClick={async ()=>{
@@ -43,7 +44,7 @@ const UpBar = (props) => {
               sx={{
                 minWidth: 0,
                 minHeight: 0,
-                width: 1/30,
+                width: {sx:1/20,md: 1/30},
                 position: "absolute",
                 right: 30
               }}

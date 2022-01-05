@@ -13,7 +13,6 @@ import {
 import axios from "../Components/Requisicao";
 import { useEffect, useMemo, useState, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
-import Chat from "../Components/Chat";
 
 const conversao = [
     "Jan",
@@ -106,7 +105,7 @@ const Home = () => {
         if (data === "Não autorizado") redirect("/login");
         setNome(data.nome);
       })
-      .catch((err) => {
+      .catch(() => {
         console.log("Erro obtendo nome");
         setNome("Falha obtendo nome");
       });
@@ -326,7 +325,9 @@ function Contagem({ contagem }) {
         <Typography variant="h5">
           <strong>{contagem.pendentes} pendentes</strong>
         </Typography>
-        <Typography variant="h6">{contagem.parados} parados</Typography>
+        <Typography variant="h6">
+          {contagem.parados} parados
+        </Typography>
         <Typography variant="h6">
           {contagem.atendimento} em atendimento
         </Typography>

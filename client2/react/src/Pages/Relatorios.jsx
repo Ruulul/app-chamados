@@ -48,7 +48,6 @@ const Relatorios = (props) => {
         let data = [];
         (async () => {
             for (let filtro of filtrosAtivos) {
-                console.log(filtro)
 
                 switch (filtro.tipo) {
                     case "Departamento":
@@ -59,7 +58,6 @@ const Relatorios = (props) => {
                     case "Atendente":
                         data = await axios("get",'/api/servicos/atendenteId/' + filtro.valor)
                         let serA = data.data
-                        console.log(serA)
                         serAs = [...serAs, ...serA]
                         break;
                     case "Categoria":
@@ -89,7 +87,6 @@ const Relatorios = (props) => {
                                 p.length === 0 ? c : c.length === 0 ? p
                                     : p.filter(e1 => c.some(e2 => e1.id === e2.id))
                         )
-            console.log(relatoriodata)
             if (filtrosAtivos.some(a=>a.tipo==="DataInicio"))
                 relatoriodata = relatoriodata.filter(servico=>servico.createdAt.split('T')[0] >= filtrosAtivos.find(a=>a.tipo==="DataInicio").valor)
             if (filtrosAtivos.some(a=>a.tipo==="DataFim"))
@@ -291,7 +288,6 @@ const Relatorios = (props) => {
                                     relatorio.slice(25 * i, 25 * (i + 1)).forEach(
                                         (servico, index) => {
                                             let yo = 35 + index*10 + filtrosAtivos.length * 5
-                                            console.log(servico)
                                             doc.setFontSize(8)
                                             doc.text(
                                                 doc.splitTextToSize(servico.assunto, 20).length <= 2 ? 

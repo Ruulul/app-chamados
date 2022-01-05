@@ -26,7 +26,6 @@ export default function MudarSenha() {
 
     const [state, dispatch] = useReducer(reducer, initialState);
     const redirect = useNavigate()
-    console.log({...state.campos, enviando: state.enviando, error: state.error})
 
     function handleChange({target}) {
         dispatch({type: "campos", payload: target})
@@ -49,7 +48,6 @@ export default function MudarSenha() {
         await axios("post","/api/alterasenha", login)
             .then(({data})=>{
                 dispatch({type: "error", payload: data.error})
-                console.log({data})
                 if(!data.error) 
                   redirect("/")
                 dispatch({type: "enviando", payload: false})

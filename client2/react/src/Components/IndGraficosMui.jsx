@@ -4,13 +4,10 @@ import {
   Slider,
   Box,
   useTheme,
-  Paper,
-  Typography,
 } from "@mui/material";
 import { makeStyles } from "@mui/styles";
-import { useMemo, useState  } from "react";
 
-const Donut = ({theme = undefined, angle = 0, label, value, size, ...props }) => {
+const Donut = ({label, value, size, ...props }) => {
   return (
     <CircularProgress
       size={`${size}%`}
@@ -31,22 +28,13 @@ const Donut = ({theme = undefined, angle = 0, label, value, size, ...props }) =>
 
 const Bar = ({ label, size, ...props }) => {
   const theme = useTheme();
-
-  const useStyles = makeStyles(() => ({
-    root: {
-      height: theme.spacing(4),
-      backgroundColor: theme.palette.action.hover,
-    },
-  }));
-
-  const classes = useStyles();
-
   return (
       <LinearProgress
         variant="determinate"
         {...props}
-        sx={{ ...props.sx, height: 10, width: `${size}%` }}
-        classes={{ root: classes.root }}
+        sx={{ ...props.sx, width: `${size}%`, 
+        height: theme.spacing(4),
+        backgroundColor: theme.palette.action.hover, }}
       />
   );
 };
@@ -84,45 +72,17 @@ const BarLabelled = ({ label, labels, size, ...props }) => {
 
 const RadialBar = ({ values, size, ...props }) => {
   const theme = useTheme();
-  const useStyles = makeStyles(() => ({
-    root: {
-      display: "grid",
-      alignItems: "center",
-      padding: theme.spacing(2),
-    },
-    circle: {
-      gridRow: 1,
-      gridColumn: 1,
-      display: "grid",
-      alignItems: "center",
-      height: "100%",
-      width: "100%",
-    },
-    bar: {
-      gridRow: 1,
-      gridColumn: 1,
-      margin: "0 auto",
-      zIndex: 1,
-    },
-    track: {
-      gridRow: 1,
-      gridColumn: 1,
-      margin: "0 auto",
-      color: theme.palette.action.hover,
-    },
-  }))
-
-  const classes = useStyles()
-
   return (
     <Box
-      className={classes.root}
       sx={{
         width: `${size}%`,
+        display: "grid",
+        alignItems: "center",
+        padding: theme.spacing(2),
       }}
       {...props}
     >
-      {values.map((value, index) => {
+      {values.map(function (value, index, values) {
         //let size = 100 - (index / values.length) * 100;
         //let thickness =
         //  (15 / values.length) / (1 - index * (1 / values.length));
@@ -134,7 +94,14 @@ const RadialBar = ({ values, size, ...props }) => {
         }, ${color_factor})`;
 		let rotate_value = `${values.slice(0, index).reduce((pv, co)=>pv+co.value, 0)/100 * 360}deg`
         return (
-          <Box key={index} className={classes.circle}>
+          <Box key={index}sx={{
+            gridRow: 1,
+            gridColumn: 1,
+            display: "grid",
+            alignItems: "center",
+            height: "100%",
+            width: "100%",
+            }}>
             <Donut
               {...{
                 value: value.value,
@@ -142,6 +109,10 @@ const RadialBar = ({ values, size, ...props }) => {
                 size,
                 thickness,
                 sx: {
+                    gridRow: 1,
+                    gridColumn: 1,
+                    margin: "0 auto",
+                    zIndex: 1,
                     '& .MuiCircularProgress-svg': {
                         //rotate: rotate_value,
 						transform: `rotate(${rotate_value})`,
@@ -149,12 +120,17 @@ const RadialBar = ({ values, size, ...props }) => {
                     },
                 }
               }}
-              className={classes.bar}
             />
             <CircularProgress
               {...{ variant: "determinate", size: `${size}%`, thickness }}
               value={100}
-              className={classes.track}
+              sx={{
+                gridRow: 1,
+                gridColumn: 1,
+                margin: "0 auto",
+                //color: theme.palette.action.hover,
+                zIndex: 0
+              }}
             />
           </Box>
         );

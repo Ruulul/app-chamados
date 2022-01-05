@@ -4,75 +4,31 @@ import {
   Card,
   Typography,
   Grid,
-  Table,
-  TableHead,
-  TableRow,
-  TableBody,
-  TableCell,
-  Skeleton,
-  Stack,
   Divider,
 } from "@mui/material";
 
-import IndicadorGrafico from "../Components/IndicadoresGraficos";
 import {
-  Donut,
   Bar,
-  BarLabelled,
   RadialBar,
 } from "../Components/IndGraficosMui";
-import { PrioridadeTodos } from "../Components/IndicadoresGraficos";
 
 import { useNavigate } from "react-router-dom";
 
-async function Servicos(filtro) {
-  let Tabela = "Não autorizado";
-  await axios(
+async function Servicos(filtro="") {
+  return await axios(
     "get", "/api/servicos")
     .then(({ data }) => {
       if (data === "Não autorizado") return "Não autorizado";
-      switch (filtro) {
-        case "abertos":
-          let servicos_abertos = [];
-          data.forEach((servico) => {
-            if (servico.status === "pendente" || servico.status === "resolvido")
-              servicos_abertos = [...servicos_abertos, servico];
-          });
-
-          Tabela = servicos_abertos;
-          break;
-        case "pendentes":
-          let servicos_pendentes = [];
-          data.forEach((servico) => {
-            if (servico.status === "pendente")
-              servicos_pendentes = [...servicos_pendentes, servico];
-          });
-
-          Tabela = servicos_pendentes;
-          break;
-        case "resolvidos":
-          let servicos_resolvidos = [];
-          data.forEach((servico) => {
-            if (servico.status === "resolvido")
-              servicos_resolvidos = [...servicos_resolvidos, servico];
-          });
-
-          Tabela = servicos_resolvidos;
-        default:
-          Tabela = data;
-      }
+      return data;
     })
-    .catch((err) => {
-      Tabela = (
+    .catch(() => 
         <Typography>
           Ocorreu um erro ao carregar a tabela de {filtro}
         </Typography>
-      );
-    });
-  return Tabela;
+    );
 }
 
-const IndicadoresMui = (props) => {
+const IndicadoresMui = () => {
   const redirect = useNavigate();
   const [servicos_abertos, setServicosAbertos] = useState([]);
   const [servicos_pendentes, setServicosPendentes] = useState([]);
@@ -85,42 +41,42 @@ const IndicadoresMui = (props) => {
   const [departamentosP, setDepartamentosP] = useState([]);
   const [departamentosR, setDepartamentosR] = useState([]);
 
-  const values_abertos_tipo = tiposA.map((tipo) => ({
+  const values_abertos_tipo = useMemo(()=>tiposA.map((tipo) => ({
     label: tipo,
     value:
       (100 * servicos_abertos.filter((s) => s.tipo === tipo).length) /
         servicos_abertos.length
-  }));
-  const values_pendentes_tipo = tiposP.map((tipo) => ({
+  })), [tiposA]);
+  const values_pendentes_tipo = useMemo(()=>tiposP.map((tipo) => ({
     label: tipo,
     value:
       (100 * servicos_pendentes.filter((s) => s.tipo === tipo).length) /
         servicos_pendentes.length
-  }));
-  const values_resolvidos_tipo = tiposR.map((tipo) => ({
+  })), [tiposP]);
+  const values_resolvidos_tipo = useMemo(()=>tiposR.map((tipo) => ({
     label: tipo,
     value: 
       (100 * servicos_resolvidos.filter((s) => s.tipo === tipo).length) /
         servicos_resolvidos.length
-  }));
-  const values_abertos_departamento = departamentosA.map((dep) => ({
+  })), [tiposR]);
+  const values_abertos_departamento = useMemo(()=>departamentosA.map((dep) => ({
     label: dep,
     value: 
       (100 * servicos_abertos.filter((s) => s.departamento === dep).length) /
         servicos_abertos.length
-  }));
-  const values_pendentes_departamento = departamentosP.map((dep) => ({
+  })),[departamentosA]);
+  const values_pendentes_departamento = useMemo(()=>departamentosP.map((dep) => ({
     label: dep,
     value:
       (100 * servicos_pendentes.filter((s) => s.departamento === dep).length) /
         servicos_pendentes.length
-  }));
-  const values_resolvidos_departamento = departamentosR.map((dep) => ({
+  })), [departamentosP]);
+  const values_resolvidos_departamento = useMemo(()=>departamentosR.map((dep) => ({
     label: dep,
     value: 
       (100 * servicos_resolvidos.filter((s) => s.departamento === dep).length) /
         servicos_resolvidos.length
-  }));
+  })),[departamentosR]);
 
   function setarServicosAbertos(servicos) {
     if (servicos === "Não autorizado") redirect("/login");
@@ -146,15 +102,15 @@ const IndicadoresMui = (props) => {
     setDepartamentosR([...new Set(servicosr.map((s) => s.departamento))]);
   }
   async function setarServicosTodos() {
-    let servicos = await Servicos("");
+    let servicos = await Servicos();
     if (servicos === "Não autorizado") redirect("/login");
     setTodos(servicos);
     return servicos;
   }
 
-  useEffect(() => {
-    const setAll = () => {
-      setarServicosTodos().then((s) => {
+  useEffect(function(){
+    const setAll = function(){
+      setarServicosTodos().then(function(s){
         setarServicosAbertos(s);
         setarServicosPendentes(s);
         setarServicosResolvidos(s);

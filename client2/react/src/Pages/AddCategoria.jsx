@@ -32,7 +32,6 @@ export default function AddCategoria() {
 		axios('get','/api/servicos/categorias/') //+ infos.tipo)
 			.then(
 				({data: categorias})=>{
-					console.log(categorias);
 					setCategorias(categorias);
 					let tipos = [...new Set(categorias.sort().map(categoria=>categoria.tipo))]
 					setTipos(tipos)
@@ -55,7 +54,6 @@ export default function AddCategoria() {
 				setTipo(event.target.value)
 				break
 		}
-		console.log({tipo, newCategoria})
 	} 
 	
 	function onSubmit(event) {
@@ -103,7 +101,7 @@ export default function AddCategoria() {
 					.map((categoria, key)=><Categoria {...{categoria, tipos, getCategorias, key}} />)
 					}
 				</Stack> 
-				</>: <CircularProgress />}
+				</>: <CircularProgress sx={{ display: "grid", margin: "auto", align:"center", marginTop: "30vh", transform: "scale(3)" }} />}
 			</Stack>
 		</Grid>			
 	</Grid>
@@ -114,7 +112,6 @@ function Categoria({categoria, getCategorias, tipos}) {
 	const [openEdit, setOpen] = useState(false)
 	const [anchorElEdit, setAnchor] = useState(undefined)
 	const [openDelete, setOpenD] = useState(false)
-	const [anchorElDelete, setAnchorD] = useState(undefined)
 	const [newCategoria, setCategoria] = useState(categoria.categoria)
 	const [tipo, setTipo] = useState(tipos[0])
 	
@@ -138,7 +135,6 @@ function Categoria({categoria, getCategorias, tipos}) {
 				setTipo(event.target.value)
 				break
 		}
-		console.log({tipo, newCategoria})
 	} 
 	
 	function onSubmit(event) {
@@ -147,7 +143,6 @@ function Categoria({categoria, getCategorias, tipos}) {
 		let req = {tipo, newCategoria}
 		axios("post", `/api/servicos/editar/subcategoria/${categoria.tipo}/${categoria.categoria}`, req)
 					.then(({data})=>{
-						console.log("Sucesso! ", data)
 						setTipo(tipos[0])
 						getCategorias()
 						setOpen(false)

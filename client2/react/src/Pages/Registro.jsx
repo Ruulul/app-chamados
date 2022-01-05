@@ -24,7 +24,6 @@ export default function Registro() {
     async function onSubmit(event) {
         event.preventDefault();
         const cadastro = {nome, sobrenome, email, senha};
-        console.log({cadastro})
         await axios("post","/api/novo/usuario", cadastro)
             .then(({data})=>{
                 if (data === "Não autorizado")
@@ -36,11 +35,10 @@ export default function Registro() {
     useEffect(()=>{
       axios("get", '/api/perfil')
         .then(({data})=>{
-            console.log(data)
             if (data === "Não autorizado")
                 redirect("/")
         })
-        .catch(err=>console.log)
+        .catch(console.log)
     },[])
     return (
         <Grid item container component="form" direction="column" xs={10} md={6} lg={4} onSubmit={onSubmit} padding={5}>

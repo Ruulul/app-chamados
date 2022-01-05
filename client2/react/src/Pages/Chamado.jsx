@@ -143,7 +143,6 @@ export default function Chamado() {
               setInfos(novasInfos);
               axios("get", "/api/usuario/" + novasInfos.atendenteId).then(
                 ({ data }) => {
-                  console.log(data);
                   Email.send({
                     SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
                     To: data.email,
@@ -288,7 +287,7 @@ const AddMensagem = (props) => {
         setAutor(data.id);
       })
       .catch((err) => {
-        console.log("Erro obtendo nome\n" + err);
+        console.log("Erro obtendo nome\n" + err.message);
         setNome("Falha obtendo nome");
       });
   }, []);

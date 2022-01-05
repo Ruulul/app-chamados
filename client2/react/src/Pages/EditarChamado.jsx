@@ -99,7 +99,6 @@ export default function EditarChamado () {
   },[])
 
   useEffect(()=>{
-    console.log(idChamado)
     axios("get","/api/servico/" + idChamado)
 		.then(async ({data : chamado})=>{
 			console.log("Puxando servico: ", chamado)
@@ -107,7 +106,6 @@ export default function EditarChamado () {
 			axios("get","/api/usuario/" + chamado.atendenteId)
 				.then(({data : payload})=>{
 					dispatch({type:"setAtendente", payload})
-					console.log("Puxando atendente: ", state.infos)
 					}
 				);
 			}
@@ -116,16 +114,13 @@ export default function EditarChamado () {
 },[state.infos.id])
   
   useEffect(()=>{
-	  console.log(`/api/servicos/categorias/${state.infos.tipo}`)
 	  axios('get','/api/servicos/categorias/') //+ infos.tipo)
 		.then(
 			({data: categorias})=>{
-				console.log(categorias.filter(c=>c.tipo==state.infos.tipo));
 				dispatch({type:"setCategorias", payload: categorias.filter(c=>c.tipo==state.infos.tipo)});
 				let new_infos = {...state.infos}; 
 				new_infos.subCategoria = categorias.filter(c=>c.tipo==state.infos.tipo)[0].categoria
 				dispatch({type: "setInfos", payload: new_infos})
-				console.log(new_infos)
 			}
 		)
 		.catch(err=>console.log(err))
@@ -133,7 +128,6 @@ export default function EditarChamado () {
 
   function handleChange(event) {
     let novas_infos = {...state.infos}
-	console.log(event.target, event.target.value)
     if (event.target.name === "atendente") {
       novas_infos.atendenteId = state.atendentes[(state.atendentes.map((atendente)=>{return atendente.nome})).indexOf(event.target.value)].id
       novas_infos.atendente = event.target.value
@@ -143,7 +137,6 @@ export default function EditarChamado () {
       novas_infos[event.target.name] = prioridades.indexOf(event.target.value) + 1;
     }
     else novas_infos[event.target.name] = [event.target.value][0];
-    console.log(novas_infos)
     dispatch({type:"setInfos", payload:novas_infos})
     console.log("Infos atualizadas")
   }

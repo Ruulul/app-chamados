@@ -68,7 +68,7 @@ export default function Login() {
 				>
                     Acessar
                 </Button> : <CircularProgress sx={{placeSelf: "center"}} />}
-            </Stack>
+          </Stack>
         </Grid>
         <Grid item xs={6} md={10} mt={10} lg={7.8} height="80vh" sx={{opacity: 1}}>
           <Fade in={true} timeout={2000}>

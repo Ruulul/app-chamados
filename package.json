@@ -45,7 +45,8 @@
       "react-to-pdf": "^0.0.14",
       "sfcookies": "^1.0.2",
       "smtpjs": "^0.0.1",
-      "webfontloader": "^1.6.28"
+      "webfontloader": "^1.6.28",
+      "yarn": "^1.22.17"
    },
    "devDependencies": {
       "@types/mysql2": "github:types/mysql2",

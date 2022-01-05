@@ -61,7 +61,7 @@ export default function Avisos(props) {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {servicos!=[] ?
+                    {servicos.lenght != 0 ?
                     servicos.sort(
                         (a, b)=>a.prazo.getTime() - b.prazo.getTime()
                         ).map(

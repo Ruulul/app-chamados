@@ -59,16 +59,13 @@ export default function Requisicao () {
   }, [])
   
   useEffect(()=>{
-	  console.log(`/api/servicos/categorias/${infos.tipo}`)
 	  axios('get','/api/servicos/categorias/') //+ infos.tipo)
 		.then(
 			({data: categorias})=>{
-				console.log(categorias.filter(c=>c.tipo==infos.tipo));
 				setCategorias(categorias.filter(c=>c.tipo==infos.tipo));
 				let new_infos = {...infos}; 
 				new_infos.subCategoria = categorias.filter(c=>c.tipo==infos.tipo)[0].categoria; 
 				setInfos(new_infos)
-				console.log(new_infos)
 			}
 		)
 		.catch(err=>console.log(err))
@@ -89,7 +86,6 @@ export default function Requisicao () {
   useEffect(()=>{
     axios("get",'/api/usuarios/area/' + infos.tipo)
       .then(({data})=>{
-        console.log(data)
         setAtendentes(data)
         let novas_infos = infos
         novas_infos.atendenteId = data[0].id
@@ -108,7 +104,6 @@ export default function Requisicao () {
     } else if (event.target.name === "mensagem")
       novas_infos.chat[0].mensagem = event.target.value;
     else novas_infos[event.target.name] = [event.target.value][0];
-    console.log(infos)
     setInfos(novas_infos)
     forceUpdate({})
   }
@@ -140,7 +135,6 @@ export default function Requisicao () {
     requisicao.status = "pendente"
     await getPrazo().then(async (prazo)=>{
       requisicao.prazo=prazo.toISOString()
-      console.log(atendentes.find(a=>a.id==infos.atendenteId))
       await axios("post",'/api/novo/servico', requisicao)
         .then(()=>{
           Email.send({
