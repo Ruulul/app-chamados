@@ -223,7 +223,7 @@ function Avatares(props) {
 		.then(({data})=>data?.atendentes?.map(
 			(atendente, key)=>{
 				let date = Date().split(' ')
-				let chamados = data.chamados.filter(chamado=>chamado.metadados.find(md=>md.nome == "atendenteId")?.valor==atendente.id && chamado.metadados.find(md=>md.nome == "status")?.valor != "fechado")
+				let chamados = data.chamados.filter(chamado=>chamado.atendenteId?.valor==atendente.id && chamado.status?.valor != "fechado")
 				let atendimento = chamados.filter(chamado => chamado.atendimento == true)
 				let fechado = chamados.filter(chamado => chamado.status == "fechado" && chamado.updatedAt.split('T')[0] == `${date[3]}-${String(Math.floor(conversao.indexOf(date[1])/2)).padStart(2, '0')}-${date[2]}`)
 				return <CAvatar 

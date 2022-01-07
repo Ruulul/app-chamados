@@ -1,7 +1,22 @@
 import axios from "axios";
 
-const burl = "http://10.0.0.5:5000"
+const baseURL = "http://10.0.0.5:5000"
 //const burl = "localhost:5000"
-export default function Axios(method, path, data, timeout = 1000, options = {}) {
-    return axios({ method, url: burl + (path[0] == "/" ? "" : "/") + path, data: data || null, withCredentials: true, timeout, ...options })
+
+const AxiosSingleton = (function(){
+    var instance;
+    function createInstance() {
+        return axios.create({baseURL})
+    }
+    return {
+        getInstance: function () {
+            if (!instance)
+                instance = createInstance();
+            return instance;
+        }
+    }
+})()
+
+export default function RunAxios(method, path, data, timeout, options = {}) {
+    return AxiosSingleton.getInstance()({ method, url: (path[0] == "/" ? "" : "/") + path, data: data || null, withCredentials: true, timeout, ...options })
 }

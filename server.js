@@ -16,10 +16,15 @@ const SECRET = fs.readFileSync('./key', 'utf-8');
 
 const prisma = new PrismaClient()
 const express = require('express');
+const { createJsxAttribute } = require('typescript');
 //const https = require('https')
 const app = express();
 //const server = https.createServer({key, cert}, app)
 const port = process.env.PORT || 5000;
+
+var usuarios = "vazio"
+var chamados = "vazio"
+var categorias = "vazio"
 
 const store = new PrismaSessionStore(
   prisma, {
@@ -63,6 +68,88 @@ app.use(function (req, res, next) {
 app.get('/api/mensagem', (req, res) => {
   res.send({ express: 'Hello From Express' });
 });
+
+async function updateChamados() {
+  chamados = await prisma.chamado.findMany({
+    select: {
+      id: true,
+      autorId: true,
+      metadados: true,
+      chat: true,
+      assunto: true,
+      createdAt: true,
+      prazo: true,
+      updatedAt: true
+    }
+  })
+  .then((data) => {
+    let Metas = [];
+    chamados = [];
+    for (const [index, chamado] of Object.entries(data))
+      Metas[index] =
+        Object.fromEntries(
+          chamado.metadados.map(
+            (md) => {
+              return [md.nome, md.valor]
+            }
+          )
+        )
+    return data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } })
+  }).catch((e)=>{
+    if (chamados === "vazio")
+      throw e
+    else
+      console.log("Erro em updateChamados.\n", e)
+  })
+}
+
+async function updateUsuarios() {
+  await prisma.usuario.findMany({
+    select: {
+      id: true,
+      nome: true,
+      sobrenome: true,
+      senha: false,
+      email: true,
+      metadados: true
+    }
+  }).then(function (usuarios_array) {
+    usuarios = []
+    for (let usuario of usuarios_array)
+      usuarios[usuario.id] = usuario
+    let Metas = [];
+    for (const [index, usuario] of Object.entries(usuarios_array))
+      Metas[index] =
+        Object.fromEntries(
+          usuario.metadados.map(
+            (md) => {
+              return [md.nome, md.valor]
+            }
+          )
+        )
+    usuarios = usuarios.map((usuario, index) => { delete usuario.metadados; return { ...usuario, ...Metas[index] } })
+  }).catch((e)=>{
+    if (usuarios === "vazio")
+      throw e
+    else
+      console.log("Erro em updateUsuarios.\n", e)
+  })
+}
+
+async function updateCategorias() {
+  await prisma.usuario.findMany({
+  }).then(function (data) {
+    categorias = data
+  }).catch((e)=>{
+    if (categorias === "vazio")
+      throw e
+    else
+      console.log("Erro em updateCategorias.\n", e)
+  })
+}
+updateChamados()
+updateUsuarios()
+updateCategorias()
 /* 
 Serviços
 */
@@ -89,13 +176,13 @@ app.post('/api/novo/servico', async (req, res) => {
                 tipo: servico.tipo,
                 atendenteId: servico.atendenteId,
                 atendimento: String(false),
-				subCategoria: servico.subCategoria
+                subCategoria: servico.subCategoria
               }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } })
             }
           }
         }
       })),
-
+      (updateChamados()),
       res.status(200).send(req.body)) : res.send("Não autorizado")
 });
 
@@ -110,20 +197,11 @@ app.post('/api/update/servico/:id', async (req, res) => {
     tipo: novo_servico.tipo,
     atendenteId: novo_servico.atendenteId
   }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } });
-  let validUpdate = await prisma.metadadoChamado.findFirst(
-    {
-      where: {
-        chamadoId: novo_servico.id,
-        nome: "atendenteId"
-      }
-    }).then(async (valor) => {
-      console.log(valor)
-      let usuario = await prisma.usuario.findUnique({ where: { id: req.session.usuarioId }, select: { id: true, metadados: true } })
-      let metadados = Object.fromEntries(usuario.metadados.map((metadado) => [metadado.nome, metadado.valor]))
-      if (valor.valor == usuario.id || metadados.cargo == "admin")
-        return true;
-      else return false;
-    })
+  let validUpdate = 
+    chamados
+    .find(chamado=>chamado.metadados.chamadoId==novo_servico.id)
+    .atendenteId == usuarios[req.session.usuarioId].id 
+    || usuarios[req.session.usuarioId].metadados.find(md=>md.nome=="cargo").valor == "admin"
   console.log("Edição é " + (validUpdate ? "válida" : "inválida"))
   req.session.valid && validUpdate ? (async () => {
     console.log("Atualizando serviço")
@@ -142,7 +220,7 @@ app.post('/api/update/servico/:id', async (req, res) => {
             }
           },
         }
-      })
+      }).catch((e)=>console.log("Erro na atualização do chamado.\n", e))
     }
     for (let metadado of metadados)
       await prisma.metadadoChamado.updateMany({
@@ -153,302 +231,110 @@ app.post('/api/update/servico/:id', async (req, res) => {
         data: {
           valor: metadado.valor
         }
-      })
+      }).catch((e)=>console.log("Erro na atualização dos metadados do chamado. \n", e))
+    updateChamados()
     res.status(200).send(req.body)
   })() : res.send("Não autorizado")
 });
 
-app.get('/api/servicos', async (req, res) => {
+app.get('/api/servicos', (req, res) => {
   req.session.valid ?
-	prisma.usuario.findUnique({where: {id: req.session.usuarioId}, select:{metadados: true}})
-	.then((usuario)=>{
-		if (usuario?.metadados?.find(md=>md.nome=="tipo" && md.valor=="suporte"))
-			prisma.chamado
-			.findMany({
-				select: {
-					id: true,
-					autorId: true,
-					metadados: true,
-					chat: true,
-					assunto: true,
-					createdAt: true,
-					prazo: true,
-					updatedAt: true
-				}
-			})
-			.then((data) => {
-				let Metas = [];
-				for (const [index, chamado] of data.entries())
-				Metas[index] =
-					Object.fromEntries(
-						chamado.metadados.map(
-							(md) => {
-							return [md.nome, md.valor]
-							}
-						)
-					)
-				res.send(data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } }))
-			})
-			.catch((e)=>{
-                console.log("Ocorreu um erro no banco de dados \n", e)
-                res.status(500).send({error: e})
-            })
-		else
-			prisma.chamado
-			.findMany({
-				where: {
-					autorId: req.session.usuarioId
-				},
-				select: {
-					id: true,
-					autorId: true,
-					metadados: true,
-					chat: true,
-					assunto: true,
-					createdAt: true,
-					prazo: true,
-					updatedAt: true
-				}
-			})
-			.then(data => {
-				let Metas = [];
-				for (const [index, chamado] of data.entries())
-					Metas[index] =
-						Object.fromEntries(
-							chamado.metadados.map(
-								md =>
-									[md.nome, md.valor]
-							)
-						)
-				res.send(data.map((chamado,index)=> {delete chamado.metadados; return {...chamado, ...Metas[index]}}))
-			})
-	})
-	.catch((error)=>res.status(500).send({error}))
+        usuarios[req.session.usuarioId].tipo == "suporte" ?
+          res.send(chamados)
+        : res.send(chamados.filter(chamado=>chamado.autorId==req.session.usuarioId))
     : res.send("Não autorizado")
 });
 
-app.get('/api/servicos/:tipo/:filtro', async (req, res) => {
+app.get('/api/servicos/:tipo/:filtro', (req, res) => {
   req.session.valid ?
-	prisma.usuario.findUnique({where: {id: req.session.usuarioId}, select:{metadados: true}})
-	.then((usuario)=>{
-		if (usuario?.metadados?.find(md=>md.nome=="tipo" && md.valor=="suporte"))
-			prisma.chamado
-			.findMany({
-				where: {
-					metadados:{
-						some: {
-							nome: req.params.tipo,
-							valor: req.params.filtro
-						}
-					}
-				},
-				select: {
-					id: true,
-					autorId: true,
-					metadados: true,
-					chat: true,
-					assunto: true,
-					createdAt: true,
-					prazo: true,
-					updatedAt: true
-				}
-			})
-			.then((data) => {
-				let Metas = [];
-				for (const [index, chamado] of data.entries())
-				Metas[index] =
-					Object.fromEntries(
-						chamado.metadados.map(
-							(md) => {
-							return [md.nome, md.valor]
-							}
-						)
-					)
-				res.send(data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } }))
-			})
-			.catch("Ocorreu um erro no banco de dados")
-		else
-			prisma.chamado
-			.findMany({
-				where: {
-					autorId: req.session.usuarioId,
-					metadados:{
-						some: {
-							nome: req.params.tipo,
-							valor: req.params.filtro
-						}
-					}
-				},
-				select: {
-					id: true,
-					autorId: true,
-					metadados: true,
-					chat: true,
-					assunto: true,
-					createdAt: true,
-					prazo: true,
-					updatedAt: true
-				}
-			})
-			.then(data => {
-				let Metas = [];
-				for (const [index, chamado] of data.entries())
-					Metas[index] =
-						Object.fromEntries(
-							chamado.metadados.map(
-								md =>
-									[md.nome, md.valor]
-							)
-						)
-				res.send(data.map((chamado,index)=> {delete chamado.metadados; return {...chamado, ...Metas[index]}}))
-			})
-	})
-	.catch((error)=>res.status(500).send({error}))
+    usuarios[req.session.usuarioId].tipo == "suporte" ?
+      res.send(chamados.filter(chamado=>chamado[req.params.tipo] == req.params.filtro))
+    : res.send(chamados.filter(chamado=>chamado.autorId == req.session.usuarioId && chamado[req.params.tipo] == req.params.filtro))
     : res.send("Não autorizado")
 });
 
-app.get('/api/servico/:id', async (req, res) => {
-  req.session.valid ? prisma.chamado.findUnique({
-    where: {
-      id: parseInt(req.params.id)
-    }
-  }).then(
-    async (chamado) => {
-      let meta = Object.fromEntries((await prisma.metadadoChamado.findMany({ where: { chamado } })).map((md) => { return [md.nome, md.valor] }))
-      chamado.chat =
-        await prisma.mensagem
-          .findMany({
-            where: {
-              chamadoId: parseInt(req.params.id)
-            }
-          }
-          )
-      chamado = { ...chamado, ...meta }
+app.get('/api/servico/:id', (req, res) => {
+  let chamado = chamados.find(chamado=>chamado.id==req.params.id);
+  req.session.valid && (chamado.autorId == req.session.usuarioId || usuarios[req.session.usuarioId].tipo == "suporte") ?
       res.send(chamado)
-    })
-    .catch((e) => res.status(500).send({ erro: "Falha em encontrar serviço " + req.params.id + `\n${e}` }))
-    : res.send("Não autorizado")
-})
+  : res.send("Não autorizado")
+});
 
 /*
 Categorias
 */
 
-app.get('/api/servicos/categorias/:tipo', async (req,res)=>{
-	console.log(req.params)
-	req.session.valid ?
-	prisma.categoria.findMany({
-		where:{
-			tipo: req.params.tipo
-		}
-	})
-	.then(categorias=>res.send(categorias))
-	.catch(err=>{
-		console.log(error), 
-		res
-			.status(500)
-			.send({error})
-		}
-	) : res.send("Não autorizado")
-})
+app.get('/api/servicos/categorias/:tipo', (req, res) => {
+  console.log(req.params)
+  req.session.valid ?
+    res.send(categorias.filter(categoria=>categoria.tipo == req.params.tipo))
+  : res.send("Não autorizado")
+});
 
-app.get('/api/servicos/categorias', async (req, res)=>{
-	prisma.categoria.findMany({
-	})
-	.then(categorias=>res.send(categorias))
-	.catch(err=>{
-		console.log(error), 
-		res
-			.status(500)
-			.send({error})
-		}
-	)})
+app.get('/api/servicos/categorias', (req, res) => {
+  res.send(categorias)
+});
 
-app.post('/api/servicos/novo/subcategoria/', async (req, res) =>{
-	let sub = req.body
-	let usuario = await prisma
-		.usuario
-		.findUnique({
-			where:{
-				id: req.session.usuarioId
-			}, 
-			select:{
-				metadados: true
-			}
-		})
-	req.session.valid ?
-		usuario.metadados.find(md=>md.nome=="tipo"&&md.valor=="suporte") ?
-		prisma.categoria.create({
-			data: {
-				tipo: sub.tipo,
-				categoria: sub.newCategoria
-			}
-		})
-		.then(r=>res.status(200).send("OK" + r))
-		.catch(error=>res.status(505).send({error})) : res.send("Não autorizado")
-	: res.send("Não autorizado")
-})
+app.post('/api/servicos/novo/subcategoria/', async (req, res) => {
+  let sub = req.body
+  let usuario = usuarios[req.session.usuarioId]
+  req.session.valid ?
+    usuario.tipo == "suporte" ?
+      prisma.categoria.create({
+        data: {
+          tipo: sub.tipo,
+          categoria: sub.newCategoria
+        }
+      })
+        .then(r => res.status(200).send("OK" + r))
+        .catch(error => res.status(505).send({ error })) : res.send("Não autorizado")
+    : res.send("Não autorizado")
+  updateCategorias()
+});
 
-app.post('/api/servicos/editar/subcategoria/:c/:sc', async (req, res) =>{
-	let sub = req.body
-	let usuario = await prisma
-		.usuario
-		.findUnique({
-			where:{
-				id: req.session.usuarioId
-			}, 
-			select:{
-				metadados: true
-			}
-		}).catch(error=>console.log(error))
-	req.session.valid && usuario ?
-		usuario.metadados.find(md=>md.nome=="tipo"&&md.valor=="suporte") ?
-		prisma.categoria.updateMany({
-			where: {
-				tipo: req.params.c,
-				categoria: req.params.sc
-			},
-			data: {
-				tipo: sub.tipo,
-				categoria: sub.newCategoria
-			}
-		})
-		.then(r=>res.status(200).send("OK" + JSON.stringify(r)))
-		.catch(error=>res.status(505).send({error})) : res.send("Não autorizado")
-	: res.send("Não autorizado")
-})
+app.post('/api/servicos/editar/subcategoria/:c/:sc', async (req, res) => {
+  let sub = req.body
+  let usuario = usuarios[req.session.usuarioId]
+  req.session.valid && usuario ?
+    usuario.tipo == "suporte" ?
+      prisma.categoria.updateMany({
+        where: {
+          tipo: req.params.c,
+          categoria: req.params.sc
+        },
+        data: {
+          tipo: sub.tipo,
+          categoria: sub.newCategoria
+        }
+      })
+        .then(r => res.status(200).send("OK" + JSON.stringify(r)))
+        .catch(error => res.status(505).send({ error })) : res.send("Não autorizado")
+    : res.send("Não autorizado")
+  updateCategorias()
+});
 
-app.post('/api/servicos/excluir/subcategoria/:c/:sc', async (req, res) =>{
-	let sub = req.body
-	let usuario = await prisma
-		.usuario
-		.findUnique({
-			where:{
-				id: req.session.usuarioId
-			}, 
-			select:{
-				metadados: true
-			}
-		})
-	req.session.valid ?
-		usuario.metadados.find(md=>md.nome=="tipo"&&md.valor=="suporte") ?
-		prisma.categoria.deleteMany({
-			where: {
-				tipo: req.params.c,
-				categoria: req.params.sc
-			}
-		})
-		.then(r=>res.status(200).send("OK" + r))
-		.catch(error=>res.status(505).send({error})) : res.send("Não autorizado")
-	: res.send("Não autorizado")
-})
+app.post('/api/servicos/excluir/subcategoria/:c/:sc', async (req, res) => {
+  let usuario = usuarios[req.session.usuarioId]
+  req.session.valid ?
+    usuario.tipo == "suporte" ?
+      prisma.categoria.deleteMany({
+        where: {
+          tipo: req.params.c,
+          categoria: req.params.sc
+        }
+      })
+        .then(r => res.status(200).send("OK" + r))
+        .catch(error => res.status(505).send({ error })) : res.send("Não autorizado")
+    : res.send("Não autorizado")
+  updateCategorias()
+});
 
 /*
 Usuários
 */
 
 app.post('/api/novo/usuario', (req, res) => {
-  req.session.valid ? prisma.usuario.findMany({
+  req.session.valid && usuarios[req.session.usuarioId].cargo == "admin" ? prisma.usuario.findMany({
     where: {
       email: req.body.email
     }
@@ -474,145 +360,33 @@ app.post('/api/novo/usuario', (req, res) => {
       return
     }, (err) => { res.status(500).send("Erro criando o usuário. \n" + err) })
     : res.send("Não autorizado")
-})
-
-app.get('/api/usuarios/', async (req, res) => {
-  req.session.valid ?
-    prisma.usuario.findMany(
-      {
-        select: {
-          id: true,
-          nome: true,
-          sobrenome: true,
-          senha: false,
-          email: true,
-        }
-      }
-    )
-      .then(
-        async (data) => {
-          let Metas = [];
-          data = data.filter(({ id }) => id > 3)
-          for (const [index, usuario] of data.entries())
-            await prisma.metadadoUsuario.findMany({ where: { usuario } })
-              .then(
-                (mds) => {
-                  Metas[index] =
-                    Object.fromEntries(
-                      mds.filter((md) => md.nome !== "area").map(
-                        (md) => {
-                          return [md.nome, md.valor]
-                        }
-                      )
-                    )
-                  Metas[index].area = mds.filter((md) => md.nome === "area").map(md => md.valor)
-                }
-              )
-          res.send(
-            data.map(
-              (usuario, index) => {
-                return { ...usuario, ...Metas[index] }
-              }
-            )
-          )
-        }
-      )
-    : res.send("Não autorizado")
+  updateUsuarios()
 });
 
 app.get('/api/usuario/email/:email', (req, res) => {
-  req.session.valid ? prisma.usuario.findUnique({
-    where: {
-      email: req.params.email
-    }
-  }).then((usuario) => {
-    usuario !== "" ? res.send(usuario) : res.send("Usuário não encontrado")
-  }).catch((err) => {
-    res.status(500).send({ erro: "Falha em obter usuário " })
-  }) : res.send("Não autorizado")
-})
+  req.session.valid ? 
+    res.send(usuarios.map(usuario=>{delete usuario.senha; return usuario}).find(usuario=>usuario.email==req.params.email))
+  : res.send("Não autorizado")
+});
 
-app.get('/api/usuarios/:tipo/:filtro', async (req, res) => {
+app.get('/api/usuarios/:tipo/:filtro', (req, res) => {
   req.session.valid ?
-    prisma.usuario.findMany(
-      {
-        where: {
-          metadados: {
-            some: {
-              nome: req.params.tipo,
-              valor: req.params.filtro
-            },
-          }
-        },
-        select: {
-          id: true,
-          nome: true,
-          sobrenome: true,
-          senha: false,
-          email: true,
-        }
-      }
-    )
-      .then(
-        async (data) => {
-          let Metas = [];
-          for (const [index, usuario] of data.entries())
-            await prisma.metadadoUsuario.findMany({ where: { usuario } })
-              .then(
-                (mds) => {
-                  Metas[index] =
-                    Object.fromEntries(
-                      mds.filter((md) => md.nome !== "area").map(
-                        (md) => {
-                          return [md.nome, md.valor]
-                        }
-                      )
-                    )
-                  Metas[index].area = mds.filter((md) => md.nome === "area").map(md => md.valor)
-                }
-              )
-          res.send(
-            data.map(
-              (usuario, index) => {
-                return { ...usuario, ...Metas[index] }
-              }
-            )
-          )
-        }
-      )
+    res.send(usuarios.filter(usuario=>usuario[req.params.tipo] == req.params.filtro).map(usuario=>{delete usuario.senha; return usuario}))
     : res.send("Não autorizado")
 });
 
 app.get('/api/usuario/:id', (req, res) => {
-  req.session.valid ? prisma.usuario.findUnique({
-    where: {
-      id: parseInt(req.params.id)
-    },
-    select: {
-      id: true,
-      nome: true,
-      sobrenome: true,
-      senha: false,
-      email: true,
-    }
-  }).then((usuario) => {
-    res.send(usuario)
-  }).catch((err) => {
-    res.status(500).send({ erro: "Falha em obter usuário " })
-  }) : res.send("Não autorizado")
+  req.session.valid ? 
+    res.send(usuarios.map(usuario=>{delete usuario.senha; return usuario}).find(usuario=>usuario.id == req.params.id))
+  : res.send("Não autorizado")
 })
 /*
 perfil e auth
 */
 app.get('/api/perfil', async (req, res) => {
-  req.session.valid ? await prisma.usuario.findUnique({ where: { id: req.session.usuarioId }, select: { id: true, nome: true, sobrenome: true, metadados: true, email: true } })
-    .then(usuario => {
-      delete usuario.senha
-      res.send(usuario)
-    })
-    .catch(err => {
-      res.send("Não autorizado")
-    }) : res.send("Não autorizado")
+  req.session.valid ? 
+    res.send(usuarios.map(usuario=>{delete usuario.senha; return usuario})[req.session.usuarioId])
+  : res.send("Não autorizado")
 })
 
 app.post('/api/login', async (req, res) => {
@@ -677,6 +451,7 @@ app.post('/api/alterasenha', async (req, res) => {
     res.send(JSON.stringify({ "status": 500, "error": "Erro no login" }))
     return false
   })
+  updateUsuarios()
 })
 
 app.post('/api/logout', async (req, res) => {
@@ -695,44 +470,13 @@ app.post('/api/logout', async (req, res) => {
 misc
 */
 
-app.get('/api/monitoring', async (req, res)=>{
-	try {
-	prisma.usuario.findMany({
-		where: {
-			metadados: {
-				some: {
-					nome: "tipo",
-					valor: "suporte"
-				}
-			}
-		},
-		select: {
-			nome: true,
-			sobrenome: true,
-			id: true,
-		}
-	})
-	.then(atendentes=>{
-		prisma.chamado.findMany({
-			include: {
-				metadados: true
-			}
-		})
-		.then(chamados=>{
-		res.send({atendentes, chamados})
-		})
-		.catch(err=>{
-			console.log("Error at fetching chamados: ", err)
-			res.status(500).send("Error at fetching chamados")
-		})
-	})
-	.catch(err=>{
-		console.log("Error at fetching atendentes: ", err)
-		res.status(500).send("Error at fetching atendentes")
-	})
-	} catch(e) {
-		console.log(e)
-	}
+app.get('/api/monitoring', (req, res) => {
+  let atendentes = usuarios.slice(4, 7).map(usuario=>({id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome}))
+  //console.log(usuarios.filter(usuario=>usuario.tipo=="suporte"))
+  res.send( {
+    atendentes,
+    chamados
+  } )
 })
 
 app.listen(port, () => console.log(`Listening on port ${port}`));
