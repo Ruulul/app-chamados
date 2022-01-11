@@ -25,7 +25,7 @@ const SideBar = function (props) {
   }
 
   useEffect(()=>{
-    let interval = setInterval(getPendente, 500)
+    let interval = setInterval(getPendente, 2000)
     return ()=>{
       clearInterval(interval)
     }

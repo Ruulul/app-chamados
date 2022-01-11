@@ -1,4 +1,4 @@
-import {useEffect, useState} from "react"
+import {useEffect, useState, useReducer} from "react"
 import { Link, useNavigate } from "react-router-dom";
 import { 
   Box, 
@@ -14,60 +14,98 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
+  CircularProgress,
 } from "@mui/material";
+import Email from "../Components/smtp"
 import axios from "../Components/Requisicao";
-var Email = { send: function (a) { return new Promise(function (n, e) { a.nocache = Math.floor(1e6 * Math.random() + 1), a.Action = "Send"; var t = JSON.stringify(a); Email.ajaxPost("https://smtpjs.com/v3/smtpjs.aspx?", t, function (e) { n(e) }) }) }, ajaxPost: function (e, n, t) { var a = Email.createCORSRequest("POST", e); a.setRequestHeader("Content-type", "application/x-www-form-urlencoded"), a.onload = function () { var e = a.responseText; null != t && t(e) }, a.send(n) }, ajax: function (e, n) { var t = Email.createCORSRequest("GET", e); t.onload = function () { var e = t.responseText; null != n && n(e) }, t.send() }, createCORSRequest: function (e, n) { var t = new XMLHttpRequest; return "withCredentials" in t ? t.open(e, n, !0) : "undefined" != typeof XDomainRequest ? (t = new XDomainRequest).open(e, n) : t = null, t } };
+
+const toBase64 = (file, id) => new Promise((resolve, reject) => {
+
+  console.log(file)
+
+  const reader = new FileReader();
+ 
+  reader.onload = () => {console.log(reader.result); resolve({title: file.name, data: reader.result, descr: `Chamado n° ${id}`})};
+ 
+  reader.onerror = error => reject(error);
+
+  reader.readAsDataURL(file);
+ 
+  });
+
+const initialState = {
+  departamento: "Contábil",
+  prioridade: 1,
+  anexo: undefined,
+  assunto: "",
+  autorId: undefined,
+  tipo: "Infraestrutura",
+  chat: [{ autorId: undefined, mensagem: "" }],
+  id: undefined,
+  subCategoria: undefined,
+  atendenteId: undefined,
+  status: "pendente",
+}
+
+const reducer = function (state = initialState, action) {
+  if (!action) return state
+  if(typeof(action.action) == "string")
+    if (action.action == "all")
+      state = action.payload
+    else state[action.action] = action.payload
+  else
+    action.action.forEach((field, index)=>{
+      state[field] = action.payload[index]
+    })
+  if (action.action == "tipo")
+    return {...state}
+  else return state
+}
 
 export default function Requisicao () {
+  console.log("rererererender")
   const redirect = useNavigate()
   const [open, setOpen] = useState(false)
-  const [infos, setInfos] = useState({
-    departamento: "Contábil",
-    prioridade: 1,
-    anexo: undefined,
-    assunto: "",
-    autorId: undefined,
-    tipo: "Infraestrutura",
-    chat: [{ autorId: undefined, mensagem: "" }],
-    id: undefined,
-	subCategoria: undefined,
-    atendenteId: undefined,
-    status: "pendente",
-  });
+  const [infos, dispatch] = useReducer(reducer, undefined, reducer)
   const [, forceUpdate] = useState({})
   const [nome, setNome] = useState(undefined)
+  const [id, setId] = useState(undefined)
   const [atendentes, setAtendentes] = useState([])
   const [categorias, setCategorias] = useState([])
+  const [loadingAnexo, setLoadingAnexo] = useState(false)
   const navigate = useNavigate()
 
-  useEffect(()=>{
-    const contaServicos = ()=>{
-      axios("get",'/api/servicos')
-        .then(({data})=>{
-          if (data === "Não autorizado") redirect("/login")
-          let novasInfos = infos;
-          novasInfos.id = data.length !== 0 ? data[data.length-1].id + 1 : 0;
-          setInfos(novasInfos)
-          forceUpdate({})
-        })
-        .catch((err)=>{console.log('Erro obtendo serviços. ' + err)})
-    }
-    let interval = setInterval(contaServicos, 2000)
-    return ()=>{
-      clearInterval(interval)
-    }
-  }, [])
-  
-  useEffect(()=>{
-	  axios('get','/api/servicos/categorias/') //+ infos.tipo)
-		.then(
-			({data: categorias})=>{
-				setCategorias(categorias.filter(c=>c.tipo==infos.tipo));
-				let new_infos = {...infos}; 
-				new_infos.subCategoria = categorias.filter(c=>c.tipo==infos.tipo)[0].categoria; 
-				setInfos(new_infos)
-			}
-		)
+  useEffect(async ()=>{
+    return await axios("get",'/api/usuarios/area/' + infos.tipo)
+    .then(async ({data: atendentes})=>{
+      setAtendentes(atendentes)
+      let novas_infos = {...infos}
+      novas_infos.atendenteId = atendentes[0].id
+      return await axios('get','/api/servicos/categorias/') //+ infos.tipo)
+      .then(
+        ({data: categorias})=>{
+          let novas_categorias = categorias.filter(c=>c.tipo==infos.tipo)
+          setCategorias(novas_categorias);
+          novas_infos.subCategoria = novas_categorias[0].categoria;
+          dispatch({action: ["atendenteId", "subCategoria"], payload: [novas_infos.atendenteId, novas_infos.subCategoria]})
+          const contaServicos = ()=>{
+            axios("get",'/api/servicos')
+              .then(({data})=>{
+                if (data === "Não autorizado") redirect("/login")
+                novas_infos.id = data.length !== 0 ? data.at(-1).id + 1 : 0;
+                dispatch({action: "id", payload: novas_infos.id})
+                setId(novas_infos.id)
+              })
+              .catch((err)=>{console.log('Erro obtendo serviços. ' + err)})
+          }
+          contaServicos()
+          let interval = setInterval(contaServicos, 2000)
+          return ()=>{
+            clearInterval(interval)
+          }
+        }
+      )
+    }).catch(err=>{console.log("Erro obtendo atendentes. \n:" + err); setAtendentes([{nome: "Sem atendentes nessa categoria"}])})
 		.catch(err=>console.log(err))
   },[infos.tipo])
 
@@ -75,37 +113,37 @@ export default function Requisicao () {
     axios("get",'/api/perfil')
       .then(({data})=>{
         setNome(data.nome)
-        let novasInfos = infos
-        novasInfos.autorId = data.id
-        novasInfos.chat[0].autorId = data.id
-        setInfos(novasInfos)
+        let chat = infos.chat
+        dispatch({action: "autorId", payload: data.id})
+        chat[0].autorId = data.id
+        dispatch({action:"chat", payload: chat})
       })
       .catch(err=>{console.log("Erro obtendo nome");setNome("Falha obtendo nome")})
   },[])
 
-  useEffect(()=>{
-    axios("get",'/api/usuarios/area/' + infos.tipo)
-      .then(({data})=>{
-        setAtendentes(data)
-        let novas_infos = infos
-        novas_infos.atendenteId = data[0].id
-        setInfos(novas_infos)
-      }).catch(err=>{console.log("Erro obtendo atendentes. \n:" + err); setAtendentes([{nome: "Sem atendentes nessa categoria"}])})
-  },[infos.tipo])
-
   function handleChange(event) {
-    let novas_infos = infos
+    //console.log({name: event.target.name, value: event.target.value, target: event.target})
     if (event.target.name === "atendente") {
-      novas_infos.atendenteId = atendentes[(atendentes.map((atendente)=>{return atendente.nome})).indexOf(event.target.value)].id
+      let atendenteId = atendentes[(atendentes.map((atendente)=>{return atendente.nome})).indexOf(event.target.value)].id
+      dispatch({action:"atendenteId", payload: atendenteId})
     }
-    if (event.target.name === "prioridade") {
+    else if (event.target.name === "prioridade") {
       let prioridades = ["🟩Baixa", "🟧Média", "🟥Alta", "⬛Urgente"];
-      novas_infos[event.target.name] = prioridades.indexOf(event.target.value) + 1;
-    } else if (event.target.name === "mensagem")
-      novas_infos.chat[0].mensagem = event.target.value;
-    else novas_infos[event.target.name] = [event.target.value][0];
-    setInfos(novas_infos)
-    forceUpdate({})
+      dispatch({action: "prioridade", payload: prioridades.indexOf(event.target.value) + 1});
+    } else if (event.target.name === "mensagem") {
+      let chat = infos.chat
+      chat[0].mensagem = event.target.value;
+      dispatch({action: "chat", payload: chat})
+    } else if (event.target.name === "anexo") {
+      setLoadingAnexo(true)
+      toBase64(event.target.files[0], infos.id)
+        .then(file64=>{
+          dispatch({action:"anexo", payload: file64})
+          setLoadingAnexo(false)
+        })
+        .catch(e=>setLoadingAnexo(null))
+    }
+    else dispatch({action: [event.target.name][0], payload: [event.target.value][0] });
   }
 
   async function getPrazo() {
@@ -182,7 +220,7 @@ export default function Requisicao () {
           <Grid item xs={3}>
             <Stack spacing={2}>
               <Typography>
-                {infos.id === undefined ?  "Carregando..." : ("Ticket nº " + infos.id)}
+                {id === undefined ?  "Carregando..." : ("Ticket nº " + infos.id)}
               </Typography>
               <Typography>
                 {nome === undefined ? "Carregando..." : ("Olá, " + nome)}
@@ -217,10 +255,9 @@ export default function Requisicao () {
               <NativeSelect
                 name="atendente"
                 onChange={handleChange}
-                onClick={handleChange}
               >
                 {atendentes.map((atendente, i)=>{
-                  return <option key={i}>{atendente.nome}</option>
+                  return <option key={i} name="atendente">{atendente.nome}</option>
                 })}
               </NativeSelect>
               <InputLabel>Departamento: </InputLabel>
@@ -269,14 +306,21 @@ export default function Requisicao () {
                 <option name="3" style={{}}>🟥Alta</option>
                 <option name="4" style={{}}>⬛Urgente</option>
               </NativeSelect>
+              <Stack>
+              {loadingAnexo ?
+                <CircularProgress/>
+              : loadingAnexo === null ?
+                <CircularProgress color="error" determinated value={100}/>
+                : undefined}
               <InputLabel htmlFor="anexo">Anexo: </InputLabel>
-              <Input
-                disabled
-                name="anexo"
-                type="file"
-                onChange={handleChange}
-                value={infos.anexo}
-              />
+                <Input
+                  name="anexo"
+                  type="file"
+                  onChange={handleChange}
+                />
+                { infos.anexo &&
+                <img src={infos.anexo?.data} height={200} /> }
+              </Stack>
             </Stack>
           </Grid>
           <Grid item container xs={9} justifyContent="space-between">

@@ -118,8 +118,8 @@ async function updateUsuarios() {
     for (let usuario of usuarios_array)
       usuarios[usuario.id] = usuario
     let Metas = [];
-    for (const [index, usuario] of Object.entries(usuarios_array))
-      Metas[index] =
+    for (let [index, usuario] of Object.entries(usuarios_array)){
+      let Metas =
         Object.fromEntries(
           usuario.metadados.map(
             (md) => {
@@ -127,7 +127,12 @@ async function updateUsuarios() {
             }
           )
         )
-    usuarios = usuarios.map((usuario, index) => { delete usuario.metadados; return { ...usuario, ...Metas[index] } })
+      usuario = {...usuario, ...Metas}
+      usuario.area = usuario.metadados.filter(md=>md.nome=="area").map(md=>md.valor)
+      delete usuario.metadados
+      usuarios[usuario.id] = usuario
+    }
+    console.log(usuarios)
   }).catch((e)=>{
     if (usuarios === "vazio")
       throw e
@@ -137,7 +142,7 @@ async function updateUsuarios() {
 }
 
 async function updateCategorias() {
-  await prisma.usuario.findMany({
+  await prisma.categoria.findMany({
   }).then(function (data) {
     categorias = data
   }).catch((e)=>{
@@ -156,9 +161,11 @@ Serviços
 app.post('/api/novo/servico', async (req, res) => {
   let servico = req.body
   let autorId = servico.autorId
+  let filename = undefined
   req.session.valid ?
     ((console.log("Salvando novo serviço")),
       (servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] }),
+      (servico.anexo ? (filename = `${Date()}-${servico.anexo.title}`, fs.writeFile(`./files/${filename}`, servico.anexo.data, {encoding: 'base64url'})): undefined),
       (await prisma.chamado.create({
         data: {
           autorId,
@@ -176,7 +183,8 @@ app.post('/api/novo/servico', async (req, res) => {
                 tipo: servico.tipo,
                 atendenteId: servico.atendenteId,
                 atendimento: String(false),
-                subCategoria: servico.subCategoria
+                subCategoria: servico.subCategoria,
+                anexo: filename
               }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } })
             }
           }
@@ -247,9 +255,9 @@ app.get('/api/servicos', (req, res) => {
 
 app.get('/api/servicos/:tipo/:filtro', (req, res) => {
   req.session.valid ?
-    usuarios[req.session.usuarioId].tipo == "suporte" ?
-      res.send(chamados.filter(chamado=>chamado[req.params.tipo] == req.params.filtro))
-    : res.send(chamados.filter(chamado=>chamado.autorId == req.session.usuarioId && chamado[req.params.tipo] == req.params.filtro))
+    "suporte" == usuarios[req.session.usuarioId].tipo ?
+      res.send(Array.prototype.filter.call(chamados, chamado=>chamado[req.params.tipo] == req.params.filtro))
+    : res.send(Array.prototype.filter.call(chamados, chamado=>chamado.autorId == req.session.usuarioId && chamado[req.params.tipo] == req.params.filtro))
     : res.send("Não autorizado")
 });
 
@@ -286,7 +294,10 @@ app.post('/api/servicos/novo/subcategoria/', async (req, res) => {
           categoria: sub.newCategoria
         }
       })
-        .then(r => res.status(200).send("OK" + r))
+        .then(async (r) => {
+          updateCategorias()
+          res.status(200).send("OK" + r)
+        })
         .catch(error => res.status(505).send({ error })) : res.send("Não autorizado")
     : res.send("Não autorizado")
   updateCategorias()
@@ -297,36 +308,40 @@ app.post('/api/servicos/editar/subcategoria/:c/:sc', async (req, res) => {
   let usuario = usuarios[req.session.usuarioId]
   req.session.valid && usuario ?
     usuario.tipo == "suporte" ?
-      prisma.categoria.updateMany({
+      prisma.categoria.update({
         where: {
-          tipo: req.params.c,
-          categoria: req.params.sc
+          id: sub.id
         },
         data: {
           tipo: sub.tipo,
           categoria: sub.newCategoria
         }
       })
-        .then(r => res.status(200).send("OK" + JSON.stringify(r)))
-        .catch(error => res.status(505).send({ error })) : res.send("Não autorizado")
+        .then(async (r) => {
+          await updateCategorias()
+          res.status(200).send("OK" + JSON.stringify(r))
+        })
+        .catch(error => {console.log(error);res.status(505).send()}) : res.send("Não autorizado")
     : res.send("Não autorizado")
   updateCategorias()
 });
 
 app.post('/api/servicos/excluir/subcategoria/:c/:sc', async (req, res) => {
   let usuario = usuarios[req.session.usuarioId]
+  let cat = req.body
   req.session.valid ?
     usuario.tipo == "suporte" ?
-      prisma.categoria.deleteMany({
+      prisma.categoria.delete({
         where: {
-          tipo: req.params.c,
-          categoria: req.params.sc
+          id: cat.id,
         }
       })
-        .then(r => res.status(200).send("OK" + r))
-        .catch(error => res.status(505).send({ error })) : res.send("Não autorizado")
+        .then(async (r) => {
+          await updateCategorias();
+          res.status(200).send("OK" + r)
+        })
+        .catch(error => {console.log(error);res.status(505).send()}) : res.send("Não autorizado")
     : res.send("Não autorizado")
-  updateCategorias()
 });
 
 /*
@@ -367,6 +382,16 @@ app.get('/api/usuario/email/:email', (req, res) => {
   req.session.valid ? 
     res.send(usuarios.map(usuario=>{delete usuario.senha; return usuario}).find(usuario=>usuario.email==req.params.email))
   : res.send("Não autorizado")
+});
+
+app.get('/api/usuarios/area/:filtro', (req, res) => {
+  req.session.valid ?
+    res.send(
+      usuarios
+      .filter(usuario=>
+        usuario.area.some(area=>area==req.params.filtro))
+    .map(usuario=>{delete usuario.senha; return usuario}))
+    : res.send("Não autorizado")
 });
 
 app.get('/api/usuarios/:tipo/:filtro', (req, res) => {

@@ -10,8 +10,7 @@ import WebFont from "webfontloader";
 import { createTheme } from "@mui/material/styles";
 import { ThemeProvider } from "@mui/material/styles";
 
-import { CircularProgress } from '@mui/material';
-
+import suspend from './Components/Suspend';
 const Home = React.lazy(()=>import('./Pages/Home'));
 const Servicos = React.lazy(()=>import("./Pages/Servicos"));
 const Requisicao = React.lazy(()=>import("./Pages/Requisicao"));
@@ -59,10 +58,6 @@ const theme = createTheme({
     }
   }
 });
-
-function suspend(Component) {
-  return <Suspense fallback={<CircularProgress sx={{ display: "grid", margin: "auto", align:"center", marginTop: "30vh", transform: "scale(3)" }} />}><Component/></Suspense>
-}
 
 function Router() {
 	useEffect(()=>{

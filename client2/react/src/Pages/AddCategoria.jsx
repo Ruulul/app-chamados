@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect, useMemo} from "react";
 import axios from "../Components/Requisicao";
 import {
 	Typography,
@@ -31,19 +31,31 @@ export default function AddCategoria() {
 	function getCategorias() {
 		axios('get','/api/servicos/categorias/') //+ infos.tipo)
 			.then(
-				({data: categorias})=>{
-					setCategorias(categorias);
-					let tipos = [...new Set(categorias.sort().map(categoria=>categoria.tipo))]
+				({data})=>{
+					setCategorias(data);
+					let tipos = [...new Set(data.sort().map(categoria=>categoria.tipo))]
 					setTipos(tipos)
 					setTipo(tipos[0])
 				}
 			)
 			.catch(err=>console.log(err))
 	}
+	function getCategoriasPool() {
+		axios('get','/api/servicos/categorias/') //+ infos.tipo)
+			.then(
+				({data})=>{
+					setCategorias(data);
+				}
+			)
+			.catch(err=>console.log(err))
+	}
+
+	useEffect(getCategorias, [])
 	
 	useEffect(()=>{
-		getCategorias()
-	},[])
+		let interval = setInterval(getCategoriasPool, 2500)
+		return ()=>clearInterval(interval)
+	},[tipos])
 	
 	function handleChange(event) {
 		switch(event.target.name) {
@@ -66,6 +78,12 @@ export default function AddCategoria() {
 			})
 			.catch(err=>console.log("Erro adicionando categoria", err))
 	}
+
+	let categorias_list = useMemo(()=>categorias ? categorias
+	.sort((a, b)=> a.id > b.id)
+	.map((categoria, key)=><Categoria {...{categoria, tipos, getCategorias, key}} />) : <Typography>Carregando...</Typography>
+	, [categorias, tipos])
+
 	return (
 	<Grid container justifyContent="center">
 		<Grid item margin={3}>
@@ -75,9 +93,9 @@ export default function AddCategoria() {
 					<Stack component={Card} padding={3} spacing={2} elevation={5} display="grid">
 						<NativeSelect name="tipo" value={tipo} onChange={handleChange}>
 							{tipos
-							?.map((categoria, key)=><option>{categoria}</option>)}
+							?.map((categoria, key)=><option {...{key}}>{categoria}</option>)}
 						</NativeSelect>
-						<TextField name="categoria" value={newCategoria} label="Categoria" size="small" onChange={handleChange}/>
+						<TextField name="categoria" value={newCategoria} label="Categoria" size="small" onChange={handleChange} required/>
 						<Button 
 						type="submit" 
 						variant="contained" 
@@ -96,10 +114,7 @@ export default function AddCategoria() {
 						Categorias:
 					</Typography>
 						<Divider/>
-					{categorias
-					.sort((a, b)=> a.tipo > b.tipo)
-					.map((categoria, key)=><Categoria {...{categoria, tipos, getCategorias, key}} />)
-					}
+					{categorias_list}
 				</Stack> 
 				</>: <CircularProgress sx={{ display: "grid", margin: "auto", align:"center", marginTop: "30vh", transform: "scale(3)" }} />}
 			</Stack>
@@ -140,7 +155,7 @@ function Categoria({categoria, getCategorias, tipos}) {
 	function onSubmit(event) {
 		event.preventDefault()
 		
-		let req = {tipo, newCategoria}
+		let req = {tipo, newCategoria, id: categoria.id}
 		axios("post", `/api/servicos/editar/subcategoria/${categoria.tipo}/${categoria.categoria}`, req)
 					.then(({data})=>{
 						setTipo(tipos[0])
@@ -149,7 +164,7 @@ function Categoria({categoria, getCategorias, tipos}) {
 					})
 					.catch(console.log)
 	}
-	
+
 	return (
 	<Stack direction="row" spacing={3} display="grid" sx={{gridAutoFlow: "column", placeContent: "end"}} >
 		<Typography>
@@ -157,23 +172,23 @@ function Categoria({categoria, getCategorias, tipos}) {
 		</Typography> 
 		<Button size="small" variant="contained" sx={{height: "fit-content", width: "fit-content", padding: 1, minWidth: "fit-content" }}
 		onClick={
-			()=>{
-				setAnchor(anchor => anchor ? anchor : event.target)
+			(e)=>{
+				setAnchor(e.target)
 				setOpen(o=>!o)
 			}
 		}>
 			<FontAwesomeIcon icon={faEdit}/>
 		</Button>
 		<Popper {...{open: openEdit, anchorEl: anchorElEdit}} placement="bottom-start">
-			<ClickAwayListener onClickAway={()=>setOpen(false)}>
+			<ClickAwayListener onClickAway={()=>{setOpen(false); setAnchor(null)}}>
 				<Box component="form" mt={1} onSubmit={onSubmit}>
 					<Stack component={Card} padding={3} spacing={2} elevation={5} display="grid">
-						<NativeSelect name="tipo" value={tipo} onChange={handleChange}>
+						<NativeSelect key={1} name="tipo" value={tipo} onChange={handleChange}>
 							{tipos
-							?.map((categoria, key)=><option>{categoria}</option>)}
+							?.map((categoria, key)=><option {...{key}}>{categoria}</option>)}
 						</NativeSelect>
-						<TextField name="categoria" value={newCategoria} label="Categoria" size="small" onChange={handleChange}/>
-						<Button 
+						<TextField key={2} name="categoria" value={newCategoria} label="Categoria" size="small" onChange={handleChange} required/>
+						<Button  key={3}
 						type="submit" 
 						variant="contained" 
 						sx={{
@@ -195,13 +210,13 @@ function Categoria({categoria, getCategorias, tipos}) {
 		</Button>
 		<Divider/>
 		<Dialog open={openDelete} onClose={()=>setOpenD(false)}>
-			<Typography align="center" padding={2}> Você tem certeza de deseja deletar o campo <br/><br/>{`${categoria.tipo}: ${categoria.categoria}`}? </Typography>
-			<DialogActions>
-				<Button variant="contained" color="warning" sx={{height: "fit-content", width: "fit-content", padding: 1}}
+			<Typography key={1} align="center" padding={2}> Você tem certeza de deseja deletar o campo <br/><br/>{`${categoria.tipo}: ${categoria.categoria}`}? </Typography>
+			<DialogActions key={2}>
+				<Button key={1} variant="contained" color="warning" sx={{height: "fit-content", width: "fit-content", padding: 1}}
 				onClick={()=>deleteCategory()}>
 					Confirmar
 				</Button>
-				<Button variant="contained" sx={{height: "fit-content", width: "fit-content", padding: 1}}
+				<Button key={2} variant="contained" sx={{height: "fit-content", width: "fit-content", padding: 1}}
 				onClick={()=>setOpenD(false)}>
 					Cancelar
 				</Button>
