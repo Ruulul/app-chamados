@@ -44,7 +44,7 @@ export default function Avisos(props) {
         }
     },[]);
     return (
-    <Card marginTop={3}>
+    <Card mt={3}>
         <Grid container width={1}>
             <Grid item xs={12} component="table" >
                 <TableHead>

@@ -58,14 +58,17 @@ export default function servicosStatus() {
     }, [filtroTipo])
     useEffect(()=>{
       let temp_servicos = []
+      if (filtroStatus == "todos")
+        return setServicos(servicosTipo)
+      if (filtroTipo == "todos")
+        return setServicos(servicosStatus)
       if (servicosStatus.length > 0 && servicosTipo.length > 0)
       for (let x of servicosTipo)
         for (let y of servicosStatus)
-          if (x.id === y.id)
+          if (x.id == y.id)
             temp_servicos.push(x)
       setServicos(temp_servicos)
     },[servicosTipo, servicosStatus])
-
     return (
         <Grid container direction={{ xs: "column", md: "row" }} pt={3}>
             <Grid item xs={12}>

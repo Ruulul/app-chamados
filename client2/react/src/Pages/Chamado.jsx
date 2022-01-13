@@ -90,7 +90,9 @@ export default function Chamado() {
     };
   }, [infos]);
   useLayoutEffect(() => {
+    console.log({info: infos.atendenteId})
     axios("get", "/api/usuario/" + infos.atendenteId).then(({ data }) => {
+      console.log({data})
       setAtendente(data);
     });
   }, [isCarregado]);
@@ -133,6 +135,11 @@ export default function Chamado() {
             Status
           </Typography>
           <Typography m={2}>{infos.status}</Typography>
+          {
+            infos.anexo ?
+              <img src={infos.anexo.data} />
+            : <Typography m={4}>Nenhum anexo nesse chamado</Typography>
+          }
         </Card>
       </Grid>
       <Grid item xs={6}>

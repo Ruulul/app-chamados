@@ -63,7 +63,6 @@ const reducer = function (state = initialState, action) {
 }
 
 export default function Requisicao () {
-  console.log("rererererender")
   const redirect = useNavigate()
   const [open, setOpen] = useState(false)
   const [infos, dispatch] = useReducer(reducer, undefined, reducer)
@@ -75,8 +74,9 @@ export default function Requisicao () {
   const [loadingAnexo, setLoadingAnexo] = useState(false)
   const navigate = useNavigate()
 
-  useEffect(async ()=>{
-    return await axios("get",'/api/usuarios/area/' + infos.tipo)
+  useEffect(()=>{
+    let handle; 
+    axios("get",'/api/usuarios/area/' + infos.tipo)
     .then(async ({data: atendentes})=>{
       setAtendentes(atendentes)
       let novas_infos = {...infos}
@@ -89,30 +89,30 @@ export default function Requisicao () {
           novas_infos.subCategoria = novas_categorias[0].categoria;
           dispatch({action: ["atendenteId", "subCategoria"], payload: [novas_infos.atendenteId, novas_infos.subCategoria]})
           const contaServicos = ()=>{
-            axios("get",'/api/servicos')
+            axios("get",'/api/monitoring')
               .then(({data})=>{
                 if (data === "Não autorizado") redirect("/login")
-                novas_infos.id = data.length !== 0 ? data.at(-1).id + 1 : 0;
+                console.log(data.chamados)
+                novas_infos.id = data.chamados.length !== 0 ? data.chamados.at(-1).id + 1 : 0;
                 dispatch({action: "id", payload: novas_infos.id})
                 setId(novas_infos.id)
               })
               .catch((err)=>{console.log('Erro obtendo serviços. ' + err)})
           }
           contaServicos()
-          let interval = setInterval(contaServicos, 2000)
-          return ()=>{
-            clearInterval(interval)
-          }
+          handle = setInterval(contaServicos, 2000)
         }
       )
     }).catch(err=>{console.log("Erro obtendo atendentes. \n:" + err); setAtendentes([{nome: "Sem atendentes nessa categoria"}])})
 		.catch(err=>console.log(err))
+    return ()=>clearInterval(handle)
   },[infos.tipo])
 
   useEffect(()=>{
     axios("get",'/api/perfil')
       .then(({data})=>{
         setNome(data.nome)
+        console.log(data.id)
         let chat = infos.chat
         dispatch({action: "autorId", payload: data.id})
         chat[0].autorId = data.id
@@ -316,7 +316,8 @@ export default function Requisicao () {
                 <Input
                   name="anexo"
                   type="file"
-                  onChange={handleChange}
+                  onChange={()=>console.log("Isso não deveria aparecer")//handleChange}
+                  }disabled
                 />
                 { infos.anexo &&
                 <img src={infos.anexo?.data} height={200} /> }

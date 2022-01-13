@@ -132,7 +132,6 @@ async function updateUsuarios() {
       delete usuario.metadados
       usuarios[usuario.id] = usuario
     }
-    console.log(usuarios)
   }).catch((e)=>{
     if (usuarios === "vazio")
       throw e
@@ -163,10 +162,17 @@ app.post('/api/novo/servico', async (req, res) => {
   let autorId = servico.autorId
   let filename = undefined
   req.session.valid ?
-    ((console.log("Salvando novo serviço")),
-      (servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] }),
-      (servico.anexo ? (filename = `${Date()}-${servico.anexo.title}`, fs.writeFile(`./files/${filename}`, servico.anexo.data, {encoding: 'base64url'})): undefined),
-      (await prisma.chamado.create({
+    (console.log("Salvando novo serviço"),
+      servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] },
+      servico.anexo ? 
+        (filename = `${Date()}-${servico.anexo.title}`, 
+        fs.writeFile(
+          `./files/${filename}`, 
+          servico.anexo.data, 'base64url', 
+        ).then(()=>console.log(`Arquivo ${filename} salvo com sucesso`))
+        .catch((error)=>console.log({error})))
+      : undefined,
+      await prisma.chamado.create({
         data: {
           autorId,
           chat: {
@@ -189,9 +195,10 @@ app.post('/api/novo/servico', async (req, res) => {
             }
           }
         }
-      })),
+      }),
       (updateChamados()),
-      res.status(200).send(req.body)) : res.send("Não autorizado")
+      res.status(200).send(req.body)) 
+    : res.send("Não autorizado")
 });
 
 app.post('/api/update/servico/:id', async (req, res) => {
@@ -201,15 +208,24 @@ app.post('/api/update/servico/:id', async (req, res) => {
     departamento: novo_servico.departamento,
     status: novo_servico.status,
     prioridade: novo_servico.prioridade,
-    atendimento: (novo_servico.chat ? (novo_servico.chat.length > 1 ? true : false) : undefined),
+    atendimento: (novo_servico.chat ? (novo_servico.chat.length > 2 ? true : false) : false),
     tipo: novo_servico.tipo,
     atendenteId: novo_servico.atendenteId
   }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } });
-  let validUpdate = 
+  let validUpdate;
+  try { 
+    let chamado =
     chamados
-    .find(chamado=>chamado.metadados.chamadoId==novo_servico.id)
+    .filter(chamado=>chamado)
+    .find(chamado=>chamado.id==novo_servico.id)
+    validUpdate =
+    chamado
     .atendenteId == usuarios[req.session.usuarioId].id 
-    || usuarios[req.session.usuarioId].metadados.find(md=>md.nome=="cargo").valor == "admin"
+    || usuarios[req.session.usuarioId].cargo == "admin"
+  } catch (e) {
+    console.log(e)
+    validUpdate = false
+  }
   console.log("Edição é " + (validUpdate ? "válida" : "inválida"))
   req.session.valid && validUpdate ? (async () => {
     console.log("Atualizando serviço")
@@ -246,18 +262,25 @@ app.post('/api/update/servico/:id', async (req, res) => {
 });
 
 app.get('/api/servicos', (req, res) => {
+  let idu = req.session.usuarioId
   req.session.valid ?
-        usuarios[req.session.usuarioId].tipo == "suporte" ?
+        usuarios[idu].cargo == "admin" ?
           res.send(chamados)
-        : res.send(chamados.filter(chamado=>chamado.autorId==req.session.usuarioId))
-    : res.send("Não autorizado")
+        : usuarios[idu].tipo == "suporte" ?
+          res.send(chamados.filter(chamado=>chamado.autorId==idu||chamado.atendenteId==idu))
+        : res.send(chamados.filter(chamado=>chamado.autorId==idu))
+  : res.send("Não autorizado")
 });
 
 app.get('/api/servicos/:tipo/:filtro', (req, res) => {
-  req.session.valid ?
-    "suporte" == usuarios[req.session.usuarioId].tipo ?
-      res.send(Array.prototype.filter.call(chamados, chamado=>chamado[req.params.tipo] == req.params.filtro))
-    : res.send(Array.prototype.filter.call(chamados, chamado=>chamado.autorId == req.session.usuarioId && chamado[req.params.tipo] == req.params.filtro))
+  let {tipo, filtro} = req.params
+  let {valid, usuarioId: idu} = req.session
+  valid ?
+    usuarios[idu].cargo == "admin" ?
+      res.send(chamados.filter(chamado=>chamado[tipo]==filtro))
+    : "suporte" == usuarios[idu].tipo ?
+        res.send(chamados.filter(chamado=>chamado[tipo] == filtro && (chamado.autorId==idu||chamado.atendenteId==idu)))
+      : res.send(chamados.filter(chamado=>chamado.autorId == idu && chamado[tipo] == filtro))
     : res.send("Não autorizado")
 });
 
@@ -380,7 +403,7 @@ app.post('/api/novo/usuario', (req, res) => {
 
 app.get('/api/usuario/email/:email', (req, res) => {
   req.session.valid ? 
-    res.send(usuarios.map(usuario=>{delete usuario.senha; return usuario}).find(usuario=>usuario.email==req.params.email))
+    res.send(usuarios.find(usuario=>usuario.email==req.params.email))
   : res.send("Não autorizado")
 });
 
@@ -389,20 +412,19 @@ app.get('/api/usuarios/area/:filtro', (req, res) => {
     res.send(
       usuarios
       .filter(usuario=>
-        usuario.area.some(area=>area==req.params.filtro))
-    .map(usuario=>{delete usuario.senha; return usuario}))
+        usuario.area.some(area=>area==req.params.filtro)))
     : res.send("Não autorizado")
 });
 
 app.get('/api/usuarios/:tipo/:filtro', (req, res) => {
   req.session.valid ?
-    res.send(usuarios.filter(usuario=>usuario[req.params.tipo] == req.params.filtro).map(usuario=>{delete usuario.senha; return usuario}))
+    res.send(usuarios.filter(usuario=>usuario[req.params.tipo] == req.params.filtro))
     : res.send("Não autorizado")
 });
 
 app.get('/api/usuario/:id', (req, res) => {
-  req.session.valid ? 
-    res.send(usuarios.map(usuario=>{delete usuario.senha; return usuario}).find(usuario=>usuario.id == req.params.id))
+  req.session.valid && typeof(parseInt(req.params.id)) === "number" ? 
+    res.send(usuarios.find(usuario=>usuario?.id == req.params.id))
   : res.send("Não autorizado")
 })
 /*
@@ -496,8 +518,10 @@ misc
 */
 
 app.get('/api/monitoring', (req, res) => {
-  let atendentes = usuarios.slice(4, 7).map(usuario=>({id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome}))
-  //console.log(usuarios.filter(usuario=>usuario.tipo=="suporte"))
+  let atendentes = 
+  usuarios
+  .filter(usuario=>usuario.tipo=="suporte")
+  .map(usuario=>({id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome}))
   res.send( {
     atendentes,
     chamados

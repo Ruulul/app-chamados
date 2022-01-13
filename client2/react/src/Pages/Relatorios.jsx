@@ -310,7 +310,11 @@ const Relatorios = (props) => {
                                                 [doc.splitTextToSize(servico.chat[0].mensagem, 60)[0] + '...', '...' + doc.splitTextToSize(servico.chat[0].mensagem, 60).at(-1)]
                                                 , 1 * (campo_l + u), yo)
                                             doc.text(servico.tipo, 3 * (campo_l + u), yo)
-                                            doc.text(servico.subCategoria ? servico.subCategoria : "Não definido", 4 * (campo_l + u), yo)
+                                            doc.text(servico.subCategoria ? 
+                                                doc.splitTextToSize(servico.subCategoria, 60).length <= 2 ?
+                                                doc.splitTextToSize(servico.subCategoria, 60) :
+                                                [doc.splitTextToSize(servico.subCategoria, 60)[0] + '...', '...' + doc.splitTextToSize(servico.subCategoria, 60).at(-1)]
+                                                : "Não definido", 4 * (campo_l + u), yo)
                                             doc.text(servico.departamento, 5 * (campo_l + u), yo)
                                             doc.text(String(servico.id), 6 * (campo_l + u), yo)
                                             doc.line(10, yo + 6, 200, yo + 6)

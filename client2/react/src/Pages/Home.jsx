@@ -111,7 +111,7 @@ const Home = () => {
       });
   }, []);
   useEffect(() => {
-    const getServicos = () => {
+    const getServicos = () =>
       axios(
         "get", "/api/servicos/status/pendente", 1500)
         .then(({ data }) => {
@@ -155,10 +155,6 @@ const Home = () => {
           setPrazo(novoPrazo);
         })
         .catch((err)=><Typography>{"Erro obtendo serviços.\n" + err}</Typography>);
-      return () => {
-        setServicos(undefined);
-      };
-    };
     getServicos();
     let interval = setInterval(getServicos, 2000);
     return () => {
@@ -223,15 +219,18 @@ function Avatares(props) {
 		.then(({data})=>data?.atendentes?.map(
 			(atendente, key)=>{
 				let date = Date().split(' ')
-				let chamados = data.chamados.filter(chamado=>chamado.atendenteId?.valor==atendente.id && chamado.status?.valor != "fechado")
-				let atendimento = chamados.filter(chamado => chamado.atendimento == true)
-				let fechado = chamados.filter(chamado => chamado.status == "fechado" && chamado.updatedAt.split('T')[0] == `${date[3]}-${String(Math.floor(conversao.indexOf(date[1])/2)).padStart(2, '0')}-${date[2]}`)
-				return <CAvatar 
+        let date_today = `${date[3]}-${String(Math.floor(conversao.indexOf(date[1])/2 + 1)).padStart(2, '0')}-${date[2]}`
+				let chamados = data.chamados.filter(chamado=>chamado.atendenteId==atendente.id && chamado.status == "pendente")
+        let resolvido = data.chamados.filter(chamado=>chamado.atendenteId==atendente.id && chamado.status == "resolvido")
+        let atendimento = chamados.filter(chamado => chamado.atendimento == "true")
+        let fechado = data.chamados.filter(chamado => chamado.status == "fechado" && chamado.updatedAt.split('T')[0] == date_today)
+        return <CAvatar 
 				key={key} 
 				nome={atendente.nome}
 				atendimento={atendimento.length}
 				parado={chamados.length - atendimento.length}
 				fechado={fechado.length}
+        resolvido={resolvido.length}
 				src={
 					atendente.nome == "Valdenor" ?
 					'http://10.0.0.5:5000/images/v.jpg'
@@ -258,7 +257,7 @@ function Avatares(props) {
 	return avatares ? avatares : <CircularProgress sx={{mt: "20vh"}}/>
 }
 
-function CAvatar({nome="Fulano", atendimento=0, parado=0, fechado=0, src, ...props}) {
+function CAvatar({nome="Fulano", atendimento=0, parado=0, fechado=0, resolvido=0, src, ...props}) {
 	return <Card {...props} sx={{height: "fit-content", padding: 0, paddingX: 4, margin: 3, marginX: 1.5, ...props.sx}} elevation={5}>
 		<Avatar sx={{margin: "auto", width: 100, height: 100, padding: 0, mt: 1}} {...{src}} alt={nome}/>
 		<Typography align="center" mt={1}>{nome}</Typography>
@@ -267,6 +266,7 @@ function CAvatar({nome="Fulano", atendimento=0, parado=0, fechado=0, src, ...pro
 		<Typography variant="body2" margin={1}> {atendimento} em atendimento </Typography>
 		<Typography variant="body2" margin={1}> {parado} parados </Typography>
 		<Typography variant="body2" margin={1}> {fechado} fechados hoje </Typography>
+    <Typography variant="body2" margin={1}> {resolvido} aguardando finalização </Typography>
 	</Card>
 }	
 

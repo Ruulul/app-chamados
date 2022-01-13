@@ -143,7 +143,7 @@ export default function EditarChamado () {
 
   async function getPrazo() {
     let data = new Date()
-    switch (infos.prioridade) {
+    switch (state.infos.prioridade) {
       case 1:
         data.setDate(data.getDate()+3)
         return data;
@@ -164,8 +164,8 @@ export default function EditarChamado () {
   async function handleSubmit(event) {
     event.preventDefault();
     await getPrazo().then(async (prazo)=>{
-      if (typeof(infos.prazo) === "object")
-      infos.prazo=prazo.toISOString()
+      if (typeof(state.infos.prazo) === "object")
+      state.infos.prazo=prazo.toISOString()
       await axios("post",'/api/update/servico/' + idChamado, state.infos)
         .then(res=>navigate('/servicos'))
         .catch(err=>console.log("Erro em salvar o chamado." + err))
@@ -234,7 +234,7 @@ export default function EditarChamado () {
                   <NativeSelect
                 name="tipo"
                 onChange={handleChange}
-                value={state.infos.tipo}
+                value={state.infos.tipo || "Infraestrutura"}
               >
               <option key={1} name="infra">
                 Infraestrutura
@@ -252,7 +252,7 @@ export default function EditarChamado () {
 			  <NativeSelect
 				name="subCategoria"
 				onChange={handleChange}
-				value={state.infos.subCategoria}
+				value={state.infos.subCategoria || "Carregando..."}
 			  >
 				{state.categorias.map((categoria,key)=><option key={key}>{categoria.categoria}</option>)}
 			  </NativeSelect>
@@ -261,7 +261,7 @@ export default function EditarChamado () {
                 name="atendente"
                 onChange={handleChange}
                 onClick={handleChange}
-                value={state.infos.atendente}
+                value={state.infos.atendente || "Carregando..."}
               >
                 {state.atendentes.map((atendente, i)=>{
                   return <option key={i} name="atendente">{atendente.nome}</option>
@@ -271,7 +271,7 @@ export default function EditarChamado () {
                   <NativeSelect
                 name="departamento"
                 onChange={handleChange}
-                value={state.infos.departamento}
+                value={state.infos.departamento || "Carregando"}
               >
               <option key={1} name="contabil">
                 Contábil
@@ -319,8 +319,6 @@ export default function EditarChamado () {
                     disabled
                 name="anexo"
                 type="file"
-                onChange={handleChange}
-                    value={state.infos.anexo}
                   />
                 </Stack>
             </Grid>
