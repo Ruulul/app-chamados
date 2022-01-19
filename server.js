@@ -1,22 +1,20 @@
-const { PrismaClient } = require('@prisma/client');
+import prisma_pkg from '@prisma/client'
+const {PrismaClient} = prisma_pkg
+import cookieParser from 'cookie-parser'
 
-const cookieParser = require('cookie-parser');
+import bcrypt from 'bcrypt'
+import session from 'express-session'
 
-const bcrypt = require('bcrypt')
-const session = require('express-session')
-const _ = require('lodash')
+import { PrismaSessionStore } from '@quixo3/prisma-session-store'
 
-const { PrismaSessionStore } = require('@quixo3/prisma-session-store')
-
-const fs = require('fs')
+import fs from "fs"
 const SECRET = fs.readFileSync('./key', 'utf-8');
 
 //const key = fs.readFileSync('./certification/key.pem');
 //const cert = fs.readFileSync('./certification/cert.pem');
 
 const prisma = new PrismaClient()
-const express = require('express');
-const { createJsxAttribute } = require('typescript');
+import express from 'express';
 //const https = require('https')
 const app = express();
 //const server = https.createServer({key, cert}, app)
@@ -48,7 +46,7 @@ app.use(express.static('./public/'))
 app.use(function (req, res, next) {
 
   // Website you wish to allow to connect
-  res.setHeader('Access-Control-Allow-Origin', 'http://10.0.0.5:3000');
+  res.setHeader('Access-Control-Allow-Origin', 'http://10.0.0.5:9999');
 
   // Request methods you wish to allow
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
@@ -151,9 +149,9 @@ async function updateCategorias() {
       console.log("Erro em updateCategorias.\n", e)
   })
 }
-updateChamados()
-updateUsuarios()
-updateCategorias()
+await updateChamados()
+await updateUsuarios()
+await updateCategorias()
 /* 
 Serviços
 */
