@@ -38,7 +38,7 @@ export default function Avisos(props) {
                 .catch(()=>{redirect("/login")})
         }
         getServicos()
-        let interval = setInterval(getServicos, 2000)
+        let interval = setInterval(getServicos, 1000)
         return ()=>{
             clearInterval(interval)
         }

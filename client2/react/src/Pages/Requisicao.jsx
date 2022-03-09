@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import Email from "../Components/smtp"
 import axios from "../Components/Requisicao";
+import FormData from "form-data"
 
 const toBase64 = (file, id) => new Promise((resolve, reject) => {
 
@@ -71,6 +72,8 @@ export default function Requisicao () {
   const [id, setId] = useState(undefined)
   const [atendentes, setAtendentes] = useState([])
   const [categorias, setCategorias] = useState([])
+  const [tipos, setTipos] = useState([])
+  const [departamentos, setDepartamentos] = useState([])
   const [loadingAnexo, setLoadingAnexo] = useState(false)
   const navigate = useNavigate()
 
@@ -88,11 +91,12 @@ export default function Requisicao () {
           setCategorias(novas_categorias);
           novas_infos.subCategoria = novas_categorias[0].categoria;
           dispatch({action: ["atendenteId", "subCategoria"], payload: [novas_infos.atendenteId, novas_infos.subCategoria]})
+          axios('get', '/api/tipos/').then(({data})=>setTipos(data))
+          axios('get', '/api/departamentos').then(({data})=>setDepartamentos(data))
           const contaServicos = ()=>{
             axios("get",'/api/monitoring')
               .then(({data})=>{
                 if (data === "Não autorizado") redirect("/login")
-                console.log(data.chamados)
                 novas_infos.id = data.chamados.length !== 0 ? data.chamados.at(-1).id + 1 : 0;
                 dispatch({action: "id", payload: novas_infos.id})
                 setId(novas_infos.id)
@@ -169,28 +173,37 @@ export default function Requisicao () {
   async function handleSubmit(event) {
     event.preventDefault();
     setOpen(true)
-    let requisicao = infos
+    let requisicao = {...infos}
+    delete requisicao.anexo
     requisicao.status = "pendente"
     await getPrazo().then(async (prazo)=>{
       requisicao.prazo=prazo.toISOString()
       await axios("post",'/api/novo/servico', requisicao)
         .then(()=>{
-          Email.send({
-            SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
-            To: atendentes.find(a=>a.id==infos.atendenteId).email,
-            From: "suporte.ti@ourobrancoagronegocios.com.br",
-            Subject: "Chamado aberto",
-            Body: 
-            `Um chamado acaba de ser aberto <br/>
-            por ${nome} <br/>
-            na categoria ${infos.tipo} <br/>
-            no departamento ${infos.departamento}<br/> 
-            com o título ${infos.assunto}.<br/> <br/> 
-            Conteúdo do chamado: ${infos.chat[0].mensagem}<br/><br/>
-            Urgência: ${
-              (["Baixa", "Média", "Alta", "Urgente"])
-              [(["Baixa", "Média", "Alta", "Urgente"]).indexOf(infos.prioridade - 1)]}`
-          }).then(console.log)
+          if (infos.anexo) {
+            let anexo = new FormData(infos.anexo)
+            axios("post", `/api/update/servico/${infos.id}/arquivo`, anexo, {headers: {'Content-Type': 'multipart/form-data'}})
+            .then(data=>{
+              console.log("Arquivo salvo com sucesso")
+              Email.send({
+                SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
+                To: atendentes.find(a=>a.id==infos.atendenteId).email,
+                From: "suporte.ti@ourobrancoagronegocios.com.br",
+                Subject: "Chamado aberto",
+                Body: 
+                `Um chamado acaba de ser aberto <br/>
+                por ${nome} <br/>
+                na categoria ${infos.tipo} <br/>
+                no departamento ${infos.departamento}<br/> 
+                com o título ${infos.assunto}.<br/> <br/> 
+                Conteúdo do chamado: ${infos.chat[0].mensagem}<br/><br/>
+                Urgência: ${
+                  (["Baixa", "Média", "Alta", "Urgente"])
+                  [(["Baixa", "Média", "Alta", "Urgente"]).indexOf(infos.prioridade - 1)]}`
+              }).then(console.log)
+            })
+            .catch(err=>console.log("Erro em salvar o arquivo.\n",err))
+          }
         })
         .catch(err=>console.log("Erro em salvar o chamado." + err))
     }).catch(console.log)
@@ -230,15 +243,7 @@ export default function Requisicao () {
                 name="tipo"
                 onChange={handleChange}
               >
-              <option key={1} name="infra">
-                Infraestrutura
-              </option>,
-              <option key={2} name="sistemas">
-                Sistemas
-              </option>,
-              <option key={3} name="desenvolvimento">
-                Desenvolvimento
-              </option>,
+                {tipos.map((tipo, key)=><option {...{key}}>{tipo.tipo}</option>)}
               </NativeSelect>
 			  {categorias.filter(c=>c.tipo == infos.tipo).length > 0 ? <>
 			  <InputLabel>
@@ -266,33 +271,7 @@ export default function Requisicao () {
                 name="departamento"
                 onChange={handleChange}
               >
-              <option key={1} name="contabil">
-                Contábil
-              </option>,
-              <option key={2} name="comercial">
-                Comercial
-              </option>,
-              <option key={3} name="faturamento">
-                Faturamento
-              </option>,
-              <option key={4} name="guarita">
-                Guarita
-              </option>,
-              <option key={5} name="gerencia">
-                Gerência
-              </option>,
-              <option key={6} name="financeiro">
-                Financeiro
-              </option>,
-              <option key={7} name="ccm-ubs">
-                CCM UBS
-              </option>,
-              <option key={8} name="ccm-ob">
-                CCM OB
-              </option>,
-              <option key={9} name="ti">
-                TI
-              </option>
+                {departamentos.map((dept, key)=><option {...{key}}>{dept.departamento}</option>)}
               </NativeSelect>
               <InputLabel>Urgência: </InputLabel>
               <NativeSelect
@@ -316,11 +295,10 @@ export default function Requisicao () {
                 <Input
                   name="anexo"
                   type="file"
-                  onChange={()=>console.log("Isso não deveria aparecer")//handleChange}
-                  }disabled
+                  onChange={handleChange}
                 />
                 { infos.anexo &&
-                <img src={infos.anexo?.data} height={200} /> }
+                <img src={infos.anexo?.data} width="100%" /> }
               </Stack>
             </Stack>
           </Grid>
@@ -343,7 +321,6 @@ export default function Requisicao () {
                 label="Descreva a situação aqui"
                 onChange={handleChange}
                 minRows="17"
-                required
               />
               <Button
                 variant="contained"

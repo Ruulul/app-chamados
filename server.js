@@ -1,11 +1,25 @@
 import prisma_pkg from '@prisma/client'
-const {PrismaClient} = prisma_pkg
+const { PrismaClient } = prisma_pkg
 import cookieParser from 'cookie-parser'
 
 import bcrypt from 'bcrypt'
 import session from 'express-session'
 
 import { PrismaSessionStore } from '@quixo3/prisma-session-store'
+
+import multer from 'multer'
+
+const upload = multer({
+  dest: './files/',
+  filename: function (req, file, cb) {
+
+  },
+  limits: {
+    fieldSize: 25 * 1024 * 1024
+  }
+})
+
+import path from 'path'
 
 import fs from "fs"
 const SECRET = fs.readFileSync('./key', 'utf-8');
@@ -23,6 +37,8 @@ const port = process.env.PORT || 5000;
 var usuarios = "vazio"
 var chamados = "vazio"
 var categorias = "vazio"
+var tipos = "vazio"
+var departamentos = "vazio"
 
 const store = new PrismaSessionStore(
   prisma, {
@@ -77,28 +93,28 @@ async function updateChamados() {
       assunto: true,
       createdAt: true,
       prazo: true,
-      updatedAt: true
+      updatedAt: true,
     }
   })
-  .then((data) => {
-    let Metas = [];
-    chamados = [];
-    for (const [index, chamado] of Object.entries(data))
-      Metas[index] =
-        Object.fromEntries(
-          chamado.metadados.map(
-            (md) => {
-              return [md.nome, md.valor]
-            }
+    .then((data) => {
+      let Metas = [];
+      chamados = [];
+      for (const [index, chamado] of Object.entries(data))
+        Metas[index] =
+          Object.fromEntries(
+            chamado.metadados.map(
+              (md) => {
+                return [md.nome, md.valor]
+              }
+            )
           )
-        )
-    return data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } })
-  }).catch((e)=>{
-    if (chamados === "vazio")
-      throw e
-    else
-      console.log("Erro em updateChamados.\n", e)
-  })
+      return data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } })
+    }).catch((e) => {
+      if (chamados === "vazio")
+        throw e
+      else
+        console.log("Erro em updateChamados.\n", e)
+    })
 }
 
 async function updateUsuarios() {
@@ -116,7 +132,7 @@ async function updateUsuarios() {
     for (let usuario of usuarios_array)
       usuarios[usuario.id] = usuario
     let Metas = [];
-    for (let [index, usuario] of Object.entries(usuarios_array)){
+    for (let [index, usuario] of Object.entries(usuarios_array)) {
       let Metas =
         Object.fromEntries(
           usuario.metadados.map(
@@ -125,12 +141,12 @@ async function updateUsuarios() {
             }
           )
         )
-      usuario = {...usuario, ...Metas}
-      usuario.area = usuario.metadados.filter(md=>md.nome=="area").map(md=>md.valor)
+      usuario = { ...usuario, ...Metas }
+      usuario.area = usuario.metadados.filter(md => md.nome == "area").map(md => md.valor)
       delete usuario.metadados
       usuarios[usuario.id] = usuario
     }
-  }).catch((e)=>{
+  }).catch((e) => {
     if (usuarios === "vazio")
       throw e
     else
@@ -142,34 +158,53 @@ async function updateCategorias() {
   await prisma.categoria.findMany({
   }).then(function (data) {
     categorias = data
-  }).catch((e)=>{
+  }).catch((e) => {
     if (categorias === "vazio")
       throw e
     else
       console.log("Erro em updateCategorias.\n", e)
   })
 }
+
+async function updateDepartamentos() {
+  await prisma.departamento.findMany({
+  }).then(function (data) {
+    departamentos = data
+  }).catch((e) => {
+    if (departamentos === "vazio")
+      throw e
+    else
+      console.log("Erro em updateDepartamentos.\n", e)
+  })
+}
+
+async function updateTipos() {
+  await prisma.tipo.findMany({
+  }).then(function (data) {
+    tipos = data
+  }).catch((e) => {
+    if (tipos === "vazio")
+      throw e
+    else
+      console.log("Erro em updateTipos.\n", e)
+  })
+}
 await updateChamados()
 await updateUsuarios()
 await updateCategorias()
+await updateDepartamentos()
+await updateTipos()
 /* 
 Serviços
 */
+
 app.post('/api/novo/servico', async (req, res) => {
   let servico = req.body
   let autorId = servico.autorId
-  let filename = undefined
   req.session.valid ?
     (console.log("Salvando novo serviço"),
       servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] },
-      servico.anexo ? 
-        (filename = `${Date()}-${servico.anexo.title}`, 
-        fs.writeFile(
-          `./files/${filename}`, 
-          servico.anexo.data, 'base64url', 
-        ).then(()=>console.log(`Arquivo ${filename} salvo com sucesso`))
-        .catch((error)=>console.log({error})))
-      : undefined,
+
       await prisma.chamado.create({
         data: {
           autorId,
@@ -188,16 +223,76 @@ app.post('/api/novo/servico', async (req, res) => {
                 atendenteId: servico.atendenteId,
                 atendimento: String(false),
                 subCategoria: servico.subCategoria,
-                anexo: filename
               }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } })
             }
           }
         }
       }),
       (updateChamados()),
-      res.status(200).send(req.body)) 
+      res.status(200).send(req.body))
     : res.send("Não autorizado")
 });
+
+app.post('/api/update/servico/:id/arquivo', upload.none(), (req, res) => {
+  let filename = `${Date.now()}-${req.body.title}`
+  console.log(Object.keys(req.body), filename)
+  req.session.valid ? (
+    console.log("Salvando arquivo no serviço"),
+    req.body.data ? 
+      (console.log("Iniciando a escrita"),
+        fs.writeFile(
+          path.resolve('files/', filename),
+          req.body.data.split('base64,')[1],
+          'base64',
+          (error) => {
+            if (error) {
+              console.log(error)
+              console.log({ error })
+              res.send({ error })
+              return
+            }
+            console.log(`Arquivo ${filename} salvo com sucesso`)
+            prisma.metadadoChamado.updateMany({
+              where: {
+                chamadoId: parseInt(req.params.id),
+                nome: "anexo"
+              },
+              data: {
+                valor: filename
+              }
+            })
+              .then(async data => {
+                console.log(`${data.count} registro alterado`)
+                if (data.count == 0)
+                  await prisma.metadadoChamado.create({
+                    data: {
+                      nome: "anexo",
+                      valor: filename,
+                      chamado: {
+                        connect: {
+                          id: parseInt(req.params.id)
+                        }
+                      }
+                    }
+                  }).then(() => {
+                    console.log("Registro raiz criado")
+                    res.send()
+                  })
+                    .catch(() => { console.log("Erro na criação do registro raiz"); res.status(500).send() })
+                else
+                  res.send()
+                updateChamados()
+              })
+              .catch(error => {
+                console.log(error)
+                res.send({ error })
+              })
+          }
+        ))
+      : res.send()
+  )
+    : res.send("Não autorizado")
+})
 
 app.post('/api/update/servico/:id', async (req, res) => {
   let novo_servico = req.body
@@ -211,15 +306,15 @@ app.post('/api/update/servico/:id', async (req, res) => {
     atendenteId: novo_servico.atendenteId
   }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } });
   let validUpdate;
-  try { 
+  try {
     let chamado =
-    chamados
-    .filter(chamado=>chamado)
-    .find(chamado=>chamado.id==novo_servico.id)
+      chamados
+        .filter(chamado => chamado)
+        .find(chamado => chamado.id == novo_servico.id)
     validUpdate =
-    chamado
-    .atendenteId == usuarios[req.session.usuarioId].id 
-    || usuarios[req.session.usuarioId].cargo == "admin"
+      chamado
+        .atendenteId == usuarios[req.session.usuarioId].id
+      || usuarios[req.session.usuarioId].cargo == "admin"
   } catch (e) {
     console.log(e)
     validUpdate = false
@@ -242,7 +337,7 @@ app.post('/api/update/servico/:id', async (req, res) => {
             }
           },
         }
-      }).catch((e)=>console.log("Erro na atualização do chamado.\n", e))
+      }).catch((e) => console.log("Erro na atualização do chamado.\n", e))
     }
     for (let metadado of metadados)
       await prisma.metadadoChamado.updateMany({
@@ -253,7 +348,7 @@ app.post('/api/update/servico/:id', async (req, res) => {
         data: {
           valor: metadado.valor
         }
-      }).catch((e)=>console.log("Erro na atualização dos metadados do chamado. \n", e))
+      }).catch((e) => console.log("Erro na atualização dos metadados do chamado. \n", e))
     updateChamados()
     res.status(200).send(req.body)
   })() : res.send("Não autorizado")
@@ -262,32 +357,65 @@ app.post('/api/update/servico/:id', async (req, res) => {
 app.get('/api/servicos', (req, res) => {
   let idu = req.session.usuarioId
   req.session.valid ?
-        usuarios[idu].cargo == "admin" ?
-          res.send(chamados)
-        : usuarios[idu].tipo == "suporte" ?
-          res.send(chamados.filter(chamado=>chamado.autorId==idu||chamado.atendenteId==idu))
-        : res.send(chamados.filter(chamado=>chamado.autorId==idu))
-  : res.send("Não autorizado")
+    usuarios[idu].cargo == "admin" ?
+      res.send(chamados)
+      : usuarios[idu].tipo == "suporte" ?
+        res.send(chamados.filter(chamado => chamado.autorId == idu || chamado.atendenteId == idu))
+        : res.send(chamados.filter(chamado => chamado.autorId == idu))
+    : res.send("Não autorizado")
 });
 
 app.get('/api/servicos/:tipo/:filtro', (req, res) => {
-  let {tipo, filtro} = req.params
-  let {valid, usuarioId: idu} = req.session
+  let { tipo, filtro } = req.params
+  let { valid, usuarioId: idu } = req.session
   valid ?
     usuarios[idu].cargo == "admin" ?
-      res.send(chamados.filter(chamado=>chamado[tipo]==filtro))
-    : "suporte" == usuarios[idu].tipo ?
-        res.send(chamados.filter(chamado=>chamado[tipo] == filtro && (chamado.autorId==idu||chamado.atendenteId==idu)))
-      : res.send(chamados.filter(chamado=>chamado.autorId == idu && chamado[tipo] == filtro))
+      res.send(chamados.filter(chamado => chamado[tipo] == filtro))
+      : "suporte" == usuarios[idu].tipo ?
+        res.send(chamados.filter(chamado => chamado[tipo] == filtro && (chamado.autorId == idu || chamado.atendenteId == idu)))
+        : res.send(chamados.filter(chamado => chamado.autorId == idu && chamado[tipo] == filtro))
     : res.send("Não autorizado")
 });
 
 app.get('/api/servico/:id', (req, res) => {
-  let chamado = chamados.find(chamado=>chamado.id==req.params.id);
+  let chamado = chamados.find(chamado => chamado.id == req.params.id);
   req.session.valid && (chamado.autorId == req.session.usuarioId || usuarios[req.session.usuarioId].tipo == "suporte") ?
-      res.send(chamado)
-  : res.send("Não autorizado")
+    res.send(chamado)
+    : res.send("Não autorizado")
 });
+
+/*
+Departamentos and tipos TODO
+*/
+app.get('/api/departamentos/', (req, res)=>{
+  req.session.valid ?
+    res.send(departamentos)
+  : res.send("Não autorizado")
+})
+app.post('/api/departamentos/novo', (req, res) => {
+  req.session.valid && usuarios[req.session.usuarioId].cargo == 'admin'
+})
+app.post('/api/departamentos/editar/:id', (req, res)=>{
+  res.send("Não implementado")
+})
+app.get('/api/departamentos/excluir/:id', (req, res)=>{
+  res.send("Não implementado")
+})
+
+app.get('/api/tipos', (req, res)=>{
+  req.session.valid ?
+    res.send(tipos)
+  : res.send("Não autorizado")
+})
+app.post('/api/tipos/novo', (req, res) => {
+  res.send("Não implementado")
+})
+app.post('/api/tipos/editar/:id', (req, res)=>{
+  res.send("Não implementado")
+})
+app.get('/api/tipos/excluir/:id', (req, res)=>{
+  res.send("Não implementado")
+})
 
 /*
 Categorias
@@ -296,8 +424,8 @@ Categorias
 app.get('/api/servicos/categorias/:tipo', (req, res) => {
   console.log(req.params)
   req.session.valid ?
-    res.send(categorias.filter(categoria=>categoria.tipo == req.params.tipo))
-  : res.send("Não autorizado")
+    res.send(categorias.filter(categoria => categoria.tipo == req.params.tipo))
+    : res.send("Não autorizado")
 });
 
 app.get('/api/servicos/categorias', (req, res) => {
@@ -342,7 +470,7 @@ app.post('/api/servicos/editar/subcategoria/:c/:sc', async (req, res) => {
           await updateCategorias()
           res.status(200).send("OK" + JSON.stringify(r))
         })
-        .catch(error => {console.log(error);res.status(505).send()}) : res.send("Não autorizado")
+        .catch(error => { console.log(error); res.status(505).send() }) : res.send("Não autorizado")
     : res.send("Não autorizado")
   updateCategorias()
 });
@@ -361,7 +489,7 @@ app.post('/api/servicos/excluir/subcategoria/:c/:sc', async (req, res) => {
           await updateCategorias();
           res.status(200).send("OK" + r)
         })
-        .catch(error => {console.log(error);res.status(505).send()}) : res.send("Não autorizado")
+        .catch(error => { console.log(error); res.status(505).send() }) : res.send("Não autorizado")
     : res.send("Não autorizado")
 });
 
@@ -400,38 +528,38 @@ app.post('/api/novo/usuario', (req, res) => {
 });
 
 app.get('/api/usuario/email/:email', (req, res) => {
-  req.session.valid ? 
-    res.send(usuarios.find(usuario=>usuario.email==req.params.email))
-  : res.send("Não autorizado")
+  req.session.valid ?
+    res.send(usuarios.find(usuario => usuario.email == req.params.email))
+    : res.send("Não autorizado")
 });
 
 app.get('/api/usuarios/area/:filtro', (req, res) => {
   req.session.valid ?
     res.send(
       usuarios
-      .filter(usuario=>
-        usuario.area.some(area=>area==req.params.filtro)))
+        .filter(usuario =>
+          usuario.area.some(area => area == req.params.filtro)))
     : res.send("Não autorizado")
 });
 
 app.get('/api/usuarios/:tipo/:filtro', (req, res) => {
   req.session.valid ?
-    res.send(usuarios.filter(usuario=>usuario[req.params.tipo] == req.params.filtro))
+    res.send(usuarios.filter(usuario => usuario[req.params.tipo] == req.params.filtro))
     : res.send("Não autorizado")
 });
 
 app.get('/api/usuario/:id', (req, res) => {
-  req.session.valid && typeof(parseInt(req.params.id)) === "number" ? 
-    res.send(usuarios.find(usuario=>usuario?.id == req.params.id))
-  : res.send("Não autorizado")
+  req.session.valid && typeof (parseInt(req.params.id)) === "number" ?
+    res.send(usuarios.find(usuario => usuario?.id == req.params.id))
+    : res.send("Não autorizado")
 })
 /*
 perfil e auth
 */
 app.get('/api/perfil', async (req, res) => {
-  req.session.valid ? 
-    res.send(usuarios.map(usuario=>{delete usuario.senha; return usuario})[req.session.usuarioId])
-  : res.send("Não autorizado")
+  req.session.valid ?
+    res.send(usuarios.map(usuario => { delete usuario.senha; return usuario })[req.session.usuarioId])
+    : res.send("Não autorizado")
 })
 
 app.post('/api/login', async (req, res) => {
@@ -516,14 +644,40 @@ misc
 */
 
 app.get('/api/monitoring', (req, res) => {
-  let atendentes = 
-  usuarios
-  .filter(usuario=>usuario.tipo=="suporte")
-  .map(usuario=>({id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome}))
-  res.send( {
+  let atendentes =
+    usuarios
+      .filter(usuario => usuario.tipo == "suporte")
+      .map(usuario => ({ id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome }))
+  res.send({
     atendentes,
     chamados
-  } )
+  })
+})
+
+app.get('/api/files/:filename', (req, res) => {
+  let { filename } = req.params
+  let { valid, usuarioId: idu } = req.session
+    valid &&
+    filename != 'undefined' &&
+    (usuarios[idu].cargo == "admin" ||
+    chamados.some(chamado => chamado.anexo == filename && (chamado.atendenteId == idu || chamado.autorId == idu))) ?
+    (() => {
+      try {
+        fs.readFile(path.resolve('files/', filename), (error, data) => {
+          if (error) {
+            console.log(error)
+            return res.status(500).send()
+          }
+          let buffer = Buffer.from(data).toString('base64')
+          let data64 = "data:image/png;base64," + buffer
+          return res.send(data64)
+        })
+      } catch (e) {
+        console.log("Erro na leitura de arquivo. \n", e)
+        return res.status(500).send()
+      }
+    })()
+    : res.send("Não autorizado")
 })
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

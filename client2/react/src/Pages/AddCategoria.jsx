@@ -16,6 +16,10 @@ import {
 	ClickAwayListener,
 	Dialog,
 	DialogActions,
+
+	Accordion,
+	AccordionSummary,
+	AccordionDetails
 } from "@mui/material";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
@@ -79,9 +83,19 @@ export default function AddCategoria() {
 			.catch(err=>console.log("Erro adicionando categoria", err))
 	}
 
-	let categorias_list = useMemo(()=>categorias ? categorias
-	.sort((a, b)=> a.id > b.id)
-	.map((categoria, key)=><Categoria {...{categoria, tipos, getCategorias, key}} />) : <Typography>Carregando...</Typography>
+	let categorias_list = useMemo(()=>categorias && tipos ? 
+	tipos.sort().map((tipo, key)=>
+	<Accordion {...{key}}>
+		<AccordionSummary style={{textAlign: 'right'}}>
+			<Typography>{tipo}: {categorias.filter(a=>a.tipo==tipo).length}</Typography>
+		</AccordionSummary>
+		<AccordionDetails>{
+		categorias
+			.sort((a, b)=> a.id > b.id)
+			.filter(a=>a.tipo==tipo)
+			.map((categoria, key)=><Categoria {...{categoria, tipos, getCategorias, key, style:{padding: 5}}} />)
+	}</AccordionDetails>
+		</Accordion>) : <Typography>Carregando...</Typography>
 	, [categorias, tipos])
 
 	return (
@@ -166,7 +180,7 @@ function Categoria({categoria, getCategorias, tipos}) {
 	}
 
 	return (
-	<Stack direction="row" spacing={3} display="grid" sx={{gridAutoFlow: "column", placeContent: "end"}} >
+	<Stack direction="row" spacing={3} pb={3} display="grid" sx={{gridAutoFlow: "column", placeContent: "end"}} >
 		<Typography>
 			{`${categoria.tipo}: ${categoria.categoria}`}
 		</Typography> 

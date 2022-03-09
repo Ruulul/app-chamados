@@ -17,6 +17,6 @@ const AxiosSingleton = (function(){
     }
 })()
 
-export default function RunAxios(method, path, data, timeout, options = {}) {
-    return AxiosSingleton.getInstance()({ method, url: (path[0] == "/" ? "" : "/") + path, data: data || null, withCredentials: true, timeout, ...options })
+export default function RunAxios(method, path, data, options = {}) {
+    return AxiosSingleton.getInstance()({ method, url: (path[0] == "/" ? "" : "/") + path, data: data || null, withCredentials: true, headers: options.headers })
 }

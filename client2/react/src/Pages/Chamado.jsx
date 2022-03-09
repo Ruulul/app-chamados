@@ -68,6 +68,7 @@ export default function Chamado() {
   });
   const [isCarregado, setCarregado] = useState(false);
   const [atendente, setAtendente] = useState({ nome: "Carregando..." });
+  const [urlanexo, setAnexo] = useState(undefined)
 
   const redirect = useNavigate();
 
@@ -88,14 +89,19 @@ export default function Chamado() {
     return () => {
       clearInterval(interval);
     };
-  }, [infos]);
+  }, []);
   useLayoutEffect(() => {
     console.log({info: infos.atendenteId})
     axios("get", "/api/usuario/" + infos.atendenteId).then(({ data }) => {
-      console.log({data})
       setAtendente(data);
     });
   }, [isCarregado]);
+
+  useEffect(()=>
+    axios("get", `/api/files/${infos.anexo}`)
+    .then(({data})=>{
+      setAnexo(data)
+    }).catch(err=>console.log(err)),[infos.anexo])
 
   return (
     <Grid container direction={{ xs: "column", sm: "row" }} spacing={3}>
@@ -136,8 +142,10 @@ export default function Chamado() {
           </Typography>
           <Typography m={2}>{infos.status}</Typography>
           {
-            infos.anexo ?
-              <img src={infos.anexo.data} />
+            infos.anexo ? <>
+              <Typography variant="h5" m={2}> Anexo </Typography>
+              <img src={urlanexo} width="90%" style={{margin: "auto", display: "grid", paddingBottom: "2em"}} />
+              </>
             : <Typography m={4}>Nenhum anexo nesse chamado</Typography>
           }
         </Card>

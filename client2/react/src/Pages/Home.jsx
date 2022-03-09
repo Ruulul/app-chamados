@@ -11,6 +11,7 @@ import {
   CardMedia
 } from "@mui/material";
 import axios from "../Components/Requisicao";
+import Calendar from '../Components/Calendar';
 import { useEffect, useMemo, useState, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -95,7 +96,7 @@ const Home = () => {
   });
 
   const hoje = useMemo(() =>
-    <DiaDeHoje />, [Date().split(' ')[2]])
+    <Calendar />, [Date().split(' ')[2]])
 
   const redirect = useNavigate();
   useEffect(() => {
@@ -177,7 +178,7 @@ const Home = () => {
         direction="column"
       >
         <Infos nome={nome} contagem={contagem} vencimento={contagemPrazo} />
-        {hoje}
+          {hoje}
 		</Grid>
 		<Grid 
 		component={Card}
@@ -220,10 +221,11 @@ function Avatares(props) {
 			(atendente, key)=>{
 				let date = Date().split(' ')
         let date_today = `${date[3]}-${String(Math.floor(conversao.indexOf(date[1])/2 + 1)).padStart(2, '0')}-${date[2]}`
-				let chamados = data.chamados.filter(chamado=>chamado.atendenteId==atendente.id && chamado.status == "pendente")
-        let resolvido = data.chamados.filter(chamado=>chamado.atendenteId==atendente.id && chamado.status == "resolvido")
-        let atendimento = chamados.filter(chamado => chamado.atendimento == "true")
-        let fechado = data.chamados.filter(chamado => chamado.status == "fechado" && chamado.updatedAt.split('T')[0] == date_today)
+				let chamados_todos = data.chamados.filter(chamado=> chamado.atendenteId==atendente.id)
+        let chamados_abertos = chamados_todos.filter(chamado => chamado.status == 'pendente' || chamado.status == 'resolvido')
+        let resolvido = chamados_abertos.filter(chamado=> chamado.status == "resolvido")
+        let atendimento = chamados_abertos.filter(chamado=> chamado.atendimento == "true" && chamado.status == 'pendente')
+        let fechado = chamados_todos.filter(chamado=> chamado.status == "fechado" && chamado.updatedAt.split('T')[0] == date_today)
         return <CAvatar 
 				key={key} 
 				nome={atendente.nome}

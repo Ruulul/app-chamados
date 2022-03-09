@@ -23,6 +23,7 @@ const MudarSenha = React.lazy(()=>import("./Pages/MudarSenha"));
 const EditarChamado = React.lazy(()=>import("./Pages/EditarChamado"));
 const Relatorios = React.lazy(()=>import("./Pages/Relatorios"));
 const AddCategoria = React.lazy(()=>import("./Pages/AddCategoria"));
+const Calendar = React.lazy(()=>import('./Components/Calendar'));
 
 const theme = createTheme({
   typography: {
@@ -76,8 +77,9 @@ function Router() {
         <Route path="/mudarsenha" element={suspend(MudarSenha)} />
         <Route path="/" element={suspend(App)} >
           <Route index element={suspend(Home)} />
+          <Route path="/Calendar" element={suspend(Calendar)}/>
           <Route path="/registro" element={suspend(Registro)} />
-		  <Route path="/addCategoria" element={suspend(AddCategoria)} />
+		      <Route path="/addCategoria" element={suspend(AddCategoria)} />
           <Route path="/servicos" element={suspend(Servicos)} />
           <Route path="/avisos" element={suspend(Avisos)} />
           <Route path="/nova_requisicao" element={suspend(Requisicao)} />
