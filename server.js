@@ -39,6 +39,7 @@ var chamados = "vazio"
 var categorias = "vazio"
 var tipos = "vazio"
 var departamentos = "vazio"
+var filiais = "vazio"
 
 const store = new PrismaSessionStore(
   prisma, {
@@ -94,6 +95,7 @@ async function updateChamados() {
       createdAt: true,
       prazo: true,
       updatedAt: true,
+      filialId: true
     }
   })
     .then((data) => {
@@ -125,7 +127,8 @@ async function updateUsuarios() {
       sobrenome: true,
       senha: false,
       email: true,
-      metadados: true
+      metadados: true,
+      filialId: true
     }
   }).then(function (usuarios_array) {
     usuarios = []
@@ -143,6 +146,7 @@ async function updateUsuarios() {
         )
       usuario = { ...usuario, ...Metas }
       usuario.area = usuario.metadados.filter(md => md.nome == "area").map(md => md.valor)
+      usuario.filiais = usuario.metadados.filter(md => md.nome == "acessa_filial").map(md => md.valor)
       delete usuario.metadados
       usuarios[usuario.id] = usuario
     }
@@ -189,19 +193,32 @@ async function updateTipos() {
       console.log("Erro em updateTipos.\n", e)
   })
 }
+async function updateFiliais() {
+  await prisma.filial.findMany({
+  }).then(function (data) {
+    filiais = data
+  }).catch((e) => {
+    if (categorias === "vazio")
+      throw e
+    else
+      console.log("Erro em updateFiliais.\n", e)
+  })
+}
+
 await updateChamados()
 await updateUsuarios()
 await updateCategorias()
 await updateDepartamentos()
 await updateTipos()
+await updateFiliais()
 /* 
 Serviços
 */
 
-app.post('/api/novo/servico', async (req, res) => {
+app.post('/api/:codfilial/novo/servico', async (req, res) => {
   let servico = req.body
   let autorId = servico.autorId
-  req.session.valid ?
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
     (console.log("Salvando novo serviço"),
       servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] },
 
@@ -213,6 +230,7 @@ app.post('/api/novo/servico', async (req, res) => {
           },
           assunto: servico.assunto,
           prazo: servico.prazo,
+          filialId: parseInt(filiais.find(f=>f.codigo==req.params.codfilial).id),
           metadados: {
             createMany: {
               data: Object.entries({
@@ -233,15 +251,15 @@ app.post('/api/novo/servico', async (req, res) => {
     : res.send("Não autorizado")
 });
 
-app.post('/api/update/servico/:id/arquivo', upload.none(), (req, res) => {
+app.post('/api/:codfilial/update/servico/:id/arquivo', upload.none(), (req, res) => {
   let filename = `${Date.now()}-${req.body.title}`
   console.log(Object.keys(req.body), filename)
-  req.session.valid ? (
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ? (
     console.log("Salvando arquivo no serviço"),
     req.body.data ? 
       (console.log("Iniciando a escrita"),
         fs.writeFile(
-          path.resolve('files/', filename),
+          path.resolve(`files/${req.params.codfilial}/`, filename),
           req.body.data.split('base64,')[1],
           'base64',
           (error) => {
@@ -294,7 +312,7 @@ app.post('/api/update/servico/:id/arquivo', upload.none(), (req, res) => {
     : res.send("Não autorizado")
 })
 
-app.post('/api/update/servico/:id', async (req, res) => {
+app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
   let novo_servico = req.body
   let metadados = Object.entries({
     assunto: novo_servico.assunto,
@@ -312,9 +330,10 @@ app.post('/api/update/servico/:id', async (req, res) => {
         .filter(chamado => chamado)
         .find(chamado => chamado.id == novo_servico.id)
     validUpdate =
-      chamado
+      (chamado
         .atendenteId == usuarios[req.session.usuarioId].id
-      || usuarios[req.session.usuarioId].cargo == "admin"
+      || usuarios[req.session.usuarioId].cargo == "admin")
+      && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined
   } catch (e) {
     console.log(e)
     validUpdate = false
@@ -354,66 +373,62 @@ app.post('/api/update/servico/:id', async (req, res) => {
   })() : res.send("Não autorizado")
 });
 
-app.get('/api/servicos', (req, res) => {
+app.get('/api/:codfilial/servicos', (req, res) => {
   let idu = req.session.usuarioId
-  req.session.valid ?
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
     usuarios[idu].cargo == "admin" ?
-      res.send(chamados)
-      : usuarios[idu].tipo == "suporte" ?
-        res.send(chamados.filter(chamado => chamado.autorId == idu || chamado.atendenteId == idu))
-        : res.send(chamados.filter(chamado => chamado.autorId == idu))
-    : res.send("Não autorizado")
+      res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
+    : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == idu || chamado.atendenteId == idu))
+  : res.send("Não autorizado")
 });
 
-app.get('/api/servicos/:tipo/:filtro', (req, res) => {
-  let { tipo, filtro } = req.params
+app.get('/api/:codfilial/servicos/:tipo/:filtro', (req, res) => {
+  let { tipo, filtro, codfilial } = req.params
   let { valid, usuarioId: idu } = req.session
-  valid ?
+  valid && filiais.find(f=>f.codigo==codfilial) !== undefined ?
     usuarios[idu].cargo == "admin" ?
-      res.send(chamados.filter(chamado => chamado[tipo] == filtro))
-      : "suporte" == usuarios[idu].tipo ?
-        res.send(chamados.filter(chamado => chamado[tipo] == filtro && (chamado.autorId == idu || chamado.atendenteId == idu)))
-        : res.send(chamados.filter(chamado => chamado.autorId == idu && chamado[tipo] == filtro))
-    : res.send("Não autorizado")
+      res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro))
+    : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro && (chamado.autorId == idu || chamado.atendenteId == idu)))
+  : res.send("Não autorizado")
 });
 
-app.get('/api/servico/:id', (req, res) => {
+app.get('/api/:codfilial/servico/:id', (req, res) => {
   let chamado = chamados.find(chamado => chamado.id == req.params.id);
-  req.session.valid && (chamado.autorId == req.session.usuarioId || usuarios[req.session.usuarioId].tipo == "suporte") ?
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined && (chamado.autorId == req.session.usuarioId || usuarios[req.session.usuarioId].tipo == "suporte") ?
     res.send(chamado)
-    : res.send("Não autorizado")
+  : res.send("Não autorizado")
 });
 
 /*
 Departamentos and tipos TODO
 */
-app.get('/api/departamentos/', (req, res)=>{
-  req.session.valid ?
-    res.send(departamentos)
+app.get('/api/:codfilial/departamentos/', (req, res)=>{
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+    res.send(departamentos.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
   : res.send("Não autorizado")
 })
-app.post('/api/departamentos/novo', (req, res) => {
+app.post('/api/:codfilial/departamentos/novo', (req, res) => {
   req.session.valid && usuarios[req.session.usuarioId].cargo == 'admin'
 })
-app.post('/api/departamentos/editar/:id', (req, res)=>{
+app.post('/api/:codfilial/departamentos/editar/:id', (req, res)=>{
   res.send("Não implementado")
 })
-app.get('/api/departamentos/excluir/:id', (req, res)=>{
+app.get('/api/:codfilial/departamentos/excluir/:id', (req, res)=>{
   res.send("Não implementado")
 })
 
-app.get('/api/tipos', (req, res)=>{
+app.get('/api/:codfilial/tipos', (req, res)=>{
   req.session.valid ?
     res.send(tipos)
   : res.send("Não autorizado")
 })
-app.post('/api/tipos/novo', (req, res) => {
+app.post('/api/:codfilial/tipos/novo', (req, res) => {
   res.send("Não implementado")
 })
-app.post('/api/tipos/editar/:id', (req, res)=>{
+app.post('/api/:codfilial/tipos/editar/:id', (req, res)=>{
   res.send("Não implementado")
 })
-app.get('/api/tipos/excluir/:id', (req, res)=>{
+app.get('/api/:codfilial/tipos/excluir/:id', (req, res)=>{
   res.send("Não implementado")
 })
 
@@ -421,26 +436,27 @@ app.get('/api/tipos/excluir/:id', (req, res)=>{
 Categorias
 */
 
-app.get('/api/servicos/categorias/:tipo', (req, res) => {
+app.get('/api/:codfilial/servicos/categorias/:tipo', (req, res) => {
   console.log(req.params)
-  req.session.valid ?
-    res.send(categorias.filter(categoria => categoria.tipo == req.params.tipo))
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+    res.send(categorias.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(categoria => categoria.tipo == req.params.tipo))
     : res.send("Não autorizado")
 });
 
-app.get('/api/servicos/categorias', (req, res) => {
-  res.send(categorias)
+app.get('/api/:codfilial/servicos/categorias', (req, res) => {
+  res.send(categorias.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
 });
 
-app.post('/api/servicos/novo/subcategoria/', async (req, res) => {
+app.post('/api/:codfilial/servicos/novo/subcategoria/', async (req, res) => {
   let sub = req.body
   let usuario = usuarios[req.session.usuarioId]
-  req.session.valid ?
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
     usuario.tipo == "suporte" ?
       prisma.categoria.create({
         data: {
           tipo: sub.tipo,
-          categoria: sub.newCategoria
+          categoria: sub.newCategoria,
+          filialId:  parseInt(filiais.find(f=>f.codigo==req.params.codfilial).id)
         }
       })
         .then(async (r) => {
@@ -452,10 +468,10 @@ app.post('/api/servicos/novo/subcategoria/', async (req, res) => {
   updateCategorias()
 });
 
-app.post('/api/servicos/editar/subcategoria/:c/:sc', async (req, res) => {
+app.post('/api/:codfilial/servicos/editar/subcategoria/:c/:sc', async (req, res) => {
   let sub = req.body
   let usuario = usuarios[req.session.usuarioId]
-  req.session.valid && usuario ?
+  req.session.valid && usuario && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
     usuario.tipo == "suporte" ?
       prisma.categoria.update({
         where: {
@@ -475,10 +491,10 @@ app.post('/api/servicos/editar/subcategoria/:c/:sc', async (req, res) => {
   updateCategorias()
 });
 
-app.post('/api/servicos/excluir/subcategoria/:c/:sc', async (req, res) => {
+app.post('/api/:codfilial/servicos/excluir/subcategoria/:c/:sc', async (req, res) => {
   let usuario = usuarios[req.session.usuarioId]
   let cat = req.body
-  req.session.valid ?
+  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
     usuario.tipo == "suporte" ?
       prisma.categoria.delete({
         where: {
@@ -497,7 +513,7 @@ app.post('/api/servicos/excluir/subcategoria/:c/:sc', async (req, res) => {
 Usuários
 */
 
-app.post('/api/novo/usuario', (req, res) => {
+app.post('/api/:codfilial/novo/usuario', (req, res) => {
   req.session.valid && usuarios[req.session.usuarioId].cargo == "admin" ? prisma.usuario.findMany({
     where: {
       email: req.body.email
@@ -517,7 +533,8 @@ app.post('/api/novo/usuario', (req, res) => {
           email: data.email,
           senha: data.senha,
           nome: data.nome,
-          sobrenome: data.sobrenome
+          sobrenome: data.sobrenome,
+          filialId: parseInt(filiais.find(f=>f.codigo==req.params.codfilial).id)
         }
       })
       res.status(200).send("Usuário criado com sucesso")
@@ -628,22 +645,32 @@ app.post('/api/alterasenha', async (req, res) => {
 })
 
 app.post('/api/logout', async (req, res) => {
-  //req.session.destroy((err) => { if (!err) { res.status(200).send("Logout com sucesso"); console.log("Logout com sucesso") } else { res.status(500).send("Algum erro ocorreu."); console.log("Algum erro ocorreu.") } })
-  try {
-    req.session.valid = false
-    req.session.save()
-    res.status(200).send("OK")
-  } catch (e) {
-    console.log("Falha em logout. \n" + e)
-    res.status(500).send("Error")
-  }
+  req.session.destroy(
+    (err) => { 
+      if (!err) { 
+        res.status(200).send("Logout com sucesso"); 
+        console.log("Logout com sucesso") 
+      } else { 
+        res.status(500).send("Algum erro ocorreu."); 
+        console.log("Algum erro ocorreu.") 
+      } 
+    }
+  )
+  //try {
+  //  req.session.valid = false
+  //  req.session.save()
+  //  res.status(200).send("OK")
+  //} catch (e) {
+  //  console.log("Falha em logout. \n" + e)
+  //  res.status(500).send("Error")
+  //}
 })
 
 /*
 misc
 */
 
-app.get('/api/monitoring', (req, res) => {
+app.get('/api/:codfilial/monitoring', (req, res) => {
   let atendentes =
     usuarios
       .filter(usuario => usuario.tipo == "suporte")
@@ -654,7 +681,15 @@ app.get('/api/monitoring', (req, res) => {
   })
 })
 
-app.get('/api/files/:filename', (req, res) => {
+app.get('/api/:codfilial/atendentes', (req, res) => {
+  let atendentes =
+    usuarios
+      .filter(usuario => usuario.tipo == "suporte")
+      .map(usuario => ({ id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome }))
+  res.send(atendentes)
+})
+
+app.get('/api/:codfilial/files/:filename', (req, res) => {
   let { filename } = req.params
   let { valid, usuarioId: idu } = req.session
     valid &&
