@@ -1,23 +1,10 @@
 import prisma_pkg from '@prisma/client'
 const { PrismaClient } = prisma_pkg
-import cookieParser from 'cookie-parser'
 
 import bcrypt from 'bcrypt'
 import session from 'express-session'
 
 import { PrismaSessionStore } from '@quixo3/prisma-session-store'
-
-import multer from 'multer'
-
-const upload = multer({
-  dest: './files/',
-  filename: function (req, file, cb) {
-
-  },
-  limits: {
-    fieldSize: 25 * 1024 * 1024
-  }
-})
 
 import path from 'path'
 
@@ -48,7 +35,6 @@ const store = new PrismaSessionStore(
   dbRecordIdFunction: undefined,
 });
 app.use(express.json())
-app.use(cookieParser())
 app.use(session({
   secret: SECRET,
   store,
@@ -59,6 +45,7 @@ app.use(session({
   }
 }));
 app.use(express.static('./public/'))
+app.use('/', express.static('./client2/react/dist'))
 
 app.use(function (req, res, next) {
 
@@ -90,7 +77,11 @@ async function updateChamados() {
       id: true,
       autorId: true,
       metadados: true,
-      chat: true,
+      chat: {
+        include: {
+          metadados: true
+        }
+      },
       assunto: true,
       createdAt: true,
       prazo: true,
@@ -129,6 +120,11 @@ async function updateUsuarios() {
       email: true,
       metadados: true,
       filialId: true
+    },
+    where: {
+      id: {
+        gte: 3
+      }
     }
   }).then(function (usuarios_array) {
     usuarios = []
@@ -205,12 +201,48 @@ async function updateFiliais() {
   })
 }
 
+const conversao = [
+  "Jan",    "Jan",
+  "Feb",    "Fev",
+  "Mar",    "Mar",
+  "Apr",    "Abr",
+  "May",    "Mai",
+  "Jun",    "Jun",
+  "Jul",    "Jul",
+  "Aug",    "Ago",
+  "Sep",    "Set",
+  "Oct",    "Out",
+  "Nov",    "Nov",
+  "Dec",    "Dez",
+];
+let date_today = Date().split(' ')
+let convert = (date)=>`${date[3]}-${String(Math.floor(conversao.indexOf(date[1])/2 + 1)).padStart(2, '0')}-${date[2]}`
+
 await updateChamados()
 await updateUsuarios()
 await updateCategorias()
 await updateDepartamentos()
 await updateTipos()
 await updateFiliais()
+/*
+Filiais
+*/
+app.get('/api/:codfilial/', async (req, res)=>{
+  let {codfilial} = req.params 
+  req.session.valid ?
+    filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==codfilial) !== undefined ?
+      res.send(filiais.find(f=>f.codigo==codfilial))
+    : res.send("Filial inválida")
+  : res.send("Não autorizado")
+})
+
+app.get('/api/:codfilial/all', async (req, res)=>{
+  let {usuarioId : uid} = req.session
+  console.log(usuarios[uid]?.id,usuarios[uid]?.filiais.map(filial=>filiais.find(f=>f.id==filial)))
+  req.session.valid ?
+    res.send(usuarios[uid]?.filiais.map(filial=>filiais.find(f=>f.id==filial)))
+  : res.send("Não autorizado")
+})
 /* 
 Serviços
 */
@@ -218,7 +250,9 @@ Serviços
 app.post('/api/:codfilial/novo/servico', async (req, res) => {
   let servico = req.body
   let autorId = servico.autorId
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+  let { usuarioId : uid } = req.session
+  let { codfilial } = req.params
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==codfilial) ?
     (console.log("Salvando novo serviço"),
       servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] },
 
@@ -241,6 +275,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                 atendenteId: servico.atendenteId,
                 atendimento: String(false),
                 subCategoria: servico.subCategoria,
+                usuarioId: servico.usuarioId
               }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } })
             }
           }
@@ -251,15 +286,17 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     : res.send("Não autorizado")
 });
 
-app.post('/api/:codfilial/update/servico/:id/arquivo', upload.none(), (req, res) => {
-  let filename = `${Date.now()}-${req.body.title}`
+app.post('/api/:codfilial/update/servico/:id/arquivo', (req, res) => {
+  let filename = (()=>`${Date.now()}-${req.body.title}`)()
+  let {usuarioId:uid} = req.session
+  let {codfilial, id} = req.params
   console.log(Object.keys(req.body), filename)
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ? (
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
     console.log("Salvando arquivo no serviço"),
     req.body.data ? 
       (console.log("Iniciando a escrita"),
         fs.writeFile(
-          path.resolve(`files/${req.params.codfilial}/`, filename),
+          path.resolve(`files/`, filename),
           req.body.data.split('base64,')[1],
           'base64',
           (error) => {
@@ -295,6 +332,7 @@ app.post('/api/:codfilial/update/servico/:id/arquivo', upload.none(), (req, res)
                   }).then(() => {
                     console.log("Registro raiz criado")
                     res.send()
+                    updateChamados()
                   })
                     .catch(() => { console.log("Erro na criação do registro raiz"); res.status(500).send() })
                 else
@@ -314,6 +352,9 @@ app.post('/api/:codfilial/update/servico/:id/arquivo', upload.none(), (req, res)
 
 app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
   let novo_servico = req.body
+  let chamado_atualizado = undefined
+  let { usuarioId : uid } = req.session 
+  let { codfilial, id } = req.params
   let metadados = Object.entries({
     assunto: novo_servico.assunto,
     departamento: novo_servico.departamento,
@@ -321,29 +362,32 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
     prioridade: novo_servico.prioridade,
     atendimento: (novo_servico.chat ? (novo_servico.chat.length > 2 ? true : false) : false),
     tipo: novo_servico.tipo,
-    atendenteId: novo_servico.atendenteId
+    atendenteId: novo_servico.atendenteId,
+    usuarioId: novo_servico.usuarioId
   }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } });
-  let validUpdate;
+  let valuidpdate;
   try {
     let chamado =
       chamados
         .filter(chamado => chamado)
         .find(chamado => chamado.id == novo_servico.id)
-    validUpdate =
+    valuidpdate =
       (chamado
         .atendenteId == usuarios[req.session.usuarioId].id
+      ||chamado
+        .usuarioId == usuarios[req.session.usuarioId].id
       || usuarios[req.session.usuarioId].cargo == "admin")
-      && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined
+      && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined
   } catch (e) {
     console.log(e)
-    validUpdate = false
+    valuidpdate = false
   }
-  console.log("Edição é " + (validUpdate ? "válida" : "inválida"))
-  req.session.valid && validUpdate ? (async () => {
+  console.log("Edição é " + (valuidpdate ? "válida" : "inválida"))
+  req.session.valid && valuidpdate ? (async () => {
     console.log("Atualizando serviço")
     if (novo_servico.chat) {
       novo_servico.chat.forEach((element) => delete element.chamadoId)
-      await prisma.chamado.update({
+      chamado_atualizado = await prisma.chamado.update({
         where: {
           id: parseInt(req.params.id)
         },
@@ -355,6 +399,10 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
               skipDuplicates: true
             }
           },
+          updatedAt: new Date()
+        },
+        include: {
+          chat: true
         }
       }).catch((e) => console.log("Erro na atualização do chamado.\n", e))
     }
@@ -369,46 +417,142 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
         }
       }).catch((e) => console.log("Erro na atualização dos metadados do chamado. \n", e))
     updateChamados()
-    res.status(200).send(req.body)
+    res.status(200).send(chamado_atualizado)
   })() : res.send("Não autorizado")
 });
 
 app.get('/api/:codfilial/servicos', (req, res) => {
-  let idu = req.session.usuarioId
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
-    usuarios[idu].cargo == "admin" ?
+  let uid = req.session.usuarioId
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
+    usuarios[uid]?.cargo == "admin" ?
       res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
-    : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == idu || chamado.atendenteId == idu))
+    : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == uid || chamado.atendenteId == uid || chamado.usuarioId == uid))
   : res.send("Não autorizado")
 });
 
 app.get('/api/:codfilial/servicos/:tipo/:filtro', (req, res) => {
   let { tipo, filtro, codfilial } = req.params
-  let { valid, usuarioId: idu } = req.session
-  valid && filiais.find(f=>f.codigo==codfilial) !== undefined ?
-    usuarios[idu].cargo == "admin" ?
-      res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro))
-    : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro && (chamado.autorId == idu || chamado.atendenteId == idu)))
+  let { valid, usuarioId: uid } = req.session
+  valid ? 
+    filiais
+      .filter(
+        filial=>
+          usuarios[uid]
+          ?.filiais
+          .includes(filial.id.toString())
+      ).find(f=>f.codigo==codfilial) ?
+      usuarios[uid]?.cargo == "admin" ?
+        res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro))
+      : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro && (chamado.autorId == uid || chamado.atendenteId == uid|| chamado.usuarioId == uid)))
+    : res.send([])
   : res.send("Não autorizado")
 });
 
 app.get('/api/:codfilial/servico/:id', (req, res) => {
+  let { usuarioId: uid } = req.session
   let chamado = chamados.find(chamado => chamado.id == req.params.id);
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined && (chamado.autorId == req.session.usuarioId || usuarios[req.session.usuarioId].tipo == "suporte") ?
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) && (chamado.autorId == req.session.usuarioId|| chamado.usuarioId == uid || usuarios[req.session.usuarioId].tipo == "suporte") ?
     res.send(chamado)
   : res.send("Não autorizado")
 });
+
+app.post('/api/:codfilial/update/mensagem/:id/arquivo', (req, res) => {
+  let filename = (()=>`${Date.now()}-${req.body.title}`)()
+  let {usuarioId : uid} = req.session
+  let { codfilial, id } = req.params
+  id = parseInt(id)
+  console.log(Object.keys(req.body), filename)
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
+    console.log("Salvando arquivo no serviço"),
+    req.body.data ? 
+      (console.log("Iniciando a escrita"),
+        fs.writeFile(
+          path.resolve(`files/`, filename),
+          req.body.data.split('base64,')[1],
+          'base64',
+          (error) => {
+            if (error) {
+              console.log(error)
+              console.log({ error })
+              res.send({ error })
+              return
+            }
+            console.log(`Arquivo ${filename} salvo com sucesso`)
+            prisma.metadadoMensagem.updateMany({
+              where: {
+                mensagemId: parseInt(req.params.id),
+                nome: "anexo"
+              },
+              data: {
+                valor: filename
+              }
+            })
+              .then(async data => {
+                console.log(`${data.count} registro alterado`)
+                if (data.count == 0)
+                  await prisma.metadadoMensagem.create({
+                    data: {
+                      nome: "anexo",
+                      valor: filename,
+                      mensagem: {
+                        connect: {
+                          id
+                        }
+                      }
+                    }
+                  }).then(() => {
+                    console.log("Registro raiz criado")
+                    res.send()
+                    updateChamados()
+                  })
+                    .catch((e) => { console.log("Erro na criação do registro raiz\n", e); res.status(500).send() })
+                else
+                  res.send()
+                updateChamados()
+              })
+              .catch(error => {
+                console.log(error)
+                res.send({ error })
+              })
+          }
+        ))
+      : res.send()
+  )
+    : res.send("Não autorizado")
+})
 
 /*
 Departamentos and tipos TODO
 */
 app.get('/api/:codfilial/departamentos/', (req, res)=>{
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+  let { usuarioId : uid } = req.session
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
     res.send(departamentos.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
   : res.send("Não autorizado")
 })
 app.post('/api/:codfilial/departamentos/novo', (req, res) => {
-  req.session.valid && usuarios[req.session.usuarioId].cargo == 'admin'
+  let { usuarioId : uid } = req.session 
+  let { codfilial } = req.params
+  req.session.valid 
+  && usuarios[uid]?.cargo == 'admin' 
+  && filiais
+      .filter(
+        filial=>
+        usuarios[uid]
+          ?.filiais
+          .includes(filial.id.toString())
+      ).find(f=>f.codigo==codfilial) ?
+    prisma.departamento.create({
+      data: {
+        departamento: req.body.newDepartamento,
+        filialId: filiais.find(filial=>filial.codigo == codfilial).id
+      }
+    }).then(()=>{
+      console.log(`Departamento ${req.body.newDepartamento} criado com sucesso na filial ${codfilial}`)
+      updateDepartamentos()
+      res.send("OK")
+    })
+  : res.send("Não autorizado")
 })
 app.post('/api/:codfilial/departamentos/editar/:id', (req, res)=>{
   res.send("Não implementado")
@@ -418,8 +562,9 @@ app.get('/api/:codfilial/departamentos/excluir/:id', (req, res)=>{
 })
 
 app.get('/api/:codfilial/tipos', (req, res)=>{
-  req.session.valid ?
-    res.send(tipos)
+  let { usuarioId : uid } = req.session
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) ?
+    res.send(tipos.filter(t=>filiais.find(f=>f.codigo==req.params.codfilial).id==t.filialId))
   : res.send("Não autorizado")
 })
 app.post('/api/:codfilial/tipos/novo', (req, res) => {
@@ -438,19 +583,21 @@ Categorias
 
 app.get('/api/:codfilial/servicos/categorias/:tipo', (req, res) => {
   console.log(req.params)
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
     res.send(categorias.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(categoria => categoria.tipo == req.params.tipo))
     : res.send("Não autorizado")
 });
 
 app.get('/api/:codfilial/servicos/categorias', (req, res) => {
-  res.send(categorias.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
+  let {usuarioId : uid} = req.session
+  res.send(categorias.filter(c=>filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial)?.id==c.filialId))
 });
 
 app.post('/api/:codfilial/servicos/novo/subcategoria/', async (req, res) => {
   let sub = req.body
   let usuario = usuarios[req.session.usuarioId]
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+  let { usuarioId : uid } = req.session
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
     usuario.tipo == "suporte" ?
       prisma.categoria.create({
         data: {
@@ -471,7 +618,8 @@ app.post('/api/:codfilial/servicos/novo/subcategoria/', async (req, res) => {
 app.post('/api/:codfilial/servicos/editar/subcategoria/:c/:sc', async (req, res) => {
   let sub = req.body
   let usuario = usuarios[req.session.usuarioId]
-  req.session.valid && usuario && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+  let { usuarioId : uid } = req.session
+  req.session.valid && usuario && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
     usuario.tipo == "suporte" ?
       prisma.categoria.update({
         where: {
@@ -494,7 +642,8 @@ app.post('/api/:codfilial/servicos/editar/subcategoria/:c/:sc', async (req, res)
 app.post('/api/:codfilial/servicos/excluir/subcategoria/:c/:sc', async (req, res) => {
   let usuario = usuarios[req.session.usuarioId]
   let cat = req.body
-  req.session.valid && filiais.find(f=>f.codigo==req.params.codfilial) !== undefined ?
+  let { usuarioId : uid } = req.session
+  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
     usuario.tipo == "suporte" ?
       prisma.categoria.delete({
         where: {
@@ -513,6 +662,15 @@ app.post('/api/:codfilial/servicos/excluir/subcategoria/:c/:sc', async (req, res
 Usuários
 */
 
+app.get('/api/:codfilial/usuarios/all', (req, res)=>{
+  let {valid, usuarioId : uid} = req.session
+  valid ? 
+    (usuarios[uid]?.tipo=="suporte" || usuarios[uid]?.cargo=="admin") ?
+      res.send(usuarios.filter(user=>user&&![3,7].includes(user.id)))
+    : res.send([usuarios[uid]])
+  : res.send("Não autorizado")
+})
+
 app.post('/api/:codfilial/novo/usuario', (req, res) => {
   req.session.valid && usuarios[req.session.usuarioId].cargo == "admin" ? prisma.usuario.findMany({
     where: {
@@ -528,15 +686,36 @@ app.post('/api/:codfilial/novo/usuario', (req, res) => {
     return req.body
   }, (err) => { res.status(500).send("Erro acessando o banco de dados") })
     .then(async (data) => {
-      await prisma.usuario.create({
+      let user = await prisma.usuario.create({
         data: {
           email: data.email,
           senha: data.senha,
           nome: data.nome,
           sobrenome: data.sobrenome,
-          filialId: parseInt(filiais.find(f=>f.codigo==req.params.codfilial).id)
+          filialId: parseInt(filiais.find(f=>f.codigo==req.params.codfilial).id),
+          metadados: {
+            createMany: {
+              data: data?.acessa_filial?.map(af=>({nome: acessa_filial, valor: af}))
+            }
+          }
         }
       })
+      if (data.permissoes.includes("suporte"))
+        await prisma.metadadoUsuario.create({
+          data: {
+            usuarioId: user.id,
+            nome: "tipo",
+            valor: "suporte"
+          }
+        })
+      if (data.permissoes.includes("admin"))
+        await prisma.metadadoUsuario.create({
+          data: {
+            usuarioId: user.id,
+            nome: "cargo",
+            valor: "admin"
+          }
+        })
       res.status(200).send("Usuário criado com sucesso")
       return
     }, (err) => { res.status(500).send("Erro criando o usuário. \n" + err) })
@@ -544,13 +723,13 @@ app.post('/api/:codfilial/novo/usuario', (req, res) => {
   updateUsuarios()
 });
 
-app.get('/api/usuario/email/:email', (req, res) => {
+app.get('/api/:codfilial/usuario/email/:email', (req, res) => {
   req.session.valid ?
     res.send(usuarios.find(usuario => usuario.email == req.params.email))
     : res.send("Não autorizado")
 });
 
-app.get('/api/usuarios/area/:filtro', (req, res) => {
+app.get('/api/:codfilial/usuarios/area/:filtro', (req, res) => {
   req.session.valid ?
     res.send(
       usuarios
@@ -559,27 +738,27 @@ app.get('/api/usuarios/area/:filtro', (req, res) => {
     : res.send("Não autorizado")
 });
 
-app.get('/api/usuarios/:tipo/:filtro', (req, res) => {
+app.get('/api/:codfilial/usuarios/:tipo/:filtro', (req, res) => {
   req.session.valid ?
     res.send(usuarios.filter(usuario => usuario[req.params.tipo] == req.params.filtro))
     : res.send("Não autorizado")
 });
 
-app.get('/api/usuario/:id', (req, res) => {
+app.get('/api/:codfilial/usuario/:id', (req, res) => {
   req.session.valid && typeof (parseInt(req.params.id)) === "number" ?
     res.send(usuarios.find(usuario => usuario?.id == req.params.id))
-    : res.send("Não autorizado")
+  : res.send("Não autorizado")
 })
 /*
 perfil e auth
 */
-app.get('/api/perfil', async (req, res) => {
+app.get('/api/:codfilial/perfil', async (req, res) => {
   req.session.valid ?
     res.send(usuarios.map(usuario => { delete usuario.senha; return usuario })[req.session.usuarioId])
     : res.send("Não autorizado")
 })
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/:codfilial/login', async (req, res) => {
   await prisma.usuario.findMany({
     where: {
       email: req.body.email
@@ -604,7 +783,7 @@ app.post('/api/login', async (req, res) => {
   })
 })
 
-app.post('/api/alterasenha', async (req, res) => {
+app.post('/api/:codfilial/alterasenha', async (req, res) => {
   await prisma.usuario.findMany({
     where: {
       email: req.body.email
@@ -644,7 +823,7 @@ app.post('/api/alterasenha', async (req, res) => {
   updateUsuarios()
 })
 
-app.post('/api/logout', async (req, res) => {
+app.post('/api/:codfilial/logout', async (req, res) => {
   req.session.destroy(
     (err) => { 
       if (!err) { 
@@ -690,12 +869,12 @@ app.get('/api/:codfilial/atendentes', (req, res) => {
 })
 
 app.get('/api/:codfilial/files/:filename', (req, res) => {
-  let { filename } = req.params
-  let { valid, usuarioId: idu } = req.session
+  let { filename, codfilial } = req.params
+  let { valid, usuarioId: uid } = req.session
     valid &&
     filename != 'undefined' &&
-    (usuarios[idu].cargo == "admin" ||
-    chamados.some(chamado => chamado.anexo == filename && (chamado.atendenteId == idu || chamado.autorId == idu))) ?
+    (usuarios[uid]?.cargo == "admin" ||
+    chamados.some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
     (() => {
       try {
         fs.readFile(path.resolve('files/', filename), (error, data) => {
@@ -714,5 +893,10 @@ app.get('/api/:codfilial/files/:filename', (req, res) => {
     })()
     : res.send("Não autorizado")
 })
+
+// React redirect
+app.get('*', (req, res) => {                       
+  res.sendFile('./client2/react/dist/index.html');                               
+});
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

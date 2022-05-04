@@ -38,7 +38,7 @@ class TheMain extends React.Component {
 
   componentDidMount(){ 
     let servicos = [];
-    axios.get('/api/servicos')
+    axios.get('/servicos')
     .then((res)=>{servicos = res.data})
     .catch((err)=>{servicos[0].assunto = "Erro carregando serviços"; console.error(err)})  
     .finally(() => {this.setState({servicos: []}, ()=>{this.setState({servicos})})});
@@ -75,7 +75,7 @@ class TheMain extends React.Component {
   }
 
   async abreservico(id) {
-    axios.get('/api/servico/' + id)
+    axios.get('/servico/' + id)
       .then((res)=>this.adicionaservico(res.data))
       .catch((err)=>console.log("Erro abrindo serviço. " + err))
   }
@@ -108,21 +108,21 @@ class TheMain extends React.Component {
   }
 
   salvaservico(req) {
-    axios.post('/api/novo/servico', req)
+    axios.post('/novo/servico', req)
       .then(res=>{this.setState({}, () => this.setState({}));console.log('Serviço salvo: ' + JSON.stringify(res.data))})
       .catch(err=>console.error('Falha em salvar o serviço'));
     ;
   }
 
   atualizaservicoservidor(req) {
-    axios.post('/api/update/servico/' + req.id, req)
+    axios.post('/update/servico/' + req.id, req)
       .then(res=>{this.setState({}, ()=> this.setState({})); console.log('Servico salvo: ' + JSON.stringify(res.data))})
       .catch(err=>console.error('Falha em atualizar o serviço'))
   }
 
   async geraidservico() {
     let temp_id = 0;
-    await axios.get('/api/servicos')
+    await axios.get('/servicos')
       .then(({data})=>temp_id=data.length)
       .catch((err)=>{console.log('Erro gerando serviços. ' + err)})
     return temp_id;

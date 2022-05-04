@@ -31,12 +31,12 @@ class Filtro extends React.Component {
   geraservicos() {
     let servicos = [];
     if (this.state.filtro === "todos") 
-      axios.get('/api/0101/servicos')
+      axios.get('/servicos')
         .then((res)=>{servicos = res.data})
         .catch((err)=>{servicos[0].assunto = "Erro carregando serviços"; console.error(err)})  
         .finally(() => {this.setState({servicos: []}, ()=>{this.setState({servicos})})});
     else 
-      axios.get('/api/0101/servicos/' + this.state.filtro)
+      axios.get('/servicos/' + this.state.filtro)
         .then((res)=>{servicos = res.data; console.log('Serviços recebidos: ' + JSON.stringify(servicos))})
         .catch((err)=>{servicos[0] = {}; servicos[0].assunto = "Erro carregando serviços"; console.error(err)}) 
         .finally(() => {this.setState({servicos}, ()=>{this.setState({servicos})})});

@@ -228,7 +228,7 @@ const Indicadores = (props) => {
 
 async function Servicos(filtro) {
     let Tabela = undefined;
-    await axios.get('/api/servicos')
+    await axios.get('/servicos')
         .then( (res)=>{
             switch(filtro) {
                 case "abertos":
