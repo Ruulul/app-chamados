@@ -23,14 +23,15 @@ class Boundary extends React.Component {
     }
   }
   
+let sx_centralize = { 
+  display: "grid", 
+  margin: "auto", 
+  align:"center", 
+  marginTop: "30vh", 
+  transform: "scale(3)" }
+
 export default function suspend(Component) {
-    let sx_centralize = { 
-      display: "grid", 
-      margin: "auto", 
-      align:"center", 
-      marginTop: "30vh", 
-      transform: "scale(3)" }
-    return <Boundary sx={sx_centralize}>
+    return ()=><Boundary sx={sx_centralize}>
       <Suspense 
         fallback={
           <CircularProgress 

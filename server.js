@@ -7,8 +7,14 @@ import session from 'express-session'
 import { PrismaSessionStore } from '@quixo3/prisma-session-store'
 
 import path from 'path'
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+console.log(JSON.stringify({__filename, __dirname}))
 
 import fs from "fs"
+import { fileTypeFromBuffer } from "file-type"
+
 const SECRET = fs.readFileSync('./key', 'utf-8');
 
 //const key = fs.readFileSync('./certification/key.pem');
@@ -386,7 +392,7 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
   req.session.valid && valuidpdate ? (async () => {
     console.log("Atualizando serviço")
     if (novo_servico.chat) {
-      novo_servico.chat.forEach((element) => delete element.chamadoId)
+      novo_servico.chat.forEach((element) => {delete element.chamadoId;delete element.metadados})
       chamado_atualizado = await prisma.chamado.update({
         where: {
           id: parseInt(req.params.id)
@@ -626,7 +632,7 @@ app.post('/api/:codfilial/servicos/editar/subcategoria/:c/:sc', async (req, res)
           id: sub.id
         },
         data: {
-          tipo: sub.tipo,
+          tipo: sub.tipo.tipo,
           categoria: sub.newCategoria
         }
       })
@@ -853,7 +859,7 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
   let atendentes =
     usuarios
       .filter(usuario => usuario.tipo == "suporte")
-      .map(usuario => ({ id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome }))
+      .map(usuario => ({ id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome, perfil: usuario.fotoPerfil }))
   res.send({
     atendentes,
     chamados
@@ -882,9 +888,14 @@ app.get('/api/:codfilial/files/:filename', (req, res) => {
             console.log(error)
             return res.status(500).send()
           }
-          let buffer = Buffer.from(data).toString('base64')
-          let data64 = "data:image/png;base64," + buffer
-          return res.send(data64)
+          let buffer = Buffer.from(data)
+          let data64 = buffer.toString('base64')
+          fileTypeFromBuffer(buffer)
+            .then(({mime})=>{
+              let url64 = `data:${mime};base64,` + data64
+              res.send(url64)
+            })
+            .catch(err=>res.status(500).send(err))
         })
       } catch (e) {
         console.log("Erro na leitura de arquivo. \n", e)
@@ -895,8 +906,8 @@ app.get('/api/:codfilial/files/:filename', (req, res) => {
 })
 
 // React redirect
-app.get('*', (req, res) => {                       
-  res.sendFile('./client2/react/dist/index.html');                               
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, 'client2/react/dist/index.html'));                               
 });
 
 app.listen(port, () => console.log(`Listening on port ${port}`));

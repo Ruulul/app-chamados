@@ -25,27 +25,29 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faBan, faEdit } from "@fortawesome/free-solid-svg-icons"
 
-
 export default function AddCategoria() {
 	const [categorias, setCategorias] = useState(undefined)
 	const [newCategoria, setCategoria] = useState("")
 	const [tipo, setTipo] = useState("")
 	const [tipos, setTipos] = useState([])
-	
-	function getCategorias() {
-		axios('get','/api/servicos/categorias/') //+ infos.tipo)
+
+	function getTipos() {
+		axios('get', '/tipos')
 			.then(
 				({data})=>{
-					setCategorias(data);
-					let tipos = [...new Set(data.sort().map(categoria=>categoria.tipo))]
-					setTipos(tipos)
-					setTipo(tipos[0])
+					if (tipos.length == 0) {
+						setTipos(data)
+						setTipo(data[1].tipo)
+					}
+					else setTipos(data)
 				}
 			)
 			.catch(err=>console.log(err))
 	}
-	function getCategoriasPool() {
-		axios('get','/api/servicos/categorias/') //+ infos.tipo)
+	
+	function getCategorias() {
+		getTipos()
+		axios('get','/servicos/categorias/') //+ infos.tipo)
 			.then(
 				({data})=>{
 					setCategorias(data);
@@ -57,7 +59,7 @@ export default function AddCategoria() {
 	useEffect(getCategorias, [])
 	
 	useEffect(()=>{
-		let interval = setInterval(getCategoriasPool, 2500)
+		let interval = setInterval(getCategorias, 2500)
 		return ()=>clearInterval(interval)
 	},[tipos])
 	
@@ -75,7 +77,7 @@ export default function AddCategoria() {
 	function onSubmit(event) {
 		event.preventDefault()
 		let req = {tipo, newCategoria}
-		axios("post", "/api/servicos/novo/subcategoria/", req)
+		axios("post", "/servicos/novo/subcategoria/", req)
 			.then(res=>{
 				setCategoria("")
 				getCategorias()
@@ -87,12 +89,12 @@ export default function AddCategoria() {
 	tipos.sort().map((tipo, key)=>
 	<Accordion {...{key}}>
 		<AccordionSummary style={{textAlign: 'right'}}>
-			<Typography>{tipo}: {categorias.filter(a=>a.tipo==tipo).length}</Typography>
+			<Typography>{tipo.tipo}: {categorias.filter(a=>a.tipo==tipo.tipo).length}</Typography>
 		</AccordionSummary>
 		<AccordionDetails>{
 		categorias
 			.sort((a, b)=> a.id > b.id)
-			.filter(a=>a.tipo==tipo)
+			.filter(a=>a.tipo==tipo.tipo)
 			.map((categoria, key)=><Categoria {...{categoria, tipos, getCategorias, key, style:{padding: 5}}} />)
 	}</AccordionDetails>
 		</Accordion>) : <Typography>Carregando...</Typography>
@@ -107,7 +109,7 @@ export default function AddCategoria() {
 					<Stack component={Card} padding={3} spacing={2} elevation={5} display="grid">
 						<NativeSelect name="tipo" value={tipo} onChange={handleChange}>
 							{tipos
-							?.map((categoria, key)=><option {...{key}}>{categoria}</option>)}
+							?.map((tipo, key)=><option {...{key}}>{tipo.tipo}</option>)}
 						</NativeSelect>
 						<TextField name="categoria" value={newCategoria} label="Categoria" size="small" onChange={handleChange} required/>
 						<Button 
@@ -146,7 +148,7 @@ function Categoria({categoria, getCategorias, tipos}) {
 	
 	const deleteCategory = 
 		(event)=>{
-			axios("post", `/api/servicos/excluir/subcategoria/${categoria.tipo}/${categoria.categoria}`, categoria)
+			axios("post", `/servicos/excluir/subcategoria/${categoria.tipo}/${categoria.categoria}`, categoria)
 				.then(()=>{
 					console.log("Sucesso!")
 					setOpenD(false)
@@ -170,9 +172,9 @@ function Categoria({categoria, getCategorias, tipos}) {
 		event.preventDefault()
 		
 		let req = {tipo, newCategoria, id: categoria.id}
-		axios("post", `/api/servicos/editar/subcategoria/${categoria.tipo}/${categoria.categoria}`, req)
+		axios("post", `/servicos/editar/subcategoria/${categoria.tipo}/${categoria.categoria}`, req)
 					.then(({data})=>{
-						setTipo(tipos[0])
+						setTipo(tipos[0].tipo)
 						getCategorias()
 						setOpen(false)
 					})
@@ -199,7 +201,7 @@ function Categoria({categoria, getCategorias, tipos}) {
 					<Stack component={Card} padding={3} spacing={2} elevation={5} display="grid">
 						<NativeSelect key={1} name="tipo" value={tipo} onChange={handleChange}>
 							{tipos
-							?.map((categoria, key)=><option {...{key}}>{categoria}</option>)}
+							?.map((tipo, key)=><option {...{key}}>{tipo.tipo}</option>)}
 						</NativeSelect>
 						<TextField key={2} name="categoria" value={newCategoria} label="Categoria" size="small" onChange={handleChange} required/>
 						<Button  key={3}

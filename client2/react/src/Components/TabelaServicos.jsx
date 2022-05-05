@@ -13,6 +13,8 @@ import {
 
 import { Link } from "react-router-dom";
 
+import Valida_Suporte from "./Valida_Suporte";
+
 const TabelaServicos = (props) => {
   return (
       <Table>
@@ -20,6 +22,8 @@ const TabelaServicos = (props) => {
           <TableRow >
             <TableCell align="right" colSpan={2}>ID</TableCell>
             <TableCell align="right">Urgência</TableCell>
+            <TableCell align="right">Atendente</TableCell>
+            <TableCell align="right">Usuário</TableCell>
             <TableCell align="right">Assunto</TableCell>
             <TableCell align="right">Departamento</TableCell>
             <TableCell align="right">Categoria</TableCell>
@@ -28,8 +32,8 @@ const TabelaServicos = (props) => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {typeof(props.servicos) === "object" ? props.servicos.map((s) => {
-            return (<TableRow key={s.id} alignItems="right">
+          {typeof(props.servicos) === "object" ? props.servicos.sort((a, b)=>b.id-a.id).map((s) => {
+            return (<TableRow key={s.id}>
                       <TableCell>
                         <Button
                           variant="contained"
@@ -42,6 +46,12 @@ const TabelaServicos = (props) => {
                       </TableCell>
                       <TableCell align="right">{s.id}</TableCell>
                       <TableCell align="right">{(["Baixa", "Média", "Alta", "Urgente"])[s.prioridade - 1]}</TableCell>
+                      <TableCell align="right">{
+                        props.atendentes.find(atendente=>atendente.id==s.atendenteId)?.nome || "Nome não encontrado"
+                      }</TableCell>
+                        <TableCell align="right">{
+                        props.usuarios?.find(usuario=>usuario.id==s.usuarioId)?.nome || "Nome não encontrado"
+                        }</TableCell>
                       <TableCell align="right">{s.assunto}</TableCell>
                       <TableCell align="right">{s.departamento}</TableCell>
                       <TableCell align="right">{s.tipo}</TableCell>

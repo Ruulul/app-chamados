@@ -5,7 +5,7 @@ export default function Calendar (props) {
   style={{border: 'dashed 1px #777', borderRadius: '2.5%'}} 
   width="100%"
   height="300vh" 
-  frameborder="0" 
+  frameBorder="0" 
   scrolling="no"/>
   </div>
 }

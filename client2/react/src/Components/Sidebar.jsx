@@ -6,10 +6,13 @@ import {
   faChartBar,
   faBell,
   faBookOpen,
-  faCog
+  faCog,
+  faUserPlus
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom";
 import req from "./Requisicao";
+import valida_suporte from "./Valida_Suporte";
+import valida_admin from "./Valida_Admin";
 import { Button, Stack, Badge, Tooltip, useTheme } from "@mui/material";
 
 const SideBar = function (props) {
@@ -18,7 +21,7 @@ const SideBar = function (props) {
   const sobe_botao = theme.transitions.create(['left'], {duration: 300, delay: 250})
   const [pendentes, setPendentes] = useState(0)
   const getPendente = async function () {
-    await req("get", "/api/servicos/status/pendente")
+    await req("get", "/servicos/status/pendente")
       .then(({data})=>{
         setPendentes(data.length)
       }).catch((err)=>{setPendentes(0);console.log(err)})
@@ -47,10 +50,25 @@ const SideBar = function (props) {
 	}}
 	direction={{xs: "row", lg: "column"}}
     >
-       <SideButton title="Home" color="#7DC9FF" path="/" icon={faHome} />
-       <SideButton title="Serviços" color="#DED97A" path="/servicos" icon={faTasks} />
-       <SideButton title="Indicadores" color="#C9E054" path="/indicadores" icon={faChartBar} />
-        <Tooltip title="Avisos">
+        <SideButton title="Home" color="#7DC9FF" path="/" icon={faHome} />
+        <SideButton title="Serviços" color="#DED97A" path="/servicos" icon={faTasks} />
+        {/*valida_suporte(
+         ()=>SideButton({
+            title:"Indicadores",
+            color:"#C9E054",
+            path:"/indicadores",
+            icon:faChartBar
+          })
+        )() || valida_admin(
+          ()=>SideButton({
+            title:"Indicadores",
+            color:"#C9E054",
+            path:"/indicadores",
+            icon:faChartBar
+          })
+        )()//<SideButton title="Indicadores" color="#C9E054" path="/indicadores" icon={faChartBar} />
+      */}
+       {valida_suporte(()=><Tooltip title="Avisos">
         <Button 
             color="warning" 
             variant="contained"
@@ -65,9 +83,50 @@ const SideBar = function (props) {
                 <FontAwesomeIcon icon={faBell} />
             </Badge>
         </Button>
-        </Tooltip>
-       <SideButton title="Relatórios" color="#8287E0" path="/relatorios" icon={faBookOpen} />
-       <SideButton title="Configurações" color="#A362E0" path="/addCategoria" icon={faCog} />
+        </Tooltip>)()}
+        {valida_suporte(
+         ()=>SideButton({
+            title:"Relatórios",
+            color:"#8287E0",
+            path:"/relatorios",
+            icon:faBookOpen
+          })
+        )() || 
+        valida_admin(
+          ()=>SideButton({
+             title:"Relatórios",
+             color:"#8287E0",
+             path:"/relatorios",
+             icon:faBookOpen
+           })
+        )()//<SideButton title="Relatórios" color="#8287E0" path="/relatorios" icon={faBookOpen} />
+       }
+       {valida_suporte(
+         ()=>SideButton({
+            title:"Configurações",
+            color:"#A362E0",
+            path:"/Config",
+            icon:faCog
+          })
+        )() || 
+        valida_admin(
+          ()=>SideButton({
+             title:"Configurações",
+             color:"#A362E0",
+             path:"/Config",
+             icon:faCog
+           })
+        )()//<SideButton title="Configurações" color="#A362E0" path="/Config" icon={faCog} />
+       }
+       {valida_admin(
+         ()=>SideButton({
+           title:"Adicionar Usuário",
+           color: "#86B5F0",
+           path:"/registro",
+           icon:faUserPlus
+         })
+       )()
+       }
     </Stack>
   );
 };
