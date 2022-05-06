@@ -10,19 +10,19 @@ import path from 'path'
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-console.log(JSON.stringify({__filename, __dirname}))
 
 import fs from "fs"
 import { fileTypeFromBuffer } from "file-type"
 
 const SECRET = fs.readFileSync('./key', 'utf-8');
 
-//const key = fs.readFileSync('./certification/key.pem');
-//const cert = fs.readFileSync('./certification/cert.pem');
+const key = fs.readFileSync(path.resolve('./ssl/key.pem'));
+const cert = fs.readFileSync(path.resolve('./ssl/cert.pem'));
 
 const prisma = new PrismaClient()
 import express from 'express';
-//const https = require('https')
+import https from 'https';
+import http from 'http';
 const app = express();
 //const server = https.createServer({key, cert}, app)
 const port = process.env.PORT || 5000;
@@ -47,7 +47,8 @@ app.use(session({
   resave: true,
   saveUninitialized: true,
   cookie: {
-    secure: false,
+    secure: true,
+    httpOnly: true
   }
 }));
 app.use(express.static('./public/'))
@@ -56,7 +57,7 @@ app.use('/', express.static('./client2/react/dist'))
 app.use(function (req, res, next) {
 
   // Website you wish to allow to connect
-  res.setHeader('Access-Control-Allow-Origin', 'http://10.0.0.5:9999');
+  res.setHeader('Access-Control-Allow-Origin', 'https://10.0.0.5:9999');
 
   // Request methods you wish to allow
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
@@ -235,6 +236,7 @@ Filiais
 */
 app.get('/api/:codfilial/', async (req, res)=>{
   let {codfilial} = req.params 
+  let { usuarioId : uid } = req.session
   req.session.valid ?
     filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==codfilial) !== undefined ?
       res.send(filiais.find(f=>f.codigo==codfilial))
@@ -244,7 +246,7 @@ app.get('/api/:codfilial/', async (req, res)=>{
 
 app.get('/api/:codfilial/all', async (req, res)=>{
   let {usuarioId : uid} = req.session
-  console.log(usuarios[uid]?.id,usuarios[uid]?.filiais.map(filial=>filiais.find(f=>f.id==filial)))
+  console.log(usuarios[uid]?.nome,usuarios[uid]?.filiais.map(filial=>filiais.find(f=>f.id==filial)))
   req.session.valid ?
     res.send(usuarios[uid]?.filiais.map(filial=>filiais.find(f=>f.id==filial)))
   : res.send("Não autorizado")
@@ -632,7 +634,7 @@ app.post('/api/:codfilial/servicos/editar/subcategoria/:c/:sc', async (req, res)
           id: sub.id
         },
         data: {
-          tipo: sub.tipo.tipo,
+          tipo: sub.tipo,
           categoria: sub.newCategoria
         }
       })
@@ -883,17 +885,16 @@ app.get('/api/:codfilial/files/:filename', (req, res) => {
     chamados.some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
     (() => {
       try {
-        fs.readFile(path.resolve('files/', filename), (error, data) => {
+        fs.readFile(path.resolve('files/', filename), (error, data_raw) => {
           if (error) {
             console.log(error)
             return res.status(500).send()
           }
-          let buffer = Buffer.from(data)
-          let data64 = buffer.toString('base64')
-          fileTypeFromBuffer(buffer)
+          let buffer_from_raw = Buffer.from(data_raw)
+          fileTypeFromBuffer(buffer_from_raw)
             .then(({mime})=>{
-              let url64 = `data:${mime};base64,` + data64
-              res.send(url64)
+              let url_base64 = `data:${mime};base64,` + buffer_from_raw.toString('base64')
+              res.send(url_base64)
             })
             .catch(err=>res.status(500).send(err))
         })
@@ -907,7 +908,13 @@ app.get('/api/:codfilial/files/:filename', (req, res) => {
 
 // React redirect
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'client2/react/dist/index.html'));                               
+  req.secure 
+  ? res.sendFile(path.resolve(__dirname, 'client2/react/dist/index.html'))  
+  : res.redirect('https://' + req.headers.host + req.url);
 });
 
-app.listen(port, () => console.log(`Listening on port ${port}`));
+//app.listen(port, () => console.log(`Listening on port ${port}`));
+
+https.createServer({key, cert},app).listen(port, ()=>console.log(`Listening on port ${port}`))
+
+//http.createServer(app).listen(port, ()=>console.log(`Listening on port ${port}`))

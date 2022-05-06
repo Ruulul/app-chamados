@@ -8,3 +8,6 @@ temp/
 .key/
 .key.pub/
 .files/
+ssl/
+client2/react/node_modules
+client2/react/ssl

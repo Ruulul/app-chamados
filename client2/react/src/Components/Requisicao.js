@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const baseURL = "http://10.0.0.5:5000/api/"
+const baseURL = "https://10.0.0.5:5000/api/"
 //const burl = "localhost:5000"
 
 const AxiosSingleton = (function(){
