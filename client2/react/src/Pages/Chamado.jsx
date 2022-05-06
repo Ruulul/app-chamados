@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlusCircle, faPen } from "@fortawesome/free-solid-svg-icons";
 
-import { Typography } from "@mui/material";
+import { Input, Typography } from "@mui/material";
 
 import axios from "../Components/Requisicao";
 
@@ -58,6 +58,18 @@ var Email = {
   },
 };
 
+const toBase64 = (file, id) => new Promise((resolve, reject) => {
+
+  const reader = new FileReader();
+ 
+  reader.onload = () => resolve({title: file.name, data: reader.result, descr: `Anexo de mensagem do chamado ${id}`});
+ 
+  reader.onerror = error => reject(error);
+
+  reader.readAsDataURL(file);
+ 
+  });
+
 export default function Chamado() {
   const [addMensagem, setMensagem] = useState(false);
   const [infos, setInfos] = useState({
@@ -68,13 +80,14 @@ export default function Chamado() {
   });
   const [isCarregado, setCarregado] = useState(false);
   const [atendente, setAtendente] = useState({ nome: "Carregando..." });
+  const [usuario, setUsuario] = useState({nome: "Carregando..."})
   const [urlanexo, setAnexo] = useState(undefined)
 
   const redirect = useNavigate();
 
   useLayoutEffect(() => {
     const getInfos = () => {
-      axios("get", "/api/servico/" + infos.id)
+      axios("get", "/servico/" + infos.id)
         .then(({ data }) => {
           if (data === "Não autorizado") redirect("/login");
           setInfos(data);
@@ -91,14 +104,16 @@ export default function Chamado() {
     };
   }, []);
   useLayoutEffect(() => {
-    console.log({info: infos.atendenteId})
-    axios("get", "/api/usuario/" + infos.atendenteId).then(({ data }) => {
+    axios("get", "/usuario/" + infos.atendenteId).then(({ data }) => {
       setAtendente(data);
+    });
+    axios("get", "/usuario/" + infos.usuarioId).then(({ data }) => {
+      setUsuario(data);
     });
   }, [isCarregado]);
 
   useEffect(()=>
-    axios("get", `/api/files/${infos.anexo}`)
+    axios("get", `/files/${infos.anexo}`)
     .then(({data})=>{
       setAnexo(data)
     }).catch(err=>console.log(err)),[infos.anexo])
@@ -109,7 +124,7 @@ export default function Chamado() {
         <Card>
           <Typography variant="h4" mt={2} ml={2} sx={{display:"grid-inline"}}>
             Chamado Número {infos.id} {" "}
-            <Box
+            {/*<Box
               component="span"
               sx={{
                 backgroundColor: "lightblue",
@@ -123,7 +138,7 @@ export default function Chamado() {
               }}
             >
               <FontAwesomeIcon icon={faPen} />
-            </Box>
+            </Box>*/}
           </Typography>
           <Typography variant="h5" m={2}>
             Assunto
@@ -133,6 +148,10 @@ export default function Chamado() {
             Atendente
           </Typography>
           <Typography m={2}>{atendente.nome}</Typography>
+          <Typography variant="h5" m={2}>
+            Atendido
+          </Typography>
+          <Typography m={2}>{usuario.nome}</Typography>
           <Typography variant="h5" m={2}>
             Categoria
           </Typography>
@@ -156,13 +175,13 @@ export default function Chamado() {
             infos={infos}
             mudastatus={(novasInfos) => {
               setInfos(novasInfos);
-              axios("get", "/api/usuario/" + novasInfos.atendenteId).then(
+              axios("get", "/usuario/" + novasInfos.atendenteId).then(
                 ({ data }) => {
                   Email.send({
                     SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
                     To: data.email,
                     From: "suporte.ti@ourobrancoagronegocios.com.br",
-                    Subject: `Chamado sobre "${novasInfos.assunto}" modificado`,
+                    Subject: `Chamado sobre "${novasInfos.assunto}"(id ${novasInfos.id}) modificado`,
                     Body: `O chamado de id ${novasInfos.id} teve seu status modificado para ${novasInfos.status}.`,
                   }).then(console.log);
                 }
@@ -210,6 +229,7 @@ const Mensagens = (props) => {
                         key={mensagem.id}
                         autorId={mensagem.autorId}
                         mensagem={mensagem.mensagem}
+                        anexo={mensagem.metadados?.find(({nome})=>nome=="anexo")?.valor}
                       />
                     );
                   })
@@ -269,7 +289,7 @@ const Mensagens = (props) => {
                   alert("Isso definitivamente não devia aparecer");
               }
               if (servico)
-                axios("post", "/api/update/servico/" + servico.id, servico)
+                axios("post", "/update/servico/" + servico.id, servico)
                   .then((res) => props.mudastatus(servico))
                   .catch((err) =>
                     console.error("Falha em salvar o serviço \n" + err)
@@ -294,9 +314,11 @@ const AddMensagem = (props) => {
   const [mensagem, setNovaMensagem] = useState("");
   const [autorId, setAutor] = useState(undefined);
   const [nome, setNome] = useState(undefined);
+  const [anexo, setAnexo] = useState(undefined);
+  const { id } = useParams()
 
   useEffect(async () => {
-    await axios("get", "/api/perfil")
+    await axios("get", "/perfil")
       .then(({ data }) => {
         setNome(data.nome);
         setAutor(data.id);
@@ -310,12 +332,29 @@ const AddMensagem = (props) => {
   function handleChange(event) {
     setNovaMensagem(event.target.value);
   }
+
+  function getAnexo(file) {
+    toBase64(file, id)
+      .then((anexo)=>setAnexo(anexo))
+      .catch(console.error)
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
     let novasInfos = props.infos;
     novasInfos.chat.push({ autorId: autorId, mensagem });
-    axios("post", "/api/update/servico/" + novasInfos.id, novasInfos)
-      .then((res) => props.setMensagem(false))
+    axios("post", "/update/servico/" + novasInfos.id, novasInfos)
+      .then(({data: res}) => {
+        props.setMensagem(false)
+        let new_chat = res.chat 
+        let last_message = new_chat.sort((a, b)=>b.id-a.id)[0]
+        if (anexo) {
+          //let anexo_form_data = new FormData(anexo)
+          axios("post", `/update/mensagem/${last_message.id}/arquivo`, anexo)//, {headers: {'Content-Type': 'multipart/form-data'}})
+          .then(data=>console.log("Arquivo salvo com sucesso\n", data))
+          .catch(err=>console.log("Erro em salvar o arquivo.\n",err))
+        }
+      })
       .catch((err) => console.error("Erro em adicionar mensagem. \n" + err));
   }
 
@@ -323,11 +362,11 @@ const AddMensagem = (props) => {
     <Box component="form" onSubmit={handleSubmit}>
       <Stack spacing={2}>
         <Typography pt={3}>
-          {(() => {
-            if (nome === undefined) return;
-            else if (nome === "Usuário não encontrado") return "Email inválido";
-            else return nome;
-          })()}
+          {
+            (nome === undefined) ? undefined :
+            (nome === "Usuário não encontrado") ? "Email inválido" :
+            nome
+          }
         </Typography>
         <TextField
           label="Mensagem"
@@ -336,6 +375,16 @@ const AddMensagem = (props) => {
           minRows="15"
           required
           onChange={handleChange}
+          onPaste={(pasteEvent)=>getAnexo(pasteEvent.clipboardData.files[0])}
+        />
+        <img src={anexo?.data} style={{width:"100%"}}/>
+        <Input 
+          sx={{ width: "30%" }}
+          variant="contained"
+          name="anexo"
+          color="info"
+          type="file"
+          onChange={({target:{files}})=>getAnexo(files[0])}
         />
         <Button
           sx={{ width: "100%" }}
@@ -352,17 +401,30 @@ const AddMensagem = (props) => {
 
 const Mensagem = (props) => {
   const [autor, setAutor] = useState(undefined);
+  const [anexo, setAnexo] = useState(undefined);
   useEffect(() => {
-    axios("get", "/api/usuario/" + props.autorId)
-      .then(({ data }) => setAutor(data))
+    axios("get", "/usuario/" + props.autorId)
+      .then(({ data: autor }) => setAutor(autor))
       .catch(({ erro }) => setAutor(erro));
   }, []);
+  useEffect(()=>{
+    axios("get", "/files/" + props.anexo)
+      .then(({ data: anexo }) => anexo=="Não autorizado" ? setAnexo(null) : setAnexo(anexo))
+      .catch(({ erro }) => setAnexo(null))
+  })
   return (
     <Card>
       <Typography variant="h5" m={2}>
         {autor ? autor.nome : "Carregando..."}
       </Typography>
       <Typography m={2}>{props.mensagem} </Typography>
+      {
+        anexo===null
+        ? undefined 
+        : anexo 
+        ? <img src={anexo} width="90%" style={{margin: "auto", display: "grid", paddingBottom: "2em"}} />
+        : <Typography>Carregando...</Typography>
+      }
     </Card>
   );
 };
