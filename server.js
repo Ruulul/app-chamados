@@ -19,6 +19,8 @@ const SECRET = fs.readFileSync('./key', 'utf-8');
 const key = fs.readFileSync(path.resolve('./ssl/key.pem'));
 const cert = fs.readFileSync(path.resolve('./ssl/cert.pem'));
 
+import WebSocket, {WebSocketServer} from 'ws';
+
 const prisma = new PrismaClient()
 import express from 'express';
 import https from 'https';
@@ -137,7 +139,6 @@ async function updateUsuarios() {
     usuarios = []
     for (let usuario of usuarios_array)
       usuarios[usuario.id] = usuario
-    let Metas = [];
     for (let [index, usuario] of Object.entries(usuarios_array)) {
       let Metas =
         Object.fromEntries(
@@ -208,6 +209,15 @@ async function updateFiliais() {
   })
 }
 
+let isPrimeiroAcesso = (usuario) => {
+  let primeiro_acesso = 
+    usuario.metadados 
+      ? usuario.metadados.find(md=>md.nome=="primeiro_acesso")?.valor 
+      : usuario.primeiro_acesso
+  if(primeiro_acesso==undefined||primeiro_acesso==null)
+    primeiro_acesso = "true"
+  return primeiro_acesso==='true'?true:primeiro_acesso==='false'?false:null
+}
 const conversao = [
   "Jan",    "Jan",
   "Feb",    "Fev",
@@ -674,7 +684,7 @@ app.get('/api/:codfilial/usuarios/all', (req, res)=>{
   let {valid, usuarioId : uid} = req.session
   valid ? 
     (usuarios[uid]?.tipo=="suporte" || usuarios[uid]?.cargo=="admin") ?
-      res.send(usuarios.filter(user=>user&&![3,7].includes(user.id)))
+      res.send(usuarios.filter(user=>user&&![3, 7, 11].includes(user.id)))
     : res.send([usuarios[uid]])
   : res.send("Não autorizado")
 })
@@ -689,7 +699,6 @@ app.post('/api/:codfilial/novo/usuario', (req, res) => {
       res.status(302).send("Email já registrado")
       return
     }
-    console.log(JSON.stringify(req.body))
     req.body.senha = await bcrypt.hash(req.body.senha, 12)
     return req.body
   }, (err) => { res.status(500).send("Erro acessando o banco de dados") })
@@ -703,7 +712,7 @@ app.post('/api/:codfilial/novo/usuario', (req, res) => {
           filialId: parseInt(filiais.find(f=>f.codigo==req.params.codfilial).id),
           metadados: {
             createMany: {
-              data: data?.acessa_filial?.map(af=>({nome: acessa_filial, valor: af}))
+              data: data?.acessa_filial?.map(af=>({nome: "acessa_filial", valor: af}))
             }
           }
         }
@@ -725,10 +734,10 @@ app.post('/api/:codfilial/novo/usuario', (req, res) => {
           }
         })
       res.status(200).send("Usuário criado com sucesso")
+      updateUsuarios()
       return
     }, (err) => { res.status(500).send("Erro criando o usuário. \n" + err) })
     : res.send("Não autorizado")
-  updateUsuarios()
 });
 
 app.get('/api/:codfilial/usuario/email/:email', (req, res) => {
@@ -762,7 +771,11 @@ perfil e auth
 */
 app.get('/api/:codfilial/perfil', async (req, res) => {
   req.session.valid ?
-    res.send(usuarios.map(usuario => { delete usuario.senha; return usuario })[req.session.usuarioId])
+    res.send(usuarios.map(usuario => { 
+      delete usuario.senha; 
+      usuario.primeiro_acesso = isPrimeiroAcesso(usuario);
+      return usuario 
+    })[req.session.usuarioId])
     : res.send("Não autorizado")
 })
 
@@ -770,6 +783,9 @@ app.post('/api/:codfilial/login', async (req, res) => {
   await prisma.usuario.findMany({
     where: {
       email: req.body.email
+    },
+    include: {
+      metadados: true
     }
   }).then(async (usuario) => {
     if (usuario.length === 0) {
@@ -777,7 +793,7 @@ app.post('/api/:codfilial/login', async (req, res) => {
       return
     }
     req.session.valid = false
-    req.session.valid = await bcrypt.compare(req.body.senha, usuario[0].senha)
+    req.session.valid = isPrimeiroAcesso(usuario) || await bcrypt.compare(req.body.senha, usuario[0].senha)
     if (req.session.valid) req.session.usuarioId = usuario[0].id
     if (!req.session.valid) {
       res.send(JSON.stringify({ "status": 404, "error": "Senha incorreta" }))
@@ -795,6 +811,9 @@ app.post('/api/:codfilial/alterasenha', async (req, res) => {
   await prisma.usuario.findMany({
     where: {
       email: req.body.email
+    },
+    include: {
+      metadados: true
     }
   }).then(async (usuario) => {
     if (usuario.length === 0) {
@@ -802,21 +821,50 @@ app.post('/api/:codfilial/alterasenha', async (req, res) => {
       return
     }
     req.session.valid = false
-    if (usuario[0].senha !== "")
+    let primeiro_acesso = isPrimeiroAcesso(usuario[0])
+    let senha_blank = usuario[0].senha === ""
+    if (!primeiro_acesso && !senha_blank) //A comparação só deve ser feita se não for o primeiro acesso e a senha não estiver em branco
       req.session.valid = await bcrypt.compare(req.body.senhaatual, usuario[0].senha)
     else
-      req.session.valid = true
+      req.session.valid = usuario[0].id
     if (req.session.valid) {
       req.session.usuarioId = usuario[0].id
       req.body.senha = await bcrypt.hash(req.body.senha, 12)
-      await prisma.usuario.update({
-        where: {
-          id: usuario[0].id
-        },
-        data: {
-          senha: req.body.senha
-        }
-      })
+      
+      usuario[0].metadados.find(md=>md.nome==="primeiro_acesso") 
+        ? await prisma.usuario.update({
+            where: {
+              id: usuario[0].id
+            },
+            data: {
+              senha: req.body.senha,
+              metadados: {
+                updateMany: {
+                  where: {
+                    nome: "primeiro_acesso"
+                  },
+                  data: {
+                    valor: "false"
+                  }
+                }
+              }
+            }
+          })
+        : await prisma.usuario.update({
+            where: {
+              id: usuario[0].id
+            },
+            data: {
+              senha: req.body.senha,
+              metadados: {
+                create: {
+                  nome: "primeiro_acesso",
+                  valor: "false"
+                }
+              }
+            }
+          })
+      await updateUsuarios()
     }
     if (!req.session.valid) {
       res.send(JSON.stringify({ "status": 404, "error": "Senha incorreta" }))
@@ -828,7 +876,6 @@ app.post('/api/:codfilial/alterasenha', async (req, res) => {
     res.send(JSON.stringify({ "status": 500, "error": "Erro no login" }))
     return false
   })
-  updateUsuarios()
 })
 
 app.post('/api/:codfilial/logout', async (req, res) => {
@@ -915,6 +962,7 @@ app.get('*', (req, res) => {
 
 //app.listen(port, () => console.log(`Listening on port ${port}`));
 
-https.createServer({key, cert},app).listen(port, ()=>console.log(`Listening on port ${port}`))
+const server = https.createServer({key, cert},app)
 
+server.listen(port, ()=>console.log(`Listening on port ${port}`))
 //http.createServer(app).listen(port, ()=>console.log(`Listening on port ${port}`))

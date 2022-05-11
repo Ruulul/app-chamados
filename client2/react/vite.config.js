@@ -17,5 +17,8 @@ export default defineConfig({
       key,
       cert
     }
+  },
+  build: {
+    target: ['es2020']
   }
 })
