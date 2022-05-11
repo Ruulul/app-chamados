@@ -712,7 +712,10 @@ app.post('/api/:codfilial/novo/usuario', (req, res) => {
           filialId: parseInt(filiais.find(f=>f.codigo==req.params.codfilial).id),
           metadados: {
             createMany: {
-              data: data?.acessa_filial?.map(af=>({nome: "acessa_filial", valor: af}))
+              data: [
+                {nome:"dept", valor: data.dept},
+                ...data?.acessa_filial?.map(af=>({nome: "acessa_filial", valor: af}))
+              ]
             }
           }
         }
@@ -793,7 +796,7 @@ app.post('/api/:codfilial/login', async (req, res) => {
       return
     }
     req.session.valid = false
-    req.session.valid = isPrimeiroAcesso(usuario) || await bcrypt.compare(req.body.senha, usuario[0].senha)
+    req.session.valid = await bcrypt.compare(req.body.senha, usuario[0].senha)
     if (req.session.valid) req.session.usuarioId = usuario[0].id
     if (!req.session.valid) {
       res.send(JSON.stringify({ "status": 404, "error": "Senha incorreta" }))

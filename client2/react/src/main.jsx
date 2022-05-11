@@ -12,6 +12,7 @@ import { ThemeProvider } from "@mui/material/styles";
 
 import suspend from './Components/Suspend';
 import valida from './Components/Valida';
+import { validateLocaleAndSetLanguage } from 'typescript';
 const e = createElement
 const home = React.lazy(()=>import('./Pages/Home'));
 const servicos = React.lazy(()=>import("./Pages/Servicos"));
@@ -26,6 +27,7 @@ const editarChamado = React.lazy(()=>import("./Pages/EditarChamado"));
 const relatorios = React.lazy(()=>import("./Pages/Relatorios"));
 const config = React.lazy(()=>import("./Pages/Config"));
 const calendar = React.lazy(()=>import('./Components/Calendar'));
+const painel_usuarios = React.lazy(()=>import('./Pages/PainelUsuarios'));
 
 const theme = createTheme({
   typography: {
@@ -84,6 +86,8 @@ function Router() {
   let Relatorios = ()=>valida(suspend(relatorios))()
   let Config = ()=>valida(suspend(config))()
   let Calendar = ()=>valida(suspend(calendar))()
+  let PainelUsuarios = ()=>valida(suspend(painel_usuarios))()
+  let EditaPerfil = ()=>valida(suspend(React.lazy(()=>import('./Pages/EditaPerfil'))))()
 	return (
 	<ThemeProvider {...{theme}}>
     <BrowserRouter>
@@ -100,6 +104,8 @@ function Router() {
           <Route path="/nova_requisicao" element={<Requisicao/>} />
           <Route path="/indicadores" element={<Indicadores/>} />
           <Route path="/relatorios" element={<Relatorios/>} />
+          <Route path="/usuarios" element={<PainelUsuarios/>} />
+          <Route path="/usuario/editar/:id" element={<EditaPerfil/>}/>
           <Route path="/chamado/:id" element={<Chamado/>} />
           <Route path="/chamado/:id/editar" element={<EditarChamado/>} />
           <Route path="*" element={
