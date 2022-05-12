@@ -290,7 +290,6 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                 status: servico.status,
                 prioridade: servico.prioridade,
                 tipo: servico.tipo,
-                atendenteId: servico.atendenteId,
                 atendimento: String(false),
                 subCategoria: servico.subCategoria,
                 usuarioId: servico.usuarioId
@@ -374,15 +373,21 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
   let { usuarioId : uid } = req.session 
   let { codfilial, id } = req.params
   let metadados = Object.entries({
-    assunto: novo_servico.assunto,
     departamento: novo_servico.departamento,
     status: novo_servico.status,
     prioridade: novo_servico.prioridade,
-    atendimento: (novo_servico.chat ? (novo_servico.chat.length > 2 ? true : false) : false),
+    atendimento: 
+      novo_servico.atendimento 
+      ? novo_servico.atendimento
+      : (novo_servico.chat 
+        ? (novo_servico.chat.length > 2 
+          ? true 
+          : false) 
+        : false),
     tipo: novo_servico.tipo,
     atendenteId: novo_servico.atendenteId,
     usuarioId: novo_servico.usuarioId
-  }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } });
+  }).map((metadado) => { return { nome: metadado[0], valor: String(metadado[1]) } });
   let valuidpdate;
   try {
     let chamado =
@@ -390,10 +395,10 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
         .filter(chamado => chamado)
         .find(chamado => chamado.id == novo_servico.id)
     valuidpdate =
-      (chamado
-        .atendenteId == usuarios[req.session.usuarioId].id
+      (((chamado
+        .atendenteId || uid) == uid && usuarios[uid].tipo=="suporte")
       ||chamado
-        .usuarioId == usuarios[req.session.usuarioId].id
+        .usuarioId == uid
       || usuarios[req.session.usuarioId].cargo == "admin")
       && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined
   } catch (e) {
@@ -402,7 +407,7 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
   }
   console.log("Edição é " + (valuidpdate ? "válida" : "inválida"))
   req.session.valid && valuidpdate ? (async () => {
-    console.log("Atualizando serviço")
+    console.log("Atualizando serviço " + novo_servico.id)
     if (novo_servico.chat) {
       novo_servico.chat.forEach((element) => {delete element.chamadoId;delete element.metadados})
       chamado_atualizado = await prisma.chamado.update({
@@ -424,17 +429,31 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
         }
       }).catch((e) => console.log("Erro na atualização do chamado.\n", e))
     }
-    for (let metadado of metadados)
-      await prisma.metadadoChamado.updateMany({
-        where: {
-          chamadoId: parseInt(req.params.id),
-          nome: metadado.nome
-        },
-        data: {
-          valor: metadado.valor
-        }
-      }).catch((e) => console.log("Erro na atualização dos metadados do chamado. \n", e))
-    updateChamados()
+    console.log("Atualizando metadados...")
+    for (let {nome, valor} of metadados){
+      console.log(`${nome} para ${valor}`)
+      if (chamados.find(chamado=>chamado.id==novo_servico.id)[nome])
+        await prisma.metadadoChamado.updateMany({
+          where: {
+            chamadoId: parseInt(novo_servico.id),
+            nome
+          },
+          data: {
+            valor
+          }
+        }).catch((e) => console.log("Erro na atualização dos metadados do chamado. \n", e))
+      else {
+        console.log(`Criando campo ${nome}...`)
+        await prisma.metadadoChamado.create({
+          data:{
+            nome, valor,
+            chamadoId: parseInt(novo_servico.id)
+          }
+        })
+      }
+    }
+    await updateChamados()
+    console.log("Chamado atualizado")
     res.status(200).send(chamado_atualizado)
   })() : res.send("Não autorizado")
 });
@@ -442,26 +461,30 @@ app.post('/api/:codfilial/update/servico/:id', async (req, res) => {
 app.get('/api/:codfilial/servicos', (req, res) => {
   let uid = req.session.usuarioId
   req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
-    usuarios[uid]?.cargo == "admin" ?
-      res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
-    : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == uid || chamado.atendenteId == uid || chamado.usuarioId == uid))
+    usuarios[uid]?.cargo == "admin" 
+    ? res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId))
+    : usuarios[uid]?.tipo == "suporte"
+      ? res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == uid || (chamado.atendenteId || uid) == uid || chamado.usuarioId == uid))
+      : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == uid || chamado.usuarioId == uid))
   : res.send("Não autorizado")
 });
 
 app.get('/api/:codfilial/servicos/:tipo/:filtro', (req, res) => {
   let { tipo, filtro, codfilial } = req.params
   let { valid, usuarioId: uid } = req.session
-  valid ? 
-    filiais
+  valid 
+  ? filiais
       .filter(
         filial=>
           usuarios[uid]
           ?.filiais
           .includes(filial.id.toString())
-      ).find(f=>f.codigo==codfilial) ?
-      usuarios[uid]?.cargo == "admin" ?
-        res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro))
-      : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro && (chamado.autorId == uid || chamado.atendenteId == uid|| chamado.usuarioId == uid)))
+      ).find(f=>f.codigo==codfilial) 
+    ? usuarios[uid]?.cargo == "admin" 
+      ? res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro))
+      : usuarios[uid]?.tipo == "suporte"
+        ? res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro).filter(chamado => chamado.autorId == uid || (chamado.atendenteId || uid) == uid || chamado.usuarioId == uid))
+        : res.send(chamados.filter(c=>filiais.find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro).filter(chamado => chamado.autorId == uid || chamado.usuarioId == uid))
     : res.send([])
   : res.send("Não autorizado")
 });
@@ -469,8 +492,11 @@ app.get('/api/:codfilial/servicos/:tipo/:filtro', (req, res) => {
 app.get('/api/:codfilial/servico/:id', (req, res) => {
   let { usuarioId: uid } = req.session
   let chamado = chamados.find(chamado => chamado.id == req.params.id);
-  req.session.valid && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) && (chamado.autorId == req.session.usuarioId|| chamado.usuarioId == uid || usuarios[req.session.usuarioId].tipo == "suporte") ?
-    res.send(chamado)
+  req.session.valid && 
+  filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString()))
+  .find(f=>f.codigo==req.params.codfilial) && 
+  (chamado.autorId == uid || chamado.usuarioId == uid || usuarios[uid].tipo == "suporte") 
+  ? res.send(chamado)
   : res.send("Não autorizado")
 });
 
