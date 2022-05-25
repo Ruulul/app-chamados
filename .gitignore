@@ -11,3 +11,4 @@ temp/
 ssl/
 client2/react/node_modules
 client2/react/ssl
+node_modules

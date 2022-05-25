@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'//'preact/compat';
 import {CircularProgress} from '@mui/material';
 import axios from './Requisicao';
 
@@ -11,7 +11,6 @@ let sx_centralize = {
 
 export default function valida(Component) {
     let [autorizade, autoriza] = useState(undefined)
-    console.log(autorizade!==undefined ? `Concluído(${autorizade===null ? "Not " : ""}admin)` : "Autorizando admin...")
     useEffect(()=>
         axios('get', '/perfil')
             .then(({data})=>

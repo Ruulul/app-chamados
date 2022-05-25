@@ -1,7 +1,7 @@
 import {
     useState,
     useEffect
-} from "react";
+} from 'react'//"preact/compat";
 import {
     Grid,
     Skeleton,
@@ -26,7 +26,7 @@ export default function Avisos(props) {
     const redirect = useNavigate()
     useEffect(()=>{
         const getServicos = ()=>{
-            axios("get","/api/servicos/status/pendente")
+            axios("get","/servicos/status/pendente")
                 .then(({data})=>{
                     data.forEach((servico, index)=>{
                         let criado_em = new Date(servico.createdAt)
