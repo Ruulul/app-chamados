@@ -1,5 +1,6 @@
 import express from 'express'
 import fs from 'fs'
+import path from 'path'
 import memory from '../memory.js'
 
 const {
@@ -122,7 +123,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let novo_servico = req.body
     let chamado_atualizado = undefined
     let { usuarioId : uid } = req.session 
-    let { codfilial, id } = req.params
+    let user = usuarios.get()[uid]
     let metadados = Object.entries({
       departamento: novo_servico.departamento,
       status: novo_servico.status,
@@ -150,11 +151,11 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
           .find(chamado => chamado.id == novo_servico.id)
       valuidpdate =
         (((chamado
-          .atendenteId || uid) == uid && usuarios[uid].tipo=="suporte")
+          .atendenteId || uid) == uid && user.tipo=="suporte")
         ||chamado
           .usuarioId == uid
-        || usuarios[req.session.usuarioId].cargo == "admin")
-        && filiais.filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined
+        || user.cargo == "admin")
+        && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined
     } catch (e) {
       console.log(e)
       valuidpdate = false
@@ -186,7 +187,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
       console.log("Atualizando metadados...")
       for (let {nome, valor} of metadados){
         console.log(`${nome} para ${valor}`)
-        if (chamados.find(chamado=>chamado.id==novo_servico.id)[nome])
+        if (chamados.get().find(chamado=>chamado.id==novo_servico.id)[nome])
           await prisma.metadadoChamado.updateMany({
             where: {
               chamadoId: parseInt(novo_servico.id),

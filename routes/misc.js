@@ -1,5 +1,6 @@
 import express from 'express'
 import fs from 'fs'
+import path from 'path'
 import { fileTypeFromBuffer } from 'file-type'
 import memory from '../memory.js'
 
@@ -37,7 +38,7 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
       valid &&
       filename != 'undefined' &&
       (usuarios.get()[uid]?.cargo == "admin" ||
-      chamados.get().some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
+      filename.match(/ProfileIcon$/)||chamados.get().some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
       (() => {
         try {
           fs.readFile(path.resolve('files/', filename), (error, data_raw) => {

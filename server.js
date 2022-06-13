@@ -46,7 +46,7 @@ const store = new PrismaSessionStore(
   dbRecordIdIsSessionId: true,
   dbRecordIdFunction: undefined,
 });
-app.use(express.json())
+app.use(express.json({limit:'20mb'}))
 app.use(session({
   secret: SECRET,
   store,
@@ -63,6 +63,9 @@ app.use('/', express.static('./client2/react/dist'))
 app.use(function (req, res, next) {
 
   // Website you wish to allow to connect
+  if (['https://10.0.0.5:9999', 'https://localhost:3000'].includes(req.headers.origin))
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+  else
   res.setHeader('Access-Control-Allow-Origin', 'https://10.0.0.5:9999');
 
   // Request methods you wish to allow

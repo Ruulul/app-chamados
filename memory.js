@@ -81,13 +81,6 @@ async function updateChamados() {
         usuario.area = usuario.metadados.filter(({nome}) => nome == "area").map(({valor}) => valor)
         usuario.filiais = usuario.metadados.filter(({nome}) => nome == "acessa_filial").map(({valor}) => valor)
         usuario.dept = usuario.metadados.filter(({nome}) => nome == "dept").map(({valor}) => valor)
-        usuario.contatos = 
-          usuario.metadados
-          .filter(({nome})=>nome=='contato')
-          .map(({valor})=>{
-            let [tipo, contato] = valor.split(':')
-            return {tipo, contato}
-          })
         delete usuario.metadados
         usuarios[usuario.id] = usuario
       }

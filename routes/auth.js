@@ -1,11 +1,14 @@
 import express from 'express'
 import bcrypt from 'bcrypt'
+import fs from 'fs'
+import path from 'path'
 import memory from '../memory.js'
 
 let {
     variables: {
         prisma,
         usuarios,
+        filiais
     },
     updaters: {
         updateUsuarios
@@ -21,6 +24,121 @@ app.get('/api/:codfilial/perfil', async (req, res) => {
       usuario.primeiro_acesso = isPrimeiroAcesso(usuario);
       return usuario 
     })[req.session.usuarioId])
+    : res.send("Não autorizado")
+})
+
+app.post('/api/:codfilial/perfil/editar', (req, res)=>{
+  let { usuarioId : uid } = req.session
+  async function atualizaPerfil() {
+    let { nome, sobrenome, email, contatos, bio } = req.body
+    let user = usuarios.get()[uid]
+    let metadados = 
+    Object.entries({
+      contatos,
+      bio
+    }).map(md=>({nome:md[0],valor:md[1]}))
+    .filter(md=>md.valor&&md.valor!=='undefined')
+    let metadados_existentes = (await prisma.metadadoUsuario.findMany({where:{usuarioId:uid}})).map(metadado=>metadado.nome)
+    for (let metadado of metadados)
+      metadados_existentes.includes(metadado.nome)
+        ? await prisma.metadadoUsuario.updateMany({
+          where: {
+            nome: metadado.nome
+          },
+          data: {
+            valor: metadado.valor
+          }
+        })
+        : await prisma.metadadoUsuario.create({
+          data: {
+            usuarioId: uid,
+            nome: metadado.nome,
+            valor: metadado.valor
+          }
+        })
+    await prisma.usuario.update({
+      where: {
+        id: uid
+      },
+      data:{
+        nome: nome || user.nome,
+        sobrenome: sobrenome || user.sobrenome,
+        email: email || user.email
+      }
+    })
+    updateUsuarios()
+    res.send()
+  }
+  req.session.valid && uid
+    ? atualizaPerfil()
+    : res.send("Não autorizado")
+})
+
+app.post('/api/:codfilial/perfil/icone/editar', (req, res)=>{
+  let {usuarioId:uid} = req.session
+  let user = usuarios.get()[uid]
+  let filename = `ProfileIcon${uid}`
+  let file, file_split_on_base64, filebin, file_ext
+  req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
+    console.log("Salvando arquivo no serviço"),
+    req.body.data ? 
+      (console.log("Iniciando a escrita"),
+        file = req.body.data,
+        file_split_on_base64 = file.split(';base64,'),
+        filebin = file_split_on_base64[1],
+        file_ext = '.' + file_split_on_base64[0].split('image/')[1],
+        fs.writeFile(
+          path.resolve(`files/`, filename+file_ext),
+          filebin,
+          'base64',
+          (error) => {
+            if (error) {
+              console.log(error)
+              console.log({ error })
+              res.send({ error })
+              return
+            }
+            console.log(`Arquivo ${filename+file_ext} salvo com sucesso`)
+            prisma.metadadoUsuario.updateMany({
+              where: {
+                usuarioId: uid,
+                nome: "profile_icon"
+              },
+              data: {
+                valor: filename+file_ext
+              }
+            })
+              .then(async data => {
+                console.log(`${data.count} registro alterado`)
+                if (data.count == 0)
+                  await prisma.metadadoUsuario.create({
+                    data: {
+                      nome: "profile_icon",
+                      valor: filename+file_ext,
+                      usuario: {
+                        connect: {
+                          id: uid
+                        }
+                      }
+                    }
+                  }).then(() => {
+                    console.log("Registro raiz criado")
+                    res.send()
+                    updateUsuarios()
+                  })
+                    .catch(() => { console.log("Erro na criação do registro raiz"); res.status(500).send() })
+                else
+                  res.send()
+                updateUsuarios()
+              })
+              .catch(error => {
+                console.log(error)
+                res.send({ error })
+              })
+          }
+        ))
+      : res.send()
+  )
     : res.send("Não autorizado")
 })
 
