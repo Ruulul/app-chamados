@@ -38,6 +38,7 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
       valid &&
       filename != 'undefined' &&
       (usuarios.get()[uid]?.cargo == "admin" ||
+      usuarios.get()[uid]?.tipo == "suporte" ||
       filename.match(/ProfileIcon$/)||chamados.get().some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
       (() => {
         try {

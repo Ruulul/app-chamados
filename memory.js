@@ -39,7 +39,12 @@ async function updateChamados() {
                 }
               )
             )
-        return data.map((chamado, index) => { delete chamado.metadados; return { ...chamado, ...Metas[index] } })
+        
+        return data.map((chamado, index) => { 
+          delete chamado.metadados;  
+          let chamado_full = { ...chamado, ...Metas[index] }
+          return chamado_full
+        })
       }).catch((e) => {
         if (chamados === "vazio")
           throw e

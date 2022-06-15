@@ -22,11 +22,12 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let autorId = servico.autorId
     let { usuarioId : uid } = req.session
     let { codfilial } = req.params
+    let chamado_criado;
     req.session.valid && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==codfilial) ?
       (console.log("Salvando novo serviço"),
         servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] },
   
-        await prisma.chamado.create({
+        chamado_criado = await prisma.chamado.create({
           data: {
             autorId,
             chat: {
@@ -39,7 +40,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
               createMany: {
                 data: Object.entries({
                   departamento: servico.departamento,
-                  status: servico.status,
+                  status: "pendente",
                   prioridade: servico.prioridade,
                   tipo: servico.tipo,
                   atendimento: String(false),
@@ -51,7 +52,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
           }
         }),
         (updateChamados()),
-        res.status(200).send(req.body))
+        res.status(200).send(chamado_criado))
       : res.send("Não autorizado")
   });
   
@@ -60,7 +61,9 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let {usuarioId:uid} = req.session
     let {codfilial, id} = req.params
     console.log(Object.keys(req.body), filename)
-    req.session.valid && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
+    req.session.valid && 
+    (usuarios.get()[uid].tipo === 'suporte' || usuarios.get()[uid].cargo==='admin') 
+    && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
       console.log("Salvando arquivo no serviço"),
       req.body.data ? 
         (console.log("Iniciando a escrita"),
@@ -264,8 +267,10 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let { codfilial, id } = req.params
     id = parseInt(id)
     console.log(Object.keys(req.body), filename)
-    req.session.valid && filiais.get().filter(filial=>usuarios[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
-      console.log("Salvando arquivo no serviço"),
+    req.session.valid && 
+    (usuarios.get()[uid].tipo === 'suporte' || usuarios.get()[uid].cargo==='admin') 
+    && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
+      console.log("Salvando arquivo em mensagem"),
       req.body.data ? 
         (console.log("Iniciando a escrita"),
           fs.writeFile(
