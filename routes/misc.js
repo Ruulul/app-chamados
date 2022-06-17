@@ -35,11 +35,13 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
   app.get('/api/:codfilial/files/:filename', (req, res) => {
     let { filename, codfilial } = req.params
     let { valid, usuarioId: uid } = req.session
+    let usuario = usuarios.get()[uid]
       valid &&
       filename != 'undefined' &&
-      (usuarios.get()[uid]?.cargo == "admin" ||
-      usuarios.get()[uid]?.tipo == "suporte" ||
-      filename.match(/ProfileIcon$/)||chamados.get().some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
+      (usuario?.cargo == "admin" ||
+      usuario?.tipo == "suporte" ||
+      filename.match(/ProfileIcon$/)||
+      chamados.get().some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
       (() => {
         try {
           fs.readFile(path.resolve('files/', filename), (error, data_raw) => {

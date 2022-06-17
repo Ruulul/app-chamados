@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from 'react'//"preact/compat";
 import axios from "../Components/Requisicao";
 import {
   Card,
@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 
 async function Servicos(filtro="") {
   return await axios(
-    "get", "/api/servicos")
+    "get", "/servicos")
     .then(({ data }) => {
       if (data === "Não autorizado") return "Não autorizado";
       return data;

@@ -1,5 +1,5 @@
-import React, {useEffect, createElement} from 'react'
-import ReactDOM from 'react-dom'
+import React, {useEffect, createElement} from 'react'//'preact/compat'
+import ReactDOM from 'react-dom'//'preact/compat'
 import App from './App'
 import {
   BrowserRouter,
@@ -39,11 +39,6 @@ const theme = createTheme({
     secondary: {main: '#27BAE8'}
   },
   components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {}
-      }
-    },
     MuiButton: {
       styleOverrides: {
         root: {
@@ -55,12 +50,6 @@ const theme = createTheme({
         }
       }
     },
-    Link: {
-      styleOverrides: {
-        root: {
-        }
-      }
-    }
   }
 });
 
@@ -88,6 +77,9 @@ function Router() {
   let Calendar = ()=>valida(suspend(calendar))()
   let PainelUsuarios = ()=>valida(suspend(painel_usuarios))()
   let EditaPerfil = ()=>valida(suspend(React.lazy(()=>import('./Pages/EditaPerfil'))))()
+  let Perfil = ()=>valida(suspend(React.lazy(()=>import('./Pages/Perfil'))))()
+  let PerfilDept = ()=>valida(suspend(React.lazy(()=>import('./Pages/PerfilDept'))))()
+  let EditaPerfilDept = ()=>valida(suspend(React.lazy(()=>import('./Pages/EditaPerfilDept'))))()
 	return (
 	<ThemeProvider {...{theme}}>
     <BrowserRouter>
@@ -105,7 +97,10 @@ function Router() {
           <Route path="/indicadores" element={<Indicadores/>} />
           <Route path="/relatorios" element={<Relatorios/>} />
           <Route path="/usuarios" element={<PainelUsuarios/>} />
-          <Route path="/usuario/editar/:id" element={<EditaPerfil/>}/>
+          <Route path="/usuario/:id/editar" element={<EditaPerfilDept/>}/>
+          <Route path="/perfil/editar" element={<EditaPerfil/>}/>
+          <Route path="/perfil" element={<Perfil/>}/>
+          <Route path="/usuario/:id/" element={<PerfilDept/>}/>
           <Route path="/chamado/:id" element={<Chamado/>} />
           <Route path="/chamado/:id/editar" element={<EditarChamado/>} />
           <Route path="*" element={

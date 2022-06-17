@@ -11,16 +11,19 @@ import {
 	CardMedia	
 	} from "@mui/material";
 import axios from "../Components/Requisicao";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from 'react'//"preact/compat";
+import { useLocation, useNavigate } from "react-router-dom";
 
-const burl = "http://10.0.0.5:5000"
+const burl = "https://10.0.0.5:5000"
 
 export default function Login() {
     const [enviando, setEnviando] = useState(false)
     const [email, setEmail] = useState("")
     const [senha, setSenha] = useState("")
     const [error, setError] = useState(undefined)
+    const {search} = useLocation()
+    const query = useMemo(()=>new URLSearchParams(search), [search])
+    const [primeiroAcesso, setPrimeiroAcesso] = useState(query.get("primeiroAcesso")=='true')
     const redirect = useNavigate()
     function onChangeEmail({target}) {
         setEmail(target.value)
@@ -30,17 +33,26 @@ export default function Login() {
     }
     async function onSubmit(event) {
         event.preventDefault();
-        const login = {email, senha};
+        let signal_controller = new AbortController()
+        let signal = signal_controller.signal
+        const login = {email, senha}
+        let handleEnvio = ({data})=>{
+          setError(data.error)
+          signal_controller.abort()
+          if(!data.error) return redirect("/")
+          setEnviando(false)
+        }
         setEnviando(true)
-        await axios("post","/api/login", login)
-            .then(({data})=>{
-              setError(data.error)
-              if(!data.error) redirect("/")
-              setEnviando(false)
-            }
-            )
-            .catch((e)=>{console.error(e);
-              setEnviando(false)})
+        try{
+          !primeiroAcesso 
+            ? await axios("post","/login", login, {signal})
+              .then(handleEnvio)
+            : await axios("post", "/alterasenha", login, {signal})
+              .then(handleEnvio)
+        } catch (e) {
+          console.error(e)
+          setEnviando(false)
+        }
     }
     return (
     <Stack>
@@ -49,13 +61,19 @@ export default function Login() {
           <Stack spacing={3} mr={15} mb={5} ml={5} sx={{placeContent: "center"}}>
               <Typography variant="h2" component="h1" mt={5} sx={{placeSelf: "center", fontWeigth: 100}} fontFamily="Montserrat, sans-serif">Gold Seed</Typography>
 				<Stack direction="row" justifyContent="space-evenly" sx={{"& CardMedia":{margin: "auto"}}}>
-					<CardMedia image="http://10.0.0.5:5000/images/logo_ouro_branco.png" 
+					<CardMedia image={burl+'/images/logo_ouro_branco.png'} 
 					sx={{height: 150, width: 150}}/>
-					<CardMedia image="http://10.0.0.5:5000/images/logo_sementes_mana.png" 
+					<CardMedia image={burl+'/images/logo_sementes_mana.png'} 
 					sx={{height: 150, width: 150}}/>
 				</Stack>
+        
+            <Typography variant="h5" component="h2" mt={5} sx={{placeSelf: "center", fontWeigth: 100}} fontFamily="Montserrat, sans-serif">
+              {primeiroAcesso
+                ? "Primeiro acesso"
+                : "Login"}
+            </Typography>
 				<TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
-                <TextField label="senha" name="senha" type="password"onChange={onChangeSenha} required/>
+                <TextField label="senha" name="senha" type="password" onChange={onChangeSenha} required/>
                 {error ? <Alert severity="error">{error + "."}</Alert> : undefined}
                 {!enviando ? 
                 <Button 
@@ -66,8 +84,19 @@ export default function Login() {
 						paddingX: 2
 					}}
 				>
-                    Acessar
+                    {
+                      primeiroAcesso
+                        ? "Definir senha"
+                        : "Acessar"
+                    }
                 </Button> : <CircularProgress sx={{placeSelf: "center"}} />}
+                  <Typography onClick={()=>setPrimeiroAcesso(!primeiroAcesso)}>
+                    {
+                      primeiroAcesso 
+                        ? "Já tem uma conta? Clique aqui!"
+                        : "Primeiro acesso? Clique aqui!"
+                    }
+                  </Typography>
           </Stack>
         </Grid>
         <Grid item xs={6} md={10} mt={10} lg={7.8} height="80vh" sx={{opacity: 1}}>

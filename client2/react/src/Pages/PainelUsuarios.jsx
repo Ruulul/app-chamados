@@ -1,7 +1,7 @@
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Typography, Stack, Table, TableHead, TableRow, TableCell, TableBody, Button } from "@mui/material";
-import { useEffect, useState } from "preact/compat";
+import { useEffect, useState } from 'react'//"preact/compat";
 import { Link } from "react-router-dom";
 
 import axios from "../Components/Requisicao"
@@ -16,7 +16,10 @@ export default function PainelUsuarios() {
         let fetchUsers = 
             () => {
                 axios("get", "/usuarios/all", undefined, {signal})
-                    .then(({data})=>signal.aborted?undefined:setUsuarios(data))
+                    .then(({data})=>{
+                        console.log(data)
+                        signal.aborted?undefined:setUsuarios(data)
+                    })
                     .catch(e=>signal.aborted?undefined:setUsuarios([{nome:e.reason}]))
             }
         let fetchTimer =
@@ -76,7 +79,7 @@ export default function PainelUsuarios() {
                             <Button
                             component={Link}
                             variant="contained"
-                            to={`/usuario/editar/`+usuario.id}>
+                            to={`/usuario/${usuario.id}/editar/`}>
                                 <FontAwesomeIcon icon={faPen}/>
                             </Button>
                         </TableCell>

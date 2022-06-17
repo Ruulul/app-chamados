@@ -1,6 +1,6 @@
 import { Typography, Alert, Button, Grid, TextField, Stack, CircularProgress } from "@mui/material";
 import axios from "../Components/Requisicao";
-import { useReducer, useState } from "react";
+import { useReducer, useState } from 'react'//"preact/compat";
 import { useNavigate } from "react-router-dom";
 
 export default function MudarSenha() {
@@ -45,7 +45,7 @@ export default function MudarSenha() {
         dispatch({type: "error", payload: undefined})
         update({})
         if (senhaatual === confirmasenha)
-        await axios("post","/api/alterasenha", login)
+        await axios("post","/alterasenha", login)
             .then(({data})=>{
                 dispatch({type: "error", payload: data.error})
                 if(!data.error) 

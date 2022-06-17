@@ -1,26 +1,38 @@
-import {useState, useEffect, useMemo} from "react";
+import {useState, useEffect, useMemo} from 'react'//"preact/compat";
 import axios from "../Components/Requisicao";
-import {
-	Typography,
-	Grid,
-	Stack,
-	InputLabel,
-	TextField,
-	Card,
-	Divider,
-	Box,
-	Button,
-	NativeSelect,
-	Popper,
-	CircularProgress,
-	ClickAwayListener,
-	Dialog,
-	DialogActions,
-
-	Accordion,
-	AccordionSummary,
-	AccordionDetails
-} from "@mui/material";
+import Typography
+from "@mui/material/Typography"
+import Grid 
+from "@mui/material/Grid"
+import Stack
+from "@mui/material/Stack"
+import TextField
+from "@mui/material/TextField"
+import Card
+from "@mui/material/Card"
+import Divider
+from "@mui/material/Divider"
+import Box
+from "@mui/material/Box"
+import Button
+from "@mui/material/Button"
+import NativeSelect
+from "@mui/material/NativeSelect"
+import Popper
+from "@mui/material/Popper"
+import CircularProgress
+from "@mui/material/CircularProgress"
+import Dialog
+from "@mui/material/Dialog"
+import DialogActions
+from "@mui/material/DialogActions"
+import Accordion
+from "@mui/material/Accordion"
+import AccordionSummary
+from "@mui/material/AccordionSummary"
+import AccordionDetails
+from "@mui/material/AccordionDetails"
+import ClickAwayListener from '@mui/material/ClickAwayListener';
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faBan, faEdit } from "@fortawesome/free-solid-svg-icons"
@@ -76,7 +88,9 @@ export default function AddCategoria() {
 	
 	function onSubmit(event) {
 		event.preventDefault()
-		let req = {tipo, newCategoria}
+		console.log(tipo)
+		let req = {tipo: tipo, newCategoria}
+		console.log(req)
 		axios("post", "/servicos/novo/subcategoria/", req)
 			.then(res=>{
 				setCategoria("")
@@ -144,7 +158,7 @@ function Categoria({categoria, getCategorias, tipos}) {
 	const [anchorElEdit, setAnchor] = useState(undefined)
 	const [openDelete, setOpenD] = useState(false)
 	const [newCategoria, setCategoria] = useState(categoria.categoria)
-	const [tipo, setTipo] = useState(tipos[0])
+	const [tipo, setTipo] = useState(categoria.tipo)
 	
 	const deleteCategory = 
 		(event)=>{
@@ -170,8 +184,9 @@ function Categoria({categoria, getCategorias, tipos}) {
 	
 	function onSubmit(event) {
 		event.preventDefault()
-		
-		let req = {tipo, newCategoria, id: categoria.id}
+		console.log(tipo)
+		let req = {tipo: tipo.tipo, newCategoria, id: categoria.id}
+		console.log(req)
 		axios("post", `/servicos/editar/subcategoria/${categoria.tipo}/${categoria.categoria}`, req)
 					.then(({data})=>{
 						setTipo(tipos[0].tipo)

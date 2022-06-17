@@ -1,11 +1,11 @@
-import { faBackward } from "@fortawesome/free-solid-svg-icons";
-import Stack from "@mui/material/Stack";
-import Button from '@mui/material/Button'
-import { useEffect, useState } from "react";
-import { EditaIcon, EditaInfos, Dept } from '../Components/Perfil'
-import axios from '../Components/Requisicao';
-import { Link } from "react-router-dom";
+import { faPen } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Button } from "@mui/material";
+import Stack from "@mui/material/Stack";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { Icon, Infos, Dept } from '../Components/Perfil'
+import axios from '../Components/Requisicao';
 
 export default function Perfil () {
     let [{nome, sobrenome, bio, contatos="[]", profile_icon : icon, dept}, setPerfil] = useState({})
@@ -16,15 +16,15 @@ export default function Perfil () {
     return <Stack sx={{m:3}} direction="row" gap="3em">
         <Stack display="grid" alignment="justified">
             <Stack direction="row">
-                <EditaIcon icon={icon} />
+                <Icon icon={icon} />
                 <Button
                 component={ Link }
-                to="/perfil"
+                to="/perfil/editar"
                 >
-                    <FontAwesomeIcon icon={faBackward} />
+                    <FontAwesomeIcon icon={faPen} />
                 </Button>
             </Stack>
-            <EditaInfos sx={{mt:3}} {...{nome,sobrenome,bio,contatos}} />
+            <Infos sx={{mt:3}} {...{nome, sobrenome, bio, contatos}} />
         </Stack>
         <Dept dept={[...(typeof dept == 'string' ? [dept] : dept) || ""]} />
     </Stack>

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useReducer } from "react"
+import { useEffect, useLayoutEffect, useReducer } from 'react'//"preact/compat"
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Box,
@@ -12,7 +12,6 @@ import {
   Button
 } from "@mui/material";
 import axios from "../Components/Requisicao";
-import FormData from "form-data"
 
 const toBase64 = (file, id) => new Promise((resolve, reject) => {
 
@@ -82,7 +81,7 @@ export default function EditarChamado() {
   const [state, dispatch] = useReducer(reducer, initialState)
 
   useEffect(() => {
-    axios("get", '/api/perfil')
+    axios("get", '/perfil')
       .then(({ data }) => {
         dispatch({ type: "setNome", payload: data.nome })
       })
@@ -93,10 +92,10 @@ export default function EditarChamado() {
   }, [])
 
   useEffect(() => {
-    axios("get", "/api/servico/" + idChamado)
+    axios("get", "/servico/" + idChamado)
       .then(async ({ data: chamado }) => {
         dispatch({ type: "setInfos", payload: chamado });
-        axios("get", "/api/usuario/" + chamado.atendenteId)
+        axios("get", "/usuario/" + chamado.atendenteId)
           .then(({ data: payload }) => {
             dispatch({ type: "setAtendente", payload })
           });
@@ -105,11 +104,11 @@ export default function EditarChamado() {
   }, [])
 
   useEffect(()=>{
-    axios('get', '/api/servicos/categorias/') //+ infos.tipo)
+    axios('get', '/categorias/') //+ infos.tipo)
     .then(
       ({ data: categorias }) => {
         dispatch({ type: "setCategorias", payload: categorias.filter(c => c.tipo == state.infos.tipo) });
-        axios("get", '/api/usuarios/area/' + state.infos.tipo)
+        axios("get", '/usuarios/area/' + state.infos.tipo)
           .then(
             ({ data: payload }) => {
               dispatch({ type: "setAtendentes", payload });
@@ -134,7 +133,15 @@ export default function EditarChamado() {
   async function handleChange(event) {
     let novas_infos = { ...state.infos }
     if (event.target.name === "atendente") {
+      console.log(state.atendentes)
+      try {
       novas_infos.atendenteId = state.atendentes[(state.atendentes.map((atendente) => { return atendente.nome })).indexOf(event.target.value)].id
+      } catch (e) {
+        if (e instanceof TypeError)
+          dispatch({type:"setAtendentes", payload: state.atendentes})
+        else
+          console.log("Erro não esperado.\n", e.message)
+      }
       novas_infos.atendente = event.target.value
     }
     else if (event.target.name === "prioridade") {
@@ -176,14 +183,10 @@ export default function EditarChamado() {
     await getPrazo().then(async (prazo) => {
       if (typeof (state.infos.prazo) === "object")
         state.infos.prazo = prazo.toISOString()
-      await axios("post", '/api/update/servico/' + idChamado, infos)
+      await axios("post", '/update/servico/' + idChamado, infos)
         .then(res => {
           if (state.infos.anexo) {
-            let anexo = new FormData()
-            anexo.append('title', state.infos.anexo.title)
-            anexo.append('data', state.infos.anexo.data)
-            anexo.append('descr', state.infos.anexo.descr)
-            axios("post", `/api/update/servico/${infos.id}/arquivo`, anexo, {headers: {'Content-Type': 'multipart/form-data'}})
+            axios("post", `/update/servico/${infos.id}/arquivo`, anexo)
             .then(data=>{console.log("Arquivo salvo com sucesso"); navigate('/servicos')})
             .catch(err=>console.log("Erro em salvar o arquivo.\n",err))
           } else

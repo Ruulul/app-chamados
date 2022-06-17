@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react'//"preact/compat";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHome,
@@ -7,12 +7,14 @@ import {
   faBell,
   faBookOpen,
   faCog,
-  faUserPlus
+  faUserPlus,
+  faUsers
 } from "@fortawesome/free-solid-svg-icons";
 import {Link} from "react-router-dom";
 import req from "./Requisicao";
 import valida_suporte from "./Valida_Suporte";
 import valida_admin from "./Valida_Admin";
+import valida_privilegio from "./Valida_Privilegio";
 import { Button, Stack, Badge, Tooltip, useTheme } from "@mui/material";
 
 const SideBar = function (props) {
@@ -34,10 +36,13 @@ const SideBar = function (props) {
     }
   }, [])
   return (
+    <Stack 
+      sx={{
+		    margin: {xs: "auto", lg: 2},
+      }}>
     <Stack
       sx={{ 
 		paddingTop: 5,
-		margin: {xs: "auto", lg: 2},
 		'& *': {
 			display: "relative",
 			left: 0,
@@ -84,21 +89,27 @@ const SideBar = function (props) {
             </Badge>
         </Button>
         </Tooltip>)()}
-        {valida_suporte(
+      </Stack>
+      <Stack
+      sx={{ 
+		    '& *': {
+		    	display: "relative",
+		    	left: 0,
+		    	//transition: sobe_botao,
+		    	zIndex: 20,
+		    	//'&:hover': {
+		    	//	left: 10
+		    	//}
+	      },
+	    }}
+	    direction={{xs: "row", lg: "column"}}>
+        {valida_privilegio(
          ()=>SideButton({
             title:"Relatórios",
             color:"#8287E0",
             path:"/relatorios",
             icon:faBookOpen
           })
-        )() || 
-        valida_admin(
-          ()=>SideButton({
-             title:"Relatórios",
-             color:"#8287E0",
-             path:"/relatorios",
-             icon:faBookOpen
-           })
         )()//<SideButton title="Relatórios" color="#8287E0" path="/relatorios" icon={faBookOpen} />
        }
        {valida_suporte(
@@ -127,6 +138,17 @@ const SideBar = function (props) {
          })
        )()
        }
+       {
+       //valida_admin(
+       //  ()=>SideButton({
+       //    title:"Gerenciar Usuários",
+       //    color: "#DDEEE0",
+       //    path:"/usuarios",
+       //    icon: faUsers
+       //  })
+       //)()
+       }
+    </Stack>
     </Stack>
   );
 };

@@ -1,4 +1,4 @@
-import {useState, useEffect} from "react";
+import {useState, useEffect} from 'react'//"preact/compat";
 import TabelaServicos from "../Components/TabelaServicos";
 import {
     Grid, 
@@ -17,15 +17,25 @@ export default function servicosStatus() {
     const [servicosStatus, setservicosStatus] = useState([])
     const [servicosTipo, setservicosTipo] = useState([])
     const [servicos, setServicos] = useState([])
+    const [atendentes, setAtendentes] = useState([])
+    const [usuarios, setUsuarios] = useState([])
     const redirect = useNavigate()
     useEffect(()=>{
+      axios('get', '/atendentes')
+        .then(res=>setAtendentes(res.data))
+    },[])
+    useEffect(()=>{
+      axios('get', '/usuarios/all')
+        .then(res=>setUsuarios(res.data))
+    },[])
+    useEffect(()=>{
       let getServicos = () => filtroStatus === "todos" ?
-      axios("get", '/api/servicos')
+      axios("get", '/servicos')
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosStatus(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
-    : axios("get",'/api/servicos/status/' + filtroStatus)
+    : axios("get",'/servicos/status/' + filtroStatus)
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosStatus(res.data)
@@ -39,12 +49,12 @@ export default function servicosStatus() {
     }, [filtroStatus])
     useEffect(()=>{
       let getServicos = ()=>filtroTipo === "todos" ?
-      axios("get",'/api/servicos')
+      axios("get",'/servicos')
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosTipo(res.data)})
         .catch(err => console.log("Erro obtendo serviços. \n" + err))
-    : axios("get",'/api/servicos/tipo/' + filtroTipo)
+    : axios("get",'/servicos/tipo/' + filtroTipo)
         .then(res => {
           if (res.data === "Não autorizado") redirect("/login")
           setservicosTipo(res.data)
@@ -135,6 +145,8 @@ export default function servicosStatus() {
                     <Grid item md={10}>
                       <TabelaServicos
                         servicos={servicos}
+                        atendentes={atendentes}
+                        usuarios={usuarios}
                       />
                     </Grid>
                     </Grid>

@@ -13,10 +13,11 @@ import {
     Table,
     TableHead,
     TableBody,
-    Stack
+    Stack,
+    Box
 } from "@mui/material"
 import axios from "../Components/Requisicao"
-import { createRef, useEffect, useLayoutEffect, useMemo, useState } from "react"
+import { createRef, useEffect, useLayoutEffect, useMemo, useState } from 'react'//"preact/compat"
 
 import { jsPDF } from 'jspdf';
 
@@ -28,6 +29,7 @@ const Relatorios = (props) => {
     const [filtrosAtivos, setFiltros] = useState([])
     const [campos, setCampos] = useState([])
     const [atendentes, setAtendentes] = useState([])
+    const [usuarios, setUsuarios] = useState([])
     const [popOpen, setPopOpen] = useState(false)
     const [anchorEl, setAnchor] = useState(null)
     const [relatorio, setRelatorio] = useState(undefined)
@@ -40,48 +42,55 @@ const Relatorios = (props) => {
     }
 
     function geraRelatorio() {
-        let serDs = [];
-        let serAs = [];
-        let serCs = [];
-        let serUs = [];
-        let serSs = [];
+        let ser = []
+        let serDepars = [];
+        let serAtends = [];
+        let serUsuars = []
+        let serCategs = [];
+        let serUrgens = [];
+        let serStatus = [];
         let data = [];
         (async () => {
             for (let filtro of filtrosAtivos) {
 
                 switch (filtro.tipo) {
                     case "Departamento":
-                        data = await axios("get",'/api/servicos/departamento/' + filtro.valor)
-                        let serD = data.data
-                        serDs = [...serDs, ...serD]
+                        data = await axios("get",'/servicos/departamento/' + filtro.valor)
+                        ser = data.data
+                        serDepars = [...serDepars, ...ser]
                         break;
                     case "Atendente":
-                        data = await axios("get",'/api/servicos/atendenteId/' + filtro.valor)
-                        let serA = data.data
-                        serAs = [...serAs, ...serA]
+                        data = await axios("get",'/servicos/atendenteId/' + filtro.valor)
+                        ser = data.data
+                        serAtends = [...serAtends, ...ser]
+                        break;
+                    case "Usuário":
+                        data = await axios("get",'/servicos/usuarioId/' + filtro.valor)
+                        ser = data.data
+                        serUsuars = [...serUsuars, ...ser]
                         break;
                     case "Categoria":
-                        data = await axios("get",'/api/servicos/tipo/' + filtro.valor)
-                        let serC = data.data
-                        serCs = [...serCs, ...serC]
+                        data = await axios("get",'/servicos/tipo/' + filtro.valor)
+                        ser = data.data
+                        serCategs = [...serCategs, ...ser]
                         break;
                     case "Urgência":
-                        data = await axios("get",'/api/servicos/prioridade/' + filtro.valor)
-                        let serU = data.data
-                        serUs = [...serUs, ...serU]
+                        data = await axios("get",'/servicos/prioridade/' + filtro.valor)
+                        ser = data.data
+                        serUrgens = [...serUrgens, ...ser]
                         break;
                     case "Status":
-                        data = await axios("get",'/api/servicos/status/' + filtro.valor)
-                        let serS = data.data
-                        serSs = [...serSs, ...serS]
+                        data = await axios("get",'/servicos/status/' + filtro.valor)
+                        ser = data.data
+                        serStatus = [...serStatus, ...ser]
                         break;
                 }
             }
             let relatoriodata =
                 filtrosAtivos.filter(a=>!a.tipo.includes('Data')).length === 0 ?
-                    ({ data } = await axios("get",'/api/servicos'),
+                    ({ data } = await axios("get",'/servicos'),
                         data) :
-                    ([serDs, serAs, serCs, serSs, serUs])
+                    ([serDepars, serAtends, serUsuars, serCategs, serStatus, serUrgens])
                         .reduce(
                             (p, c) =>
                                 p.length === 0 ? c : c.length === 0 ? p
@@ -101,7 +110,7 @@ const Relatorios = (props) => {
 
     useLayoutEffect(() => {
         console.log("a")
-        axios("get",'/api/servicos')
+        axios("get",'/servicos')
             .then(({ data }) => {
                 let Departamento = data.map(s => s.departamento)
                 Departamento = [...new Set(Departamento)]
@@ -117,20 +126,27 @@ const Relatorios = (props) => {
     }, [])
 
     useEffect(()=>{
-        axios("get",'/api/usuarios')
+        axios("get",'/usuarios/tipo/suporte')
             .then(({ data }) => {
-                let Usuario = data.map(s => s.nome)
-                let Atendentes = [...new Set(Usuario)]
+                let atendentes = data.map(s => ({id: s.id, nome: s.nome}))
 
-                setAtendentes(Atendentes.map(a => ({ nome: a, id: data[Usuario.indexOf(a)].id })))
+                setAtendentes(atendentes)
             })
             .catch(err => console.log('Error: ' + err))}, [])
 
+    useEffect(()=>{
+        axios("get",'/usuarios/all')
+            .then(({ data }) => {
+                let usuarios = data.map(usr => ({id: usr.id, nome: usr.nome}))
+
+                setUsuarios(usuarios)
+            })
+            .catch(err => console.log('Error: ' + err))}, [])
     return (
         <Grid container >
-            <Grid item container>
-			<Grid item>
-                <ButtonGroup
+            <Grid key={1} item container>
+			    <Grid key={1} item>
+                    <ButtonGroup
                     disableElevation
                     orientation="vertical"
                     variant="contained"
@@ -145,7 +161,7 @@ const Relatorios = (props) => {
                         padding: 2,
                         marginTop: 2
                     }}>
-                    <ClickAwayListener onClickAway={() => setPopOpen(false)}>
+                        <ClickAwayListener key={1} onClickAway={() => setPopOpen(false)}>
                         <Button
                             onClick={(event) => {
                                 setAnchor(event.currentTarget)
@@ -154,39 +170,40 @@ const Relatorios = (props) => {
                         >
                             Adicionar filtro
                         </Button>
-                    </ClickAwayListener>
-                    <Button
+                        </ClickAwayListener>
+                        <Button key={2}
                         onClick={() => geraRelatorio()}>
                         Gerar Relatório
-                    </Button>
-                    <Menu
+                        </Button>
+                        <Menu key={3}
                         open={popOpen}
                         anchorEl={anchorEl}
                         sx={{ '& MenuItem': { width: 200, transformOrigin: 'center bottom' } }}>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Departamento', valor: null }])}>Departamento</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Atendente', valor: null }])}>Atendente</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Categoria', valor: null }])}>Categoria</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Urgência', valor: null }])}>Urgência</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Status', valor: null }])}>Status</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataInicio', valor: "" }])}>Data de Início</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataFim', valor: "" }])}>Data de Fim</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataInicio: Prazo', valor: "" }])}>Data de Início (Prazo)</MenuItem>
-                        <MenuItem onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataFim: Prazo', valor: "" }])}>Data de Fim (Prazo)</MenuItem>
-                    </Menu>
-                    <Button
+                        <MenuItem key={1} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Departamento', valor: null }])}>Departamento</MenuItem>
+                        <MenuItem key={2} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Atendente', valor: null }])}>Atendente</MenuItem>
+                        <MenuItem key={2} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Usuário', valor: null }])}>Usuário</MenuItem>
+                        <MenuItem key={3} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Categoria', valor: null }])}>Categoria</MenuItem>
+                        <MenuItem key={4} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Urgência', valor: null }])}>Urgência</MenuItem>
+                        <MenuItem key={5} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'Status', valor: null }])}>Status</MenuItem>
+                        <MenuItem key={6} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataInicio', valor: "" }])}>Data de Início</MenuItem>
+                        <MenuItem key={7} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataFim', valor: "" }])}>Data de Fim</MenuItem>
+                        <MenuItem key={8} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataInicio: Prazo', valor: "" }])}>Data de Início (Prazo)</MenuItem>
+                        <MenuItem key={9} onClick={() => setFiltros(filtro => [...filtro, { tipo: 'DataFim: Prazo', valor: "" }])}>Data de Fim (Prazo)</MenuItem>
+                        </Menu>
+                        <Button key={4}
                         onClick={() => setFiltros([])}>
                         Limpa filtros
-                    </Button>
-                </ButtonGroup>
-			</Grid>
-			<Grid item>
-			<Stack  margin={5}>
+                        </Button>
+                    </ButtonGroup>
+			    </Grid>
+			    <Grid key={2} item>
+			        <Stack  margin={5}>
 				<Typography variant="h5">
 					Instruções:
 				</Typography>
 				<Stack margin={2}>
 					<Typography>
-						1. Escolha os filtros<br/>&emsp;&emsp;(Nenhum filtro selecionará todos os chamados dentro do sistema)
+						1. Escolha os filtros<br/>&emsp;&emsp;(Ao deixar os filtros em branco, esse relatório selecionará todos os chamados dentro do sistema)
 					</Typography>
 					<Typography>
 						2. Clique em "Gerar Relatório"
@@ -195,28 +212,29 @@ const Relatorios = (props) => {
 						3. Clique em "Imprimir"
 					</Typography>
 				</Stack>
-			</Stack>
-			</Grid>
+			        </Stack>
+			    </Grid>
             </Grid>
-            <Grid item container padding={3} spacing={3} direction="row">
+            <Grid key={2} item container padding={3} spacing={3} direction="row">
                 {filtrosAtivos
                     .map(
                         (filtro, i) =>
-                            <Grid item xs={3.5} margin={1} component={Card} key={i} sx={{ p: 1.5, mb: 1 }}>
+                            <Grid key={i} item xs={3.5} margin={1} component={Card} sx={{ p: 1.5, mb: 1 }}>
                                 {
                                     filtro.tipo.includes("Data") ?
                                     <>
-                                    <Typography>
+                                    <Typography key={1}>
                                         {`Data de ${filtro.tipo.slice(4)}`}
                                     </Typography>
-                                    <TextField type="date" value={filtro.valor} onChange={(e)=>{let filtrosa = filtrosAtivos; filtrosa[i].valor = e.target.value; filtrosa[i].label = `Data de ${filtro.tipo.slice(4)}`; setFiltros(filtrosa); update()}}/>
+                                    <TextField key={2} type="date" value={filtro.valor} onChange={(e)=>{let filtrosa = filtrosAtivos; filtrosa[i].valor = e.target.value; filtrosa[i].label = `Data de ${filtro.tipo.slice(4)}`; setFiltros(filtrosa); update()}}/>
                                     </>
                                     :
                                 <>
-                                <Typography>
+                                <Typography key={1}>
                                     {filtro.tipo}
                                 </Typography>
                                 <TextField
+                                    key={2}
                                     size="small"
                                     label={filtro.label}
                                     open={filtro.label ? false : true}
@@ -226,12 +244,16 @@ const Relatorios = (props) => {
                                 >
                                     {
                                         filtro.tipo === "Atendente"
-                                            ? atendentes.map(a => 
-                                            <MenuItem onClickCapture={() => 
+                                            ? atendentes.map((a, key) => 
+                                            <MenuItem key={key} onClickCapture={() => 
                                                 { let filtrosa = filtrosAtivos; filtrosa[i].valor = a.id; filtrosa[i].label = a.nome; setFiltros(filtrosa); update() }}>
                                                 {a.nome}</MenuItem>)
-                                            :
-                                        campos[filtro.tipo].map(a => <MenuItem onClick={() => { let filtrosa = filtrosAtivos; filtrosa[i] = { tipo: filtrosa[i].tipo, valor: a, label: a }; setFiltros(filtrosa); update() }}>{typeof (a) === "string" ? a : a.value}</MenuItem>)
+                                            : filtro.tipo === "Usuário"
+                                                ? usuarios.map(a=>
+                                                    <MenuItem onClickCapture={() => 
+                                                        { let filtrosa = filtrosAtivos; filtrosa[i].valor = a.id; filtrosa[i].label = a.nome; setFiltros(filtrosa); update() }}>
+                                                        {a.nome}</MenuItem>)
+                                                : campos[filtro.tipo].map((a, key) => <MenuItem key={key} onClick={() => { let filtrosa = filtrosAtivos; filtrosa[i] = { tipo: filtrosa[i].tipo, valor: a, label: a }; setFiltros(filtrosa); update() }}>{typeof (a) === "string" ? a : a.value}</MenuItem>)
                                     }
                                 </TextField>
                                 </>
@@ -239,11 +261,12 @@ const Relatorios = (props) => {
                             </Grid>
                     )}
             </Grid>
-            <Grid container item xs={12}>
-                <Grid item xs={12}>
+            <Grid key={3} container item xs={12}>
+                <Grid key={1} item xs={12}>
                 </Grid>
-                <Grid item xs={24}>
+                <Grid key={2} item xs={24}>
                     <Button
+                        key={1}
                         variant="contained"
                         align="center"
                         size="small"
@@ -328,7 +351,8 @@ const Relatorios = (props) => {
                                 }
                                 let y_linha = 35 + (relatorio.length % 25) * 10 + ( relatorio.length > 25 ? 0 : filtrosAtivos.length * 5 - 5 )
                                 doc.text(`Total: ${relatorio.length}`, 10, y_linha + 5)
-                                doc.save('Relatorio.pdf')
+                                //doc.save('Relatorio.pdf')
+                                doc.output('dataurlnewwindow',{filename:'Relatorio.pdf'})
                                 console.log("Saved!")
                             }
                         }
@@ -344,19 +368,19 @@ const Relatorios = (props) => {
                         }}>
                         Imprimir
                     </Button>
-                    <Typography align="left" margin={2} ref={pdfRef}>
+                    <Box key={2} align="left" margin={2} ref={pdfRef}>
                         <Stack component={Card} padding={4} spacing={3}>
-                            <Typography component="h1" variant="h3">
+                            <Typography key={1} component="h1" variant="h3">
                                 Relatório de Chamados
                             </Typography>
-                            <Typography variant="h4">
+                            <Typography key={2} variant="h4">
                                 Com os filtros de:
                             </Typography>
-                            {filtrosAtivos.map((filtro, i) => <Typography variant="h5">{filtro.valor ? filtro.tipo === "Atendente" ? `Atendente: ${atendentes.find(e => e.id == filtro.valor).nome}` : `${filtro.tipo}: ${filtro.valor}` : "Filtro"}</Typography>)}
-                            <Typography>
+                            {filtrosAtivos.map((filtro, i) => <Typography key={i} variant="h5">{filtro.valor ? filtro.tipo === "Atendente" ? `Atendente: ${atendentes.find(e => e.id == filtro.valor).nome}` : `${filtro.tipo}: ${filtro.valor}` : "Filtro"}</Typography>)}
+                            <Typography key={3}>
                                 Total: {relatorio ? relatorio.length : 0}
                             </Typography>
-                            <Table>
+                            <Table key={4}>
                                 <TableHead>
                                     <TableRow>
                                         <TableCell colSpan={2}>
@@ -367,6 +391,9 @@ const Relatorios = (props) => {
                                         </TableCell>
                                         <TableCell>
                                             Atendente
+                                        </TableCell>
+                                        <TableCell>
+                                            Usuario
                                         </TableCell>
                                         <TableCell>
                                             Urgência
@@ -412,7 +439,12 @@ const Relatorios = (props) => {
                                                 </TableCell>
                                                 <TableCell>
                                                     <Typography>
-                                                        {atendentes.find(e => e.id == r.atendenteId) ? atendentes.find(e => e.id == r.atendenteId).nome : "Não encontrado"}
+                                                        {atendentes.find(e => e.id == r.atendenteId)?.nome || "Não encontrado"}
+                                                    </Typography>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Typography>
+                                                        {usuarios.find(usr => usr.id == r.usuarioId)?.nome || "Não encontrado"}
                                                     </Typography>
                                                 </TableCell>
                                                 <TableCell>
@@ -450,7 +482,7 @@ const Relatorios = (props) => {
                                 </TableBody>
                             </Table>
                         </Stack>
-                    </Typography>
+                    </Box>
                 </Grid>
             </Grid>
         </Grid>

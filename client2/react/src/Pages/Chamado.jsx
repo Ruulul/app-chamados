@@ -1,8 +1,11 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState, useMemo } from 'react'//"preact/compat";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlusCircle, faPen } from "@fortawesome/free-solid-svg-icons";
 
 import { Input, Typography } from "@mui/material";
+
+import { marked } from 'marked'
+import insane from 'insane'
 
 import axios from "../Components/Requisicao";
 
@@ -51,8 +54,8 @@ var Email = {
       "withCredentials" in t
         ? t.open(e, n, !0)
         : "undefined" != typeof XDomainRequest
-        ? (t = new XDomainRequest()).open(e, n)
-        : (t = null),
+          ? (t = new XDomainRequest()).open(e, n)
+          : (t = null),
       t
     );
   },
@@ -61,27 +64,31 @@ var Email = {
 const toBase64 = (file, id) => new Promise((resolve, reject) => {
 
   const reader = new FileReader();
- 
-  reader.onload = () => resolve({title: file.name, data: reader.result, descr: `Anexo de mensagem do chamado ${id}`});
- 
+
+  reader.onload = () => resolve({ title: file.name, data: reader.result, descr: `Anexo de mensagem do chamado ${id}` });
+
   reader.onerror = error => reject(error);
 
   reader.readAsDataURL(file);
- 
-  });
+
+});
 
 export default function Chamado() {
-  const [addMensagem, setMensagem] = useState(false);
-  const [infos, setInfos] = useState({
+  let infosCarregando = {
     id: useParams().id,
     assunto: "Carregando...",
     departamento: "Carregando...",
     status: "Carregando...",
-  });
+  }
+  const [addMensagem, setMensagem] = useState(false);
+  const [infos, setInfos] = useState(infosCarregando);
   const [isCarregado, setCarregado] = useState(false);
   const [atendente, setAtendente] = useState({ nome: "Carregando..." });
-  const [usuario, setUsuario] = useState({nome: "Carregando..."})
+  const [usuario, setUsuario] = useState({ nome: "Carregando..." })
   const [urlanexo, setAnexo] = useState(undefined)
+  const [perfil, setPerfil] = useState(undefined)
+
+  let mimeanexo = ()=>urlanexo?.split(';base64,')[0].split(':')[1]
 
   const redirect = useNavigate();
 
@@ -90,7 +97,15 @@ export default function Chamado() {
       axios("get", "/servico/" + infos.id)
         .then(({ data }) => {
           if (data === "Não autorizado") redirect("/login");
-          setInfos(data);
+          if (infos)
+            for (let key in data)
+              if (key === 'chat'){
+                if (data[key].length !== infos[key]?.length)
+                  setInfos(data)
+              }
+              else if (data[key] !== infos[key])
+                setInfos(data)
+          else setInfos(data)
           setCarregado(true);
         })
         .catch((err) => {
@@ -104,25 +119,66 @@ export default function Chamado() {
     };
   }, []);
   useLayoutEffect(() => {
-    axios("get", "/usuario/" + infos.atendenteId).then(({ data }) => {
-      setAtendente(data);
-    });
-    axios("get", "/usuario/" + infos.usuarioId).then(({ data }) => {
-      setUsuario(data);
-    });
+    if (isCarregado)
+      axios("get", "/usuario/" + infos.atendenteId).then(({ data }) => {
+        setAtendente(data);
+      });
+    if (isCarregado)
+      axios("get", "/usuario/" + infos.usuarioId).then(({ data }) => {
+        setUsuario(data);
+      });
   }, [isCarregado]);
 
-  useEffect(()=>
-    axios("get", `/files/${infos.anexo}`)
-    .then(({data})=>{
-      setAnexo(data)
-    }).catch(err=>console.log(err)),[infos.anexo])
+  useEffect(() =>
+    String(infos.anexo) !== 'undefined' 
+      ?axios("get", `/files/${infos.anexo}`)
+      .then(({ data }) => {
+        setAnexo(data)
+      }).catch(err => console.log(err))
+      :console.log('Sem anexo válido'), [infos.anexo])
+  useEffect(() =>
+    axios("get", "/perfil")
+      .then(({ data }) => setPerfil(data))
+      .catch(({ reason }) => console.error(reason))
+    ,
+    [])
 
+  const MensagensMemo = useMemo(()=>
+  <Mensagens
+    infos={infos}
+    perfil={perfil}
+    mudastatus={(novasInfos) => {
+      setInfos(novasInfos);
+      axios("get", "/usuario/" + novasInfos.atendenteId).then(
+        ({ data }) => {
+          Email.send({
+            SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
+            To: data.email,
+            From: "suporte.ti@ourobrancoagronegocios.com.br",
+            Subject: `Chamado sobre "${novasInfos.assunto}"(id ${novasInfos.id}) modificado`,
+            Body: `O chamado de id ${novasInfos.id} teve seu status modificado para ${novasInfos.status}.`,
+          }).then(console.log);
+        }
+      );
+    }}
+    addMensagem={setMensagem}
+  />, [infos.chat?.length])
+
+  let button_props = {
+    variant: "contained",
+    color: "action",
+    sx: {
+      fontSize: "0.8em",
+      m: 2,
+      p: 2,
+      width: "20em"
+    }
+  }
   return (
     <Grid container direction={{ xs: "column", sm: "row" }} spacing={3}>
       <Grid item xs={6}>
         <Card>
-          <Typography variant="h4" mt={2} ml={2} sx={{display:"grid-inline"}}>
+          <Typography variant="h4" mt={2} ml={2} sx={{ display: "grid-inline" }}>
             Chamado Número {infos.id} {" "}
             {/*<Box
               component="span"
@@ -147,7 +203,49 @@ export default function Chamado() {
           <Typography variant="h5" m={2}>
             Atendente
           </Typography>
-          <Typography m={2}>{atendente.nome}</Typography>
+          <Typography m={2}>{atendente.nome || "Sem atendente"}</Typography>
+          {
+            perfil
+              ? perfil.tipo == "suporte"
+                ? atendente.id
+                  ? atendente.id == perfil.id
+                    ? <Button {...button_props}
+                      onClick={() => {
+                        let novo_chamado = { ...infos }
+                        novo_chamado.atendenteId = ""
+                        novo_chamado.atendimento = false
+                        axios("post", "/update/servico/" + novo_chamado.id, novo_chamado)
+                          .then(({ data }) => {
+                            setInfos(infosCarregando)
+                            setCarregado(false)
+                            setAtendente({ nome: "Carregando..." })
+                          })
+                          .catch(console.error)
+                      }}>
+                      Liberar chamado?
+                    </Button>
+                    : undefined
+                  : <Button
+                    {...button_props}
+                    onClick={() => {
+                      let novo_chamado = { ...infos }
+                      novo_chamado.atendenteId = perfil.id
+                      novo_chamado.atendimento = true
+                      novo_chamado.assumido_em = (new Date()).toISOString()
+                      axios("post", "/update/servico/" + novo_chamado.id, novo_chamado)
+                        .then(({ data }) => {
+                          setInfos(infosCarregando)
+                          setCarregado(false)
+                          setAtendente({ nome: "Carregando..." })
+                        })
+                        .catch(console.error)
+                    }}>
+                    Assumir chamado?
+                  </Button>
+                : undefined
+              :
+              <Typography m={2}>Carregando seu perfil...</Typography>
+          }
           <Typography variant="h5" m={2}>
             Atendido
           </Typography>
@@ -161,35 +259,27 @@ export default function Chamado() {
           </Typography>
           <Typography m={2}>{infos.status}</Typography>
           {
-            infos.anexo ? <>
+            urlanexo && urlanexo !=='Não autorizado' ? <>
               <Typography variant="h5" m={2}> Anexo </Typography>
-              <img src={urlanexo} width="90%" style={{margin: "auto", display: "grid", paddingBottom: "2em"}} />
+              {
+              urlanexo?.slice(0, 20).includes('image') 
+                  ? <img src={urlanexo} style={{ width: "100%" }} />
+                  : <>
+                  <object data={urlanexo}  style={{ width: "100%" }} type={mimeanexo()}>
+                    <Typography>
+                      Não pudemos exibir
+                    </Typography>
+                  </object>
+                    <a href={urlanexo} target='_blank'><Typography>Abrir arquivo</Typography></a>
+                  </>
+              }
               </>
-            : <Typography m={4}>Nenhum anexo nesse chamado</Typography>
+              : <Typography m={4}>Nenhum anexo nesse chamado</Typography>
           }
         </Card>
       </Grid>
       <Grid item xs={6}>
-        {!addMensagem ? (
-          <Mensagens
-            infos={infos}
-            mudastatus={(novasInfos) => {
-              setInfos(novasInfos);
-              axios("get", "/usuario/" + novasInfos.atendenteId).then(
-                ({ data }) => {
-                  Email.send({
-                    SecureToken: "59fa2524-23b0-4dc1-af39-82ac290ca35c",
-                    To: data.email,
-                    From: "suporte.ti@ourobrancoagronegocios.com.br",
-                    Subject: `Chamado sobre "${novasInfos.assunto}"(id ${novasInfos.id}) modificado`,
-                    Body: `O chamado de id ${novasInfos.id} teve seu status modificado para ${novasInfos.status}.`,
-                  }).then(console.log);
-                }
-              );
-            }}
-            addMensagem={setMensagem}
-          />
-        ) : (
+        {!addMensagem ? (MensagensMemo) : (
           <AddMensagem infos={infos} setMensagem={setMensagem} />
         )}
       </Grid>
@@ -224,15 +314,15 @@ const Mensagens = (props) => {
             >
               {props.infos.chat
                 ? props.infos.chat.map((mensagem) => {
-                    return (
-                      <Mensagem
-                        key={mensagem.id}
-                        autorId={mensagem.autorId}
-                        mensagem={mensagem.mensagem}
-                        anexo={mensagem.metadados?.find(({nome})=>nome=="anexo")?.valor}
-                      />
-                    );
-                  })
+                  return (
+                    <Mensagem
+                      key={mensagem.id}
+                      autorId={mensagem.autorId}
+                      mensagem={mensagem.mensagem}
+                      anexo={mensagem.metadados?.find(({ nome }) => nome == "anexo")?.valor}
+                    />
+                  );
+                })
                 : undefined}
             </Stack>
           </Grid>
@@ -262,48 +352,54 @@ const Mensagens = (props) => {
           >
             Adicionar Mensagem: <FontAwesomeIcon icon={faPlusCircle} />
           </Button>
+          {
+            ([props.infos.atendenteId?.toString(), props.infos.usuarioId?.toString()].includes(props.perfil?.id.toString())) &&
+            <Button
+              variant="contained"
+              sx={{
+                width: 200,
+                padding: "2em",
+                transform: `scale(${zoom})`,
+                borderRadius: 5,
+                fontSize: 10,
+              }}
+              onClick={(event) => {
+                let servico = props.infos;
+                let timestamp = (new Date()).toISOString()
+                switch (servico.status) {
+                  case "pendente":
+                    servico.status = "resolvido";
+                    servico.resolvido_em = timestamp
+                    break;
+                  case "resolvido":
+                    servico.status = "fechado";
+                    servico.fechado_em = timestamp
+                    redirect("/servicos");
+                    break;
+                  case "fechado":
+                    alert("Isso não devia aparecer");
+                    break;
+                  default:
+                    alert("Isso definitivamente não devia aparecer");
+                }
+                if (servico)
+                  axios("post", "/update/servico/" + servico.id, servico)
+                    .then((res) => props.mudastatus(servico))
+                    .catch((err) =>
+                      console.error("Falha em salvar o serviço \n" + err)
+                    );
+              }}
+            >
+              {props.infos
+                ? props.infos.status === "pendente"
+                  ? "Marcar como Resolvido"
+                  : props.infos.status === "resolvido"
+                    ? "Marcar como Fechado"
+                    : undefined
+                : undefined}
+            </Button>
 
-          <Button
-            variant="contained"
-            sx={{
-              width: 200,
-              padding: "2em",
-              transform: `scale(${zoom})`,
-              borderRadius: 5,
-              fontSize: 10,
-            }}
-            onClick={(event) => {
-              let servico = props.infos;
-              switch (servico.status) {
-                case "pendente":
-                  servico.status = "resolvido";
-                  break;
-                case "resolvido":
-                  servico.status = "fechado";
-                  redirect("/servicos");
-                  break;
-                case "fechado":
-                  alert("Isso não devia aparecer");
-                  break;
-                default:
-                  alert("Isso definitivamente não devia aparecer");
-              }
-              if (servico)
-                axios("post", "/update/servico/" + servico.id, servico)
-                  .then((res) => props.mudastatus(servico))
-                  .catch((err) =>
-                    console.error("Falha em salvar o serviço \n" + err)
-                  );
-            }}
-          >
-            {props.infos
-              ? props.infos.status === "pendente"
-                ? "Marcar como Resolvido"
-                : props.infos.status === "resolvido"
-                ? "Marcar como Fechado"
-                : undefined
-              : undefined}
-          </Button>
+          }
         </Stack>
       </Stack>
     </Card>
@@ -315,6 +411,7 @@ const AddMensagem = (props) => {
   const [autorId, setAutor] = useState(undefined);
   const [nome, setNome] = useState(undefined);
   const [anexo, setAnexo] = useState(undefined);
+  console.log(anexo)
   const { id } = useParams()
 
   useEffect(async () => {
@@ -335,7 +432,7 @@ const AddMensagem = (props) => {
 
   function getAnexo(file) {
     toBase64(file, id)
-      .then((anexo)=>setAnexo(anexo))
+      .then((anexo) => setAnexo(anexo))
       .catch(console.error)
   }
 
@@ -344,15 +441,15 @@ const AddMensagem = (props) => {
     let novasInfos = props.infos;
     novasInfos.chat.push({ autorId: autorId, mensagem });
     axios("post", "/update/servico/" + novasInfos.id, novasInfos)
-      .then(({data: res}) => {
+      .then(({ data: res }) => {
         props.setMensagem(false)
-        let new_chat = res.chat 
-        let last_message = new_chat.sort((a, b)=>b.id-a.id)[0]
+        let new_chat = res.chat
+        let last_message = new_chat.sort((a, b) => b.id - a.id)[0]
         if (anexo) {
           //let anexo_form_data = new FormData(anexo)
           axios("post", `/update/mensagem/${last_message.id}/arquivo`, anexo)//, {headers: {'Content-Type': 'multipart/form-data'}})
-          .then(data=>console.log("Arquivo salvo com sucesso\n", data))
-          .catch(err=>console.log("Erro em salvar o arquivo.\n",err))
+            .then(data => console.log("Arquivo salvo com sucesso\n", data))
+            .catch(err => console.log("Erro em salvar o arquivo.\n", err))
         }
       })
       .catch((err) => console.error("Erro em adicionar mensagem. \n" + err));
@@ -364,8 +461,8 @@ const AddMensagem = (props) => {
         <Typography pt={3}>
           {
             (nome === undefined) ? undefined :
-            (nome === "Usuário não encontrado") ? "Email inválido" :
-            nome
+              (nome === "Usuário não encontrado") ? "Email inválido" :
+                nome
           }
         </Typography>
         <TextField
@@ -375,17 +472,39 @@ const AddMensagem = (props) => {
           minRows="15"
           required
           onChange={handleChange}
-          onPaste={(pasteEvent)=>getAnexo(pasteEvent.clipboardData.files[0])}
+          maxlength="1000"
+          onPaste={(pasteEvent) => getAnexo(pasteEvent.clipboardData.files[0])}
         />
-        <img src={anexo?.data} style={{width:"100%"}}/>
-        <Input 
+        {
+          anexo?.data.slice(0, 20).includes('image')
+            ? <img src={anexo?.data} style={{ width: "100%" }} />
+            : <>
+                  <object data={anexo?.data} type={anexo?.data.split(';base64,')[0].split(':')[1]}>
+                    <div>
+                      Não pudemos exibir o arquivo.
+                    </div>
+                  </object>
+                <a href={anexo?.data} target='_blank'><Typography>Abrir arquivo</Typography></a>
+            </>
+        }
+        <Input
           sx={{ width: "30%" }}
           variant="contained"
           name="anexo"
           color="info"
           type="file"
-          onChange={({target:{files}})=>getAnexo(files[0])}
+          onChange={({ target: { files } }) => getAnexo(files[0])}
         />
+        <Typography>
+          Pré-visualização da mensagem:
+        </Typography>
+        <Typography
+          ref={
+            node =>
+              node
+                ? node.innerHTML = insane(marked.parse(mensagem))
+                : undefined
+          } />
         <Button
           sx={{ width: "100%" }}
           variant="contained"
@@ -402,29 +521,57 @@ const AddMensagem = (props) => {
 const Mensagem = (props) => {
   const [autor, setAutor] = useState(undefined);
   const [anexo, setAnexo] = useState(undefined);
+  if(props.anexo) console.log(anexo?.slice(0, 21))
+  console.log(anexo)
   useEffect(() => {
     axios("get", "/usuario/" + props.autorId)
       .then(({ data: autor }) => setAutor(autor))
       .catch(({ erro }) => setAutor(erro));
   }, []);
-  useEffect(()=>{
+  useEffect(() => {
+    if (String(props.anexo) !== 'undefined')
     axios("get", "/files/" + props.anexo)
-      .then(({ data: anexo }) => anexo=="Não autorizado" ? setAnexo(null) : setAnexo(anexo))
-      .catch(({ erro }) => setAnexo(null))
-  })
+      .then(({ data }) => data == "Não autorizado" || !data ? setAnexo(null) : setAnexo(data))
+      .catch((e) => {
+        console.log(e)
+        setAnexo(null)
+      })
+      .finally(()=>props.anexo !== null ? console.log('Ended handling attachment of message') : undefined)
+    else setAnexo(null)
+  }, [])
+  const texto = useMemo(()=>
+  <Typography m={2}
+    ref={
+      node =>
+        node
+          ? node.innerHTML = insane(marked.parse(props.mensagem))
+          : undefined
+    } />,[props.mensagem])
   return (
     <Card>
       <Typography variant="h5" m={2}>
         {autor ? autor.nome : "Carregando..."}
       </Typography>
-      <Typography m={2}>{props.mensagem} </Typography>
+      {texto}
       {
-        anexo===null
-        ? undefined 
-        : anexo 
-        ? <img src={anexo} width="90%" style={{margin: "auto", display: "grid", paddingBottom: "2em"}} />
-        : <Typography>Carregando...</Typography>
+        anexo === null
+          ? undefined
+          : anexo && anexo !=='Não autorizado'
+            ? 
+            anexo.slice(0, 20).includes('image') 
+                ? <><img src={anexo} width="90%" style={{ margin: "auto", display: "grid", paddingBottom: "2em" }}/>
+                  <Button variant="contained" onClick={()=>navigator.clipboard.write(anexo)}>Copiar</Button></>
+                : <>
+                    <object data={anexo} type={anexo.split(';base64,')[0].split(':')[1]}>
+                    <div>
+                      Não pudemos exibir o arquivo.
+                    </div>
+                  </object>
+                  <a href={anexo?.data} target='_blank'><Typography>Abrir arquivo</Typography></a>
+                </>
+            : <Typography>Carregando...</Typography>
       }
     </Card>
   );
 };
+
