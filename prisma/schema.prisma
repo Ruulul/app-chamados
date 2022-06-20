@@ -10,69 +10,117 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Chamado {
-  id           Int        @id @default(autoincrement())
-  autor        Usuario?    @relation(fields: [autorId], references: [id])
-  autorId      Int        
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  prazo        DateTime   
-  assunto      String     @db.VarChar(255)
-  chat         Mensagem[]
-  metadados    MetadadoChamado[]
+model Filial {
+  id            Int              @id @default(autoincrement())
+  codigo        String           @db.VarChar(32)
+  nome          String           @db.VarChar(100)
+  chamados      Chamado[]
+  usuarios      Usuario[]
+  categorias    Categoria[]
+  tipos         Tipo[]
+  departamentos Departamento[]
+  metadados     MetadadoFilial[]
+}
 
+model MetadadoFilial {
+  id       Int    @id @default(autoincrement())
+  filial   Filial @relation(fields: [filialId], references: [id])
+  filialId Int    @default(1)
+  nome     String @db.VarChar(255)
+  valor    String @db.VarChar(255)
+}
+
+model Chamado {
+  id        Int               @id @default(autoincrement())
+  autor     Usuario?          @relation(fields: [autorId], references: [id])
+  autorId   Int
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  prazo     DateTime
+  assunto   String            @db.VarChar(255)
+  chat      Mensagem[]
+  metadados MetadadoChamado[]
+
+  Filial   Filial @relation(fields: [filialId], references: [id])
+  filialId Int    @default(1)
 }
 
 model MetadadoChamado {
-  id          Int      @id @default(autoincrement())      
-  chamado     Chamado  @relation(fields: [chamadoId], references: [id])
-  chamadoId   Int
-  nome        String   @db.VarChar(255)
-  valor       String   @db.VarChar(255)
+  id        Int     @id @default(autoincrement())
+  chamado   Chamado @relation(fields: [chamadoId], references: [id])
+  chamadoId Int
+  nome      String  @db.VarChar(255)
+  valor     String  @db.VarChar(255)
 }
+
 model MetadadoUsuario {
-  id          Int      @id @default(autoincrement())
-  usuario     Usuario    @relation(fields: [usuarioId], references: [id])
-  usuarioId   Int
-  nome        String   @db.VarChar(255)
-  valor       String   @db.VarChar(255)
+  id        Int     @id @default(autoincrement())
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  usuarioId Int
+  nome      String  @db.VarChar(255)
+  valor     String  @db.VarChar(255)
 }
+
 model MetadadoMensagem {
-  id          Int      @id @default(autoincrement())
-  mensagem    Mensagem  @relation(fields: [mensagemId], references: [id])
-  mensagemId  Int
-  nome        String   @db.VarChar(255)
-  valor       String   @db.VarChar(255)
+  id         Int      @id @default(autoincrement())
+  mensagem   Mensagem @relation(fields: [mensagemId], references: [id])
+  mensagemId Int
+  nome       String   @db.VarChar(255)
+  valor      String   @db.VarChar(255)
 }
 
 model Mensagem {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
+  id        Int                @id @default(autoincrement())
+  createdAt DateTime           @default(now())
   //autor     String
-  autor     Usuario?  @relation(fields: [autorId], references: [id])
-  autorId   Int      
-  mensagem  String   @db.VarChar(255)
-  chamado   Chamado  @relation(fields: [chamadoId], references: [id])
+  autor     Usuario?           @relation(fields: [autorId], references: [id])
+  autorId   Int
+  mensagem  String             @db.VarChar(1000)
+  chamado   Chamado            @relation(fields: [chamadoId], references: [id])
   chamadoId Int
   metadados MetadadoMensagem[]
 }
 
 model Usuario {
-  id           Int        @id @default(autoincrement())
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  email        String     @unique
-  senha        String
-  nome         String?
-  sobrenome    String?
-  chamados     Chamado[]
-  mensagems    Mensagem[]
-  metadados    MetadadoUsuario[]
+  id        Int               @id @default(autoincrement())
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  email     String            @unique
+  senha     String
+  nome      String?
+  sobrenome String?
+  chamados  Chamado[]
+  mensagems Mensagem[]
+  metadados MetadadoUsuario[]
+  Filial    Filial            @relation(fields: [filialId], references: [id])
+  filialId  Int               @default(1)
 }
 
 model Session {
   id        String   @id
   sid       String   @unique
   data      String
-  expiresAt   DateTime
+  expiresAt DateTime
+}
+
+model Categoria {
+  id        Int    @id @default(autoincrement())
+  tipo      String @db.VarChar(255)
+  categoria String @db.VarChar(255)
+  Filial    Filial @relation(fields: [filialId], references: [id])
+  filialId  Int    @default(1)
+}
+
+model Departamento {
+  id           Int    @id @default(autoincrement())
+  departamento String @db.VarChar(255)
+  Filial       Filial @relation(fields: [filialId], references: [id])
+  filialId     Int    @default(1)
+}
+
+model Tipo {
+  id       Int    @id @default(autoincrement())
+  tipo     String @db.VarChar(255)
+  Filial   Filial @relation(fields: [filialId], references: [id])
+  filialId Int    @default(1)
 }
