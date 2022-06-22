@@ -1,4 +1,4 @@
-import {createElement as e, useState} from 'preact/compat'
+import {createElement as e, useState} from 'react'//'preact/compat'
 
 import AddCategoria from '../Components/AddCategoria'
 import AddDepartamento from '../Components/AddDepartamento'

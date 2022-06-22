@@ -70,16 +70,8 @@ const toBase64 = (file, id) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   let idd = id
   reader.onload = async () => {
-    try{
-      idd = await crypto.subtle
-      .digest({
-        name: 'HMAC', hash: 'SHA-256'}, 
-        new Uint8Array(reader.result.split('').map(c=>c.charCodeAt(0))).buffer
-      )
-    }catch(e) {
-      console.log('Falha em digest da imagem, motivo: ', e.message)
-    }
-    resolve({title: file.name, id: idd || file.lastModified, data: reader.result, descr: `Chamado n° ${id}`})};
+    resolve({title: file.name, id: idd, data: reader.result, descr: `Chamado n° ${id}`})
+  };
  
   reader.onerror = error => reject(error);
 
@@ -259,6 +251,16 @@ export default function Requisicao () {
         .catch(e=>setLoadingAnexo(null))
   }
 
+  function handleFile(file) {
+    setLoadingAnexo(true)
+    toBase64(file, infos.id)
+      .then(file64=>{
+        dispatch({action:'anexo', payload: file64})
+        setLoadingAnexo(false)
+      })
+      .catch(e=>setLoadingAnexo(null))
+  }
+
   async function getPrazo() {
     let data = new Date()
     switch (infos.prioridade) {
@@ -412,11 +414,10 @@ export default function Requisicao () {
                 <Input
                   name="anexo"
                   type="file"
-                  inputProps={{multiple: true}}
-                  onChange={({target:{files}})=>handleFiles(files)}
+                  onChange={({target:{files}})=>handleFile(files[0])}
                 />
-                { infos.anexos &&
-                infos.anexos.map(anexo=><img src={anexo?.data} width="100%" />) 
+                { infos.anexo && <img src={infos.anexo?.data} width='100%'/>
+                //infos.anexos.map(anexo=><img src={anexo?.data} width="100%" />) 
                 }
               </Stack>
             </Stack>

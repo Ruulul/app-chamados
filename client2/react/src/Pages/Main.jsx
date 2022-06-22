@@ -38,7 +38,7 @@ export default function Main() {
               }
             } />
             <Outlet/>
-            <Versao versao="1.3.3"/>
+            <Versao versao="1.3.4"/>
           </Grid>
         </Grid>
       );
