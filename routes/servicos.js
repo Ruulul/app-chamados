@@ -212,7 +212,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
       }
       await updateChamados()
       console.log("Chamado atualizado")
-      res.status(200).send(chamado_atualizado)
+      res.status(200).send(chamados.get().find(chamado=>chamado.id===chamado_atualizado.id))
     })() : res.send("Não autorizado")
   });
   

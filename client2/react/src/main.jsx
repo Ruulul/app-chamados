@@ -102,6 +102,7 @@ function Router() {
           <Route path="/perfil" element={<Perfil/>}/>
           <Route path="/usuario/:id/" element={<PerfilDept/>}/>
           <Route path="/chamado/:id" element={<Chamado/>} />
+          <Route path="/servico/:id" element={<Chamado/>} />
           <Route path="/chamado/:id/editar" element={<EditarChamado/>} />
           <Route path="*" element={
             <main>
