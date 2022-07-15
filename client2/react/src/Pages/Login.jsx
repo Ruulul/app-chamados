@@ -17,12 +17,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 const burl = "https://10.0.0.5:5000"
 
 export default function Login() {
-    const [enviando, setEnviando] = useState(false)
-    const [email, setEmail] = useState("")
-    const [senha, setSenha] = useState("")
-    const [error, setError] = useState(undefined)
     const {search} = useLocation()
     const query = useMemo(()=>new URLSearchParams(search), [search])
+    const [enviando, setEnviando] = useState(false)
+    const [email, setEmail] = useState(query.get("email"))
+    const [senha, setSenha] = useState("")
+    const [error, setError] = useState(undefined)
     const [primeiroAcesso, setPrimeiroAcesso] = useState(query.get("primeiroAcesso")=='true')
     const redirect = useNavigate()
     function onChangeEmail({target}) {
@@ -72,7 +72,9 @@ export default function Login() {
                 ? "Primeiro acesso"
                 : "Login"}
             </Typography>
-				<TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
+            {!primeiroAcesso
+              ?<TextField label="email" name="email" type="email" onChange={onChangeEmail} required/>
+              :<Typography>{email}</Typography>}
                 <TextField label="senha" name="senha" type="password" onChange={onChangeSenha} required/>
                 {error ? <Alert severity="error">{error + "."}</Alert> : undefined}
                 {!enviando ? 

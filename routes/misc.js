@@ -46,7 +46,6 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
         try {
           fs.readFile(path.resolve('files/', filename), (error, data_raw) => {
             if (error) {
-              console.log(error)
               return res.status(500).send()
             }
             let buffer_from_raw = Buffer.from(data_raw)
@@ -58,7 +57,7 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
               .catch(err=>res.status(500).send(err))
           })
         } catch (e) {
-          console.log("Erro na leitura de arquivo. \n", e)
+          console.log("Erro na leitura de arquivo. \n")
           return res.status(500).send()
         }
       })()

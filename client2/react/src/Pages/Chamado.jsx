@@ -196,6 +196,9 @@ export default function Chamado() {
               <FontAwesomeIcon icon={faPen} />
             </Box>*/}
           </Typography>
+          <Typography m={2}>
+            Aberto em {infos && infos.createdAt?.split('T')[0].split('-').reverse().join('/')}
+          </Typography>
           <Typography variant="h5" m={2}>
             Assunto
           </Typography>

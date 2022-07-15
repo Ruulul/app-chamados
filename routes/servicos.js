@@ -51,7 +51,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
             }
           }
         }),
-        (updateChamados()),
+        (await updateChamados()),
         res.status(200).send(chamado_criado))
       : res.send("Não autorizado")
   });
@@ -60,10 +60,21 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let filename = (()=>`${Date.now()}-${req.body.title}`)()
     let {usuarioId:uid} = req.session
     let {codfilial, id} = req.params
+    let user = usuarios.get()[uid]
+    let usuarioId, suporteId, autorId;
+    let chamado = chamados.get()[parseInt(id)];
+    console.log("Salvando arquivo no chamado ", id);
+    try {
+      usuarioId = chamado.usuarioId;
+      suporteId = chamado.suporteId;
+      autorId = chamado.autorId;
+    }
+    catch (e) {
+      console.log("Erro em obter campos do chamado: ", chamado);
+    }
     console.log(Object.keys(req.body), filename)
     req.session.valid && 
-    (usuarios.get()[uid].tipo === 'suporte' || usuarios.get()[uid].cargo==='admin') 
-    && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
+    (user.tipo === 'suporte' || user.cargo==='admin' || [usuarioId, suporteId, autorId].map(a=>a?a.toString():undefined).includes(uid.toString())) ? (
       console.log("Salvando arquivo no serviço"),
       req.body.data ? 
         (console.log("Iniciando a escrita"),
@@ -265,11 +276,21 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let filename = (()=>`${Date.now()}-${req.body.title}`)()
     let {usuarioId : uid} = req.session
     let { codfilial, id } = req.params
-    id = parseInt(id)
+    let user = usuarios.get()[uid]
+    let usuarioId, suporteId, autorId;
+    let chamado = chamados.get()[parseInt(id)];
+    console.log("Salvando arquivo no chamado ", id);
+    try {
+      usuarioId = chamado.usuarioId;
+      suporteId = chamado.suporteId;
+      autorId = chamado.autorId;
+    }
+    catch (e) {
+      console.log("Erro em obter campos do chamado: ", chamado);
+    }
     console.log(Object.keys(req.body), filename)
     req.session.valid && 
-    (usuarios.get()[uid].tipo === 'suporte' || usuarios.get()[uid].cargo==='admin') 
-    && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
+    (user.tipo === 'suporte' || user.cargo==='admin' || [usuarioId, suporteId, autorId].map(a=>a?a.toString():undefined).includes(uid.toString())) ? (
       console.log("Salvando arquivo em mensagem"),
       req.body.data ? 
         (console.log("Iniciando a escrita"),
