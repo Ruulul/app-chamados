@@ -44,7 +44,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                   prioridade: servico.prioridade,
                   tipo: servico.tipo,
                   atendimento: String(false),
-                  subCategoria: servico.subCategoria,
+                  subCategoria: servico.categoria || servico.subCategoria,
                   usuarioId: servico.usuarioId
                 }).map((metadado) => { return { "nome": metadado[0], "valor": String(metadado[1]) } })
               }
@@ -151,6 +151,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
             : false) 
           : false),
       tipo: novo_servico.tipo,
+      subCategoria: novo_servico.categoria || novo_servico.subCategoria,
       atendenteId: novo_servico.atendenteId,
       usuarioId: novo_servico.usuarioId,
       assumido_em: novo_servico.assumido_em,
@@ -185,6 +186,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
           },
           data: {
             autor: novo_servico.autor,
+            prazo: novo_servico.prazo || chamados.get().find(chamado=>chamado.id==novo_servico.id).prazo,
             chat: {
               createMany: {
                 data: novo_servico.chat,
@@ -278,7 +280,8 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let { codfilial, id } = req.params
     let user = usuarios.get()[uid]
     let usuarioId, suporteId, autorId;
-    let chamado = chamados.get()[parseInt(id)];
+    let mensagem = chamados.get().reduce((pv, cv)=>[...pv, ...cv.chat], []).find(mensagem=>mensagem.id==id);
+    let chamado = chamados.get().find(chamado=>chamado.id==mensagem.chamadoId);
     console.log("Salvando arquivo no chamado ", id);
     try {
       usuarioId = chamado.usuarioId;
@@ -324,7 +327,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                         valor: filename,
                         mensagem: {
                           connect: {
-                            id
+                            id: parseInt(id)
                           }
                         }
                       }

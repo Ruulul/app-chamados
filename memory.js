@@ -1,6 +1,69 @@
 import prisma_pkg from '@prisma/client'
+import { createInterface } from 'readline'
 const { PrismaClient } = prisma_pkg
 const prisma = new PrismaClient()
+export default {
+  variables: {
+      usuarios:{
+          get: ()=>usuarios
+      },
+      chamados:{
+          get: ()=>chamados
+      },
+      categorias:{
+          get: ()=>categorias
+      },
+      tipos:{
+          get: ()=>tipos
+      },
+      departamentos:{
+          get: ()=>departamentos
+      },
+      filiais:{
+          get: ()=>filiais
+      },
+      prisma
+  },
+  updaters: {
+      updateCategorias,
+      updateChamados,
+      updateDepartamentos,
+      updateFiliais,
+      updateTipos,
+      updateUsuarios,
+      updateAll,
+  }
+}
+
+const rl = createInterface({
+  input: process.stdin,
+  output: process.stderr
+});
+rl.write('>');
+process.stdin.on('keypress', async (event)=>{
+  switch(event) {
+    case 'C':
+      await updateChamados();
+      rl.write('\nChamados atualizados.\n');
+      break;
+    case 'u':
+      await updateUsuarios();
+      rl.write('\nUsuários atualizados.\n');
+      break;
+    case '\x03':
+      rl.write('Fechando entrada, execute de novo para fechar o servidor')
+      rl.close();
+      break;
+    default:
+      rl.write(`
+Comando não reconhecido.
+  Os comandos disponíveis no momento são:
+    'C': atualiza os chamados;
+    'u': atualiza os usuários.
+  
+>`);
+  }
+});
 
 var usuarios = "vazio"
 var chamados = "vazio"
@@ -153,37 +216,4 @@ async function updateAll() {
         updateTipos(),
         updateUsuarios()
     ])
-}
-
-export default {
-    variables: {
-        usuarios:{
-            get: ()=>usuarios
-        },
-        chamados:{
-            get: ()=>chamados
-        },
-        categorias:{
-            get: ()=>categorias
-        },
-        tipos:{
-            get: ()=>tipos
-        },
-        departamentos:{
-            get: ()=>departamentos
-        },
-        filiais:{
-            get: ()=>filiais
-        },
-        prisma
-    },
-    updaters: {
-        updateCategorias,
-        updateChamados,
-        updateDepartamentos,
-        updateFiliais,
-        updateTipos,
-        updateUsuarios,
-        updateAll,
-    }
 }

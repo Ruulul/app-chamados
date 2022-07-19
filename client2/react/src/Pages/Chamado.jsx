@@ -63,6 +63,11 @@ var Email = {
 
 const toBase64 = (file, id) => new Promise((resolve, reject) => {
 
+  if (file.size > 12582912) {
+    alert("Arquivo muito grande para o envio, favor comprimir ou buscar outros métodos (link externo, como por exemplo o Google Fotos ou Google Drive)");
+    return;
+  }
+
   const reader = new FileReader();
 
   reader.onload = () => resolve({ title: file.name, data: reader.result, descr: `Anexo de mensagem do chamado ${id}` });

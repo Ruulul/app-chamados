@@ -65,7 +65,11 @@ var Email = {
 
 const toBase64 = (file, id) => new Promise((resolve, reject) => {
 
-  console.log(file)
+  console.log(file)			
+  if (file.size > 12582912) {
+    alert("Arquivo muito grande para o envio, favor comprimir ou buscar outros métodos (link externo, como por exemplo o Google Fotos ou Google Drive)");
+    return;
+  }
 
   const reader = new FileReader();
   let idd = id
@@ -242,16 +246,25 @@ export default function Requisicao () {
 
   function handleFiles(files) {
     setLoadingAnexo(true)
-    for (let file of Array.from(files))
+    for (let file of Array.from(files)){
+			if (file.size > 12582912) {
+				alert("Arquivo muito grande para o envio, favor comprimir ou buscar outros métodos (link externo, como por exemplo o Google Fotos ou Google Drive)");
+				return;
+			}
       toBase64(file, infos.id)
         .then(file64=>{
           dispatch({action:"anexo", payload: file64})
           setLoadingAnexo(false)
         })
         .catch(e=>setLoadingAnexo(null))
+    }
   }
 
   function handleFile(file) {
+    if (file.size > 12582912) {
+      alert("Arquivo muito grande para o envio, favor comprimir ou buscar outros métodos (link externo, como por exemplo o Google Fotos ou Google Drive)");
+      return;
+    }
     setLoadingAnexo(true)
     toBase64(file, infos.id)
       .then(file64=>{
