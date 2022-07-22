@@ -50,9 +50,14 @@ process.stdin.on('keypress', async (event)=>{
       await updateUsuarios();
       rl.write('\nUsuários atualizados.\n');
       break;
-    case '\x03':
-      rl.write('Fechando entrada, execute de novo para fechar o servidor')
+    case 'a':
+      await updateAll();
+      rl.write('\nTudo atualizado.\n');
+      break;
+    case '\x03' || 'q':
       rl.close();
+      await prisma.$disconnect();
+      process.exit();
       break;
     default:
       rl.write(`
@@ -60,6 +65,7 @@ Comando não reconhecido.
   Os comandos disponíveis no momento são:
     'C': atualiza os chamados;
     'u': atualiza os usuários.
+    'a': atualiza tudo;
   
 >`);
   }

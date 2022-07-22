@@ -31,8 +31,8 @@ app.get('/api/:codfilial/servicos/categorias/:tipo', (req, res) => {
     let sub = req.body
     let { usuarioId : uid } = req.session
     let user = usuarios.get()[uid]
-    req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
-      user.tipo == "suporte" ?
+    req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined
+      user.tipo == "suporte" && sub.tipo && sub.newCategoria ?
         prisma.categoria.create({
           data: {
             tipo: sub.tipo,
@@ -44,7 +44,7 @@ app.get('/api/:codfilial/servicos/categorias/:tipo', (req, res) => {
             updateCategorias()
             res.status(200).send("OK" + r)
           })
-          .catch(error => res.status(505).send({ error })) : res.send("Não autorizado")
+          .catch(error => res.status(505).send({ error }))
       : res.send("Não autorizado")
     updateCategorias()
   });

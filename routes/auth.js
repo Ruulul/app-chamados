@@ -242,6 +242,21 @@ app.post('/api/:codfilial/alterasenha', async (req, res) => {
   })
 })
 
+app.post('/api/:codfilial/resetasenha', async (req, res) => {
+  let user = usuarios.get()[req.session.usuarioId];
+
+  if (user && user.cargo == 'admin')
+    await prisma.usuario.update({
+      where: {
+        email: req.body.email
+      },
+      data: {
+        senha: '',
+      }
+    }).catch(console.error)
+  res.sendStatus(200);
+})
+
 app.post('/api/:codfilial/logout', async (req, res) => {
   /*req.session.destroy(
     (err) => { 
