@@ -36,12 +36,17 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
     let { filename, codfilial } = req.params
     let { valid, usuarioId: uid } = req.session
     let usuario = usuarios.get()[uid]
+    const hasUser = (chamado, uid) => [chamado?.atendenteId, chamado?.autorId, chamado?.usuarioId].includes(uid)
       valid &&
       filename != 'undefined' &&
       (usuario?.cargo == "admin" ||
       usuario?.tipo == "suporte" ||
       filename.match(/ProfileIcon$/)||
-      chamados.get().some(chamado => chamado.anexo == filename && (chamado.atendenteId == uid || chamado.autorId == uid|| chamado.usuarioId == uid))) ?
+      chamados.get().some(chamado => chamado.anexo == filename && hasUser(chamado, uid))||
+      chamados.get().reduce((pv, cv)=>[...pv, ...cv.chat], [])
+      .some(mensagem=>mensagem.metadados.find(({nome})=>nome==='anexo')?.valor===filename 
+      && hasUser(chamados.get().find(chamado=>chamado.id===mensagem.chamadoId), uid))
+      ) ?
       (() => {
         try {
           fs.readFile(path.resolve('files/', filename), (error, data_raw) => {

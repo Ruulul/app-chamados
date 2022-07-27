@@ -23,11 +23,14 @@ app.get('/api/:codfilial/usuarios/all', (req, res)=>{
           usuarios.get()
           .filter(user=>
               user&&
-              user.filialId
-              ==filiais.get()
-              .find(filial=>
-                filial.codigo===req.params.codfilial
-              )?.id&&
+              user.filiais.map(parseInt)
+                .includes(
+                  filiais.get()
+                  .find(filial=>
+                    filial.codigo==req.params.codfilial
+                  )?.id
+                )
+              &&
               ![3, 7, 11].includes(user.id)
           )
         )

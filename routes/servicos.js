@@ -62,7 +62,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let {codfilial, id} = req.params
     let user = usuarios.get()[uid]
     let usuarioId, suporteId, autorId;
-    let chamado = chamados.get()[parseInt(id)];
+    let chamado = chamados.get().find(chamado=>chamado.id === parseInt(id));
     console.log("Salvando arquivo no chamado ", id);
     try {
       usuarioId = chamado.usuarioId;
@@ -282,7 +282,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let usuarioId, suporteId, autorId;
     let mensagem = chamados.get().reduce((pv, cv)=>[...pv, ...cv.chat], []).find(mensagem=>mensagem.id==id);
     let chamado = chamados.get().find(chamado=>chamado.id==mensagem.chamadoId);
-    console.log("Salvando arquivo no chamado ", id);
+    console.log("Salvando arquivo na mensagem ", id);
     try {
       usuarioId = chamado.usuarioId;
       suporteId = chamado.suporteId;
@@ -292,6 +292,17 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
       console.log("Erro em obter campos do chamado: ", chamado);
     }
     console.log(Object.keys(req.body), filename)
+    console.log({
+      uid,
+      usuarioId,
+      suporteId,
+      autorId
+    })
+    console.log({
+      user,
+      chamado,
+      mensagem
+    })
     req.session.valid && 
     (user.tipo === 'suporte' || user.cargo==='admin' || [usuarioId, suporteId, autorId].map(a=>a?a.toString():undefined).includes(uid.toString())) ? (
       console.log("Salvando arquivo em mensagem"),
