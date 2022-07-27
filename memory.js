@@ -71,11 +71,17 @@ Comando não reconhecido.
   }
 });
 
+/** @type {string | import('@prisma/client').Usuario[]} */
 var usuarios = "vazio"
+/** @type {string | import('@prisma/client').Chamado[]} */
 var chamados = "vazio"
+/** @type {string | import('@prisma/client').Categoria[]} */
 var categorias = "vazio"
+/** @type {string | import('@prisma/client').Tipo[]} */
 var tipos = "vazio"
+/** @type {string | import('@prisma/client').Departamento[]} */
 var departamentos = "vazio"
+/** @type {string | import('@prisma/client').Filial[]} */
 var filiais = "vazio"
 
 async function updateChamados() {
@@ -102,11 +108,7 @@ async function updateChamados() {
         for (const [index, chamado] of Object.entries(data))
           Metas[index] =
             Object.fromEntries(
-              chamado.metadados.map(
-                (md) => {
-                  return [md.nome, md.valor]
-                }
-              )
+              chamado.metadados.map((md) => [md.nome, md.valor])
             )
         
         return data.map((chamado, index) => { 
