@@ -5,22 +5,22 @@ const prisma = new PrismaClient()
 export default {
   variables: {
       usuarios:{
-          get: ()=>usuarios
+          get: ()=>Array.isArray(usuarios) ? [...usuarios] : []
       },
       chamados:{
-          get: ()=>chamados
+          get: ()=>Array.isArray(chamados) ? [...chamados] : []
       },
       categorias:{
-          get: ()=>categorias
+          get: ()=>Array.isArray(categorias) ? [...categorias] : []
       },
       tipos:{
-          get: ()=>tipos
+          get: ()=>Array.isArray(tipos) ? [...tipos] : []
       },
       departamentos:{
-          get: ()=>departamentos
+          get: ()=>Array.isArray(departamentos) ? [...departamentos] : []
       },
       filiais:{
-          get: ()=>filiais
+          get: ()=>Array.isArray(filiais) ? [...filiais] : []
       },
       prisma
   },
@@ -124,7 +124,7 @@ async function updateChamados() {
       })
   }
   
-  async function updateUsuarios() {
+async function updateUsuarios() {
     await prisma.usuario.findMany({
       select: {
         id: true,
@@ -166,9 +166,9 @@ async function updateChamados() {
       else
         console.log("Erro em updateUsuarios.\n", e)
     })
-  }
-  
-  async function updateCategorias() {
+}
+
+async function updateCategorias() {
     await prisma.categoria.findMany({
     }).then(function (data) {
       categorias = data
@@ -178,9 +178,9 @@ async function updateChamados() {
       else
         console.log("Erro em updateCategorias.\n", e)
     })
-  }
-  
-  async function updateDepartamentos() {
+}
+
+async function updateDepartamentos() {
     await prisma.departamento.findMany({
     }).then(function (data) {
       departamentos = data
@@ -190,9 +190,9 @@ async function updateChamados() {
       else
         console.log("Erro em updateDepartamentos.\n", e)
     })
-  }
-  
-  async function updateTipos() {
+}
+
+async function updateTipos() {
     await prisma.tipo.findMany({
     }).then(function (data) {
       tipos = data
@@ -202,8 +202,8 @@ async function updateChamados() {
       else
         console.log("Erro em updateTipos.\n", e)
     })
-  }
-  async function updateFiliais() {
+}
+async function updateFiliais() {
     await prisma.filial.findMany({
     }).then(function (data) {
       filiais = data
@@ -213,7 +213,7 @@ async function updateChamados() {
       else
         console.log("Erro em updateFiliais.\n", e)
     })
-  }
+}
 
 async function updateAll() {
     return Promise.all([

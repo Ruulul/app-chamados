@@ -19,8 +19,8 @@ const app = express.Router()
 
 app.get('/api/:codfilial/perfil', async (req, res) => {
   req.session.valid ?
-    res.send(usuarios.get().map(usuario => { 
-      delete usuario.senha; 
+    res.send(usuarios.get().map(usuario => {
+      if (!usuario) return
       usuario.primeiro_acesso = isPrimeiroAcesso(usuario);
       return usuario 
     })[req.session.usuarioId])

@@ -92,8 +92,9 @@ await updateAll()
 app.get('/api/:codfilial/', async (req, res)=>{
   let {codfilial} = req.params 
   let { usuarioId : uid } = req.session
+  let user = usuarios.get()[uid]
   req.session.valid ?
-    filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==codfilial) !== undefined ?
+    user.filiais.includes(filiais.get().find(filial=>filial.codigo==codfilial)) ?
       res.send(filiais.get().find(f=>f.codigo==codfilial))
     : res.send("Filial inválida")
   : res.send("Não autorizado")
