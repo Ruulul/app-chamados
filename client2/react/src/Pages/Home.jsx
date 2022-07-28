@@ -105,11 +105,11 @@ const Home = () => {
     const signal = signal_controller.signal
     const getServicos = () =>
       axios(
-        "get", "/servicos/status/pendente", 1500, {signal})
+        "get", "/servicos?filtro=status,pendente", 1500, {signal})
         .then(({ data }) => {
           if (data === "Não autorizado") redirect("/login");
           let novaContagem = {
-            pendentes: data.length,
+            pendentes: data.count,
             novos: 0,
             atendimento: 0,
             parados: 0,
@@ -124,7 +124,7 @@ const Home = () => {
           semana = semana.toISOString();
           amanha = amanha.toISOString();
           data !== "Não autorizado"
-            ? data.forEach((servico) => {
+            ? data.page.forEach((servico) => {
               //console.log(i)
               //console.log(hoje)
               //console.log(amanha)

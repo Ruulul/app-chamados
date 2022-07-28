@@ -4,22 +4,25 @@ import {
     Grid, 
     Card, 
     Stack, 
-    InputLabel, 
+    InputLabel,
+    Input,
     NativeSelect,
     Typography
 } from "@mui/material";
 import axios from "../Components/Requisicao";
-import { useNavigate } from "react-router-dom";
 
 export default function servicosStatus() {
     const [filtroStatus, setStatus] = useState("pendente")
     const [filtroTipo, setTipo] = useState("todos")
-    const [servicosStatus, setservicosStatus] = useState([])
-    const [servicosTipo, setservicosTipo] = useState([])
     const [servicos, setServicos] = useState([])
+    const [pageCount, setPages] = useState(0)
+    const [page, setPage] = useState(1)
+    const [limit, setLimit] = useState(5)
     const [atendentes, setAtendentes] = useState([])
     const [usuarios, setUsuarios] = useState([])
-    const redirect = useNavigate()
+
+    const query = `?page=${page}&limit=${limit}${filtroTipo != "todos" ? '&filtro=tipo,'+filtroTipo : ''}${filtroStatus != "todos" ? '&filtro=status,'+filtroStatus : ''}`
+    console.log(query)
     useEffect(()=>{
       axios('get', '/atendentes')
         .then(res=>setAtendentes(res.data))
@@ -28,57 +31,17 @@ export default function servicosStatus() {
       axios('get', '/usuarios/all')
         .then(res=>setUsuarios(res.data))
     },[])
+
     useEffect(()=>{
-      let getServicos = () => filtroStatus === "todos" ?
-      axios("get", '/servicos')
-        .then(res => {
-          if (res.data === "Não autorizado") redirect("/login")
-          setservicosStatus(res.data)})
-        .catch(err => console.log("Erro obtendo serviços. \n" + err))
-    : axios("get",'/servicos/status/' + filtroStatus)
-        .then(res => {
-          if (res.data === "Não autorizado") redirect("/login")
-          setservicosStatus(res.data)
+      const getServicos = () => axios('get', '/servicos' + query)
+        .then(({data:{page, pages}})=>{
+          setServicos(page)
+          setPages(pages)
         })
-        .catch(err => console.log("Erro obtendo serviços. \n" + err))
-      getServicos()
-      let interval = setInterval(getServicos, 500)
-      return ()=>{
-        clearInterval(interval)
-      }
-    }, [filtroStatus])
-    useEffect(()=>{
-      let getServicos = ()=>filtroTipo === "todos" ?
-      axios("get",'/servicos')
-        .then(res => {
-          if (res.data === "Não autorizado") redirect("/login")
-          setservicosTipo(res.data)})
-        .catch(err => console.log("Erro obtendo serviços. \n" + err))
-    : axios("get",'/servicos/tipo/' + filtroTipo)
-        .then(res => {
-          if (res.data === "Não autorizado") redirect("/login")
-          setservicosTipo(res.data)
-        })
-        .catch(err => console.log("Erro obtendo serviços. \n" + err))
-        getServicos()
-        let interval = setInterval(getServicos, 2000)
-        return ()=>{
-          clearInterval(interval)
-        }
-    }, [filtroTipo])
-    useEffect(()=>{
-      let temp_servicos = []
-      if (filtroStatus == "todos")
-        return setServicos(servicosTipo)
-      if (filtroTipo == "todos")
-        return setServicos(servicosStatus)
-      if (servicosStatus.length > 0 && servicosTipo.length > 0)
-      for (let x of servicosTipo)
-        for (let y of servicosStatus)
-          if (x.id == y.id)
-            temp_servicos.push(x)
-      setServicos(temp_servicos)
-    },[servicosTipo, servicosStatus])
+      let handle = setInterval(getServicos, 1000)
+      return ()=>clearInterval(handle)
+    }, [query])
+  
     return (
         <Grid container direction={{ xs: "column", md: "row" }} pt={3}>
             <Grid item xs={12}>
@@ -114,30 +77,28 @@ export default function servicosStatus() {
                                 <option name='"fechado"'>fechado</option>
                                 <option name='"todos"'>todos</option>
                             </NativeSelect>
-                          
+                            <InputLabel>
+                              Página:
+                            </InputLabel>
+                            <Input value={page} type='number' onChange={({target:{value}})=>setPage(value)}/>
+                            <InputLabel>
+                              Itens por página
+                            </InputLabel>
+                            <Input value={limit} type='number' min={1} max={100} onChange={({target:{value}})=>setLimit(value)}/>
                             <Card
                               sx={{ marginY: 1, padding: 1, placeContent: "center", }}
                               elevation={2}
                             >
                               <Typography variant="body2">
-                                {filtroStatus !== "todos"
-                                  ? "Serviços " +
-                                    filtroStatus +
-                                    "s: " +
-                                    servicosStatus.length
-                                  : "Todos os serviços: " + servicosStatus.length}
+                                Página atual: {page}
                               </Typography>
                             </Card>
                             <Card
-                              sx={{ marginY: 1, padding: 1, placeContent: "center" }}
+                              sx={{ marginY: 1, padding: 1, placeContent: "center", }}
                               elevation={2}
                             >
                               <Typography variant="body2">
-                                {filtroTipo !== "todos"
-                                  ? "Serviços de " +
-                                    filtroTipo + ": " +
-                                    servicosTipo.length
-                                  : "Todos os serviços: " + servicosTipo.length}
+                                Páginas: {pageCount}
                               </Typography>
                             </Card>
                         </Stack>
@@ -148,6 +109,7 @@ export default function servicosStatus() {
                         atendentes={atendentes}
                         usuarios={usuarios}
                       />
+                    
                     </Grid>
                     </Grid>
                 </Card>

@@ -232,34 +232,21 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
   app.get('/api/:codfilial/servicos', (req, res) => {
     let uid = req.session.usuarioId
     let user = usuarios.get()[uid]
-    req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
-      user?.cargo == "admin" 
-      ? res.send(chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId))
-      : user?.tipo == "suporte"
-        ? res.send(chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == uid || (chamado.atendenteId || uid) == uid || chamado.usuarioId == uid))
-        : res.send(chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado.autorId == uid || chamado.usuarioId == uid))
-    : res.send("Não autorizado")
-  });
-  
-  app.get('/api/:codfilial/servicos/:tipo/:filtro', (req, res) => {
-    let { tipo, filtro, codfilial } = req.params
-    let { valid, usuarioId: uid } = req.session
-    let user = usuarios.get()[uid]
-    valid 
-    ? filiais.get()
-        .filter(
-          filial=>
-            user
-            ?.filiais
-            .includes(filial.id.toString())
-        ).find(f=>f.codigo==codfilial) 
-      ? user?.cargo == "admin" 
-        ? res.send(chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro))
-        : user?.tipo == "suporte"
-          ? res.send(chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro).filter(chamado => chamado.autorId == uid || (chamado.atendenteId || uid) == uid || chamado.usuarioId == uid))
-          : res.send(chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId).filter(chamado => chamado[tipo] == filtro).filter(chamado => chamado.autorId == uid || chamado.usuarioId == uid))
-      : res.send([])
-    : res.send("Não autorizado")
+    if (!req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) === undefined) res.send("Não autorizado")
+    let {page = 1, limit = 20, filtro : filtros} = req.query
+    let chamados_filtrados = chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId)
+    if (filtros)
+      if (Array.isArray(filtros))
+        for (let filtroUnsplit of filtros) {
+          let [tipo, filtro] = filtroUnsplit.split(',')
+          chamados_filtrados = chamados_filtrados.filter(chamado=>chamado[tipo]==filtro)
+        }
+      else {
+        let [tipo, filtro] = filtros.split(',')
+        chamados_filtrados = chamados_filtrados.filter(chamado=>chamado[tipo]==filtro)
+      }
+    if (user?.cargo != "admin" && user?.tipo != "suporte") chamados_filtrados = chamados_filtrados.filter(chamado => chamado.autorId == uid || chamado.usuarioId == uid)
+    res.send({page: chamados_filtrados.slice((page - 1) * limit, page * limit), pages: Math.ceil(chamados_filtrados.length / limit), count: chamados_filtrados.length})
   });
   
   app.get('/api/:codfilial/servico/:id', (req, res) => {
