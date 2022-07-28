@@ -23,9 +23,9 @@ const SideBar = function (props) {
   const sobe_botao = theme.transitions.create(['left'], {duration: 300, delay: 250})
   const [pendentes, setPendentes] = useState(0)
   const getPendente = async function () {
-    await req("get", "/servicos/status/pendente")
+    await req("get", "/servicos?filtro=status,pendente")
       .then(({data})=>{
-        setPendentes(data.length)
+        setPendentes(data.count)
       }).catch((err)=>{setPendentes(0);console.log(err)})
   }
 
