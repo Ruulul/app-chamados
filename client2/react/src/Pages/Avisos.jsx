@@ -26,14 +26,14 @@ export default function Avisos(props) {
     const redirect = useNavigate()
     useEffect(()=>{
         const getServicos = ()=>{
-            axios("get","/servicos/status/pendente")
-                .then(({data})=>{
-                    data.forEach((servico, index)=>{
+            axios("get","/servicos?filtro=status,pendente")
+                .then(({data:{page}})=>{
+                    page.forEach((servico, index)=>{
                         let criado_em = new Date(servico.createdAt)
                         let prazo = new Date(servico.prazo)
-                        data[index] = {...servico, ...{criado_em, prazo}}
+                        page[index] = {...servico, ...{criado_em, prazo}}
                     })
-                    setServicos(data)
+                    setServicos(page)
                 })
                 .catch(()=>{redirect("/login")})
         }

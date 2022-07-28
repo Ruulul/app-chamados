@@ -7,7 +7,8 @@ import {
     InputLabel,
     Input,
     NativeSelect,
-    Typography
+    Typography,
+    Pagination
 } from "@mui/material";
 import axios from "../Components/Requisicao";
 
@@ -15,6 +16,7 @@ export default function servicosStatus() {
     const [filtroStatus, setStatus] = useState("pendente")
     const [filtroTipo, setTipo] = useState("todos")
     const [servicos, setServicos] = useState([])
+    const [count, setCount] = useState(0)
     const [pageCount, setPages] = useState(0)
     const [page, setPage] = useState(1)
     const [limit, setLimit] = useState(5)
@@ -34,9 +36,10 @@ export default function servicosStatus() {
 
     useEffect(()=>{
       const getServicos = () => axios('get', '/servicos' + query)
-        .then(({data:{page, pages}})=>{
+        .then(({data:{page, pages, count}})=>{
           setServicos(page)
           setPages(pages)
+          setCount(count)
         })
       let handle = setInterval(getServicos, 1000)
       return ()=>clearInterval(handle)
@@ -78,10 +81,6 @@ export default function servicosStatus() {
                                 <option name='"todos"'>todos</option>
                             </NativeSelect>
                             <InputLabel>
-                              Página:
-                            </InputLabel>
-                            <Input value={page} type='number' onChange={({target:{value}})=>setPage(value)}/>
-                            <InputLabel>
                               Itens por página
                             </InputLabel>
                             <Input value={limit} type='number' min={1} max={100} onChange={({target:{value}})=>setLimit(value)}/>
@@ -90,15 +89,7 @@ export default function servicosStatus() {
                               elevation={2}
                             >
                               <Typography variant="body2">
-                                Página atual: {page}
-                              </Typography>
-                            </Card>
-                            <Card
-                              sx={{ marginY: 1, padding: 1, placeContent: "center", }}
-                              elevation={2}
-                            >
-                              <Typography variant="body2">
-                                Páginas: {pageCount}
+                                Total: {count}
                               </Typography>
                             </Card>
                         </Stack>
@@ -109,7 +100,8 @@ export default function servicosStatus() {
                         atendentes={atendentes}
                         usuarios={usuarios}
                       />
-                    
+                     {pageCount > 1 && <Pagination count={pageCount} page={page} onChange={(event, value)=>setPage(value)}
+                     sx={{ul: {placeContent: 'center'}}}/>}
                     </Grid>
                     </Grid>
                 </Card>
