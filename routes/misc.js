@@ -16,7 +16,7 @@ const app = express.Router()
 app.get('/api/:codfilial/monitoring', (req, res) => {
     let atendentes =
       usuarios.get()
-        .filter(usuario => usuario.tipo == "suporte")
+        .filter(usuario => usuario?.tipo == "suporte")
         .map(usuario => ({ id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome, perfil: usuario.fotoPerfil }))
     res.send({
       atendentes,
@@ -27,7 +27,7 @@ app.get('/api/:codfilial/monitoring', (req, res) => {
   app.get('/api/:codfilial/atendentes', (req, res) => {
     let atendentes =
       usuarios.get()
-        .filter(usuario => usuario.tipo == "suporte")
+        .filter(usuario => usuario?.tipo == "suporte")
         .map(usuario => ({ id: usuario.id, nome: usuario.nome, sobrenome: usuario.sobrenome }))
     res.send(atendentes)
   })
