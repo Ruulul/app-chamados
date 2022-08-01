@@ -232,7 +232,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
   app.get('/api/:codfilial/servicos', (req, res) => {
     let uid = req.session.usuarioId
     let user = usuarios.get()[uid]
-    if (!req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) === undefined) res.send("Não autorizado")
+    if (!req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) === undefined) return res.send("Não autorizado")
     let {page = 1, limit = 20, filtro : filtros} = req.query
     let chamados_filtrados = chamados.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId)
     if (filtros)
