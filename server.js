@@ -25,7 +25,8 @@ const {
   variables: {
     filiais,
     usuarios,
-    prisma
+    prisma,
+    metameta
   },
   updaters : {
     updateAll
@@ -88,6 +89,22 @@ app.get('/api/mensagem', (req, res) => {
 });
 
 await updateAll()
+
+import meta_router from './routes/meta.js'
+import processos_router from './routes/processos.js'
+import etapas_router from './routes/etapas.js'
+import dados_router from './routes/dados.js'
+import log_router from './routes/log.js'
+
+app.get('/teste/metametadados', (req, res)=>{
+  res.send(metameta.get())
+})
+
+app.use(meta_router)
+app.use(processos_router)
+app.use(etapas_router)
+app.use(log_router)
+app.use(dados_router)
 
 app.get('/api/:codfilial/', async (req, res)=>{
   let {codfilial} = req.params 

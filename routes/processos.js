@@ -1,0 +1,231 @@
+import express from 'express'
+import memory from '../memory.js'
+const {
+    variables: {
+        processos,
+        etapas,
+        metadados,
+        log,
+        metameta,
+        prisma
+    },
+    updaters: {
+        updateProcessos,
+        updateEtapas,
+        updateMetadados,
+        updateLog,
+        updateMetaMeta
+    },
+} = memory
+
+const model = 'processo'
+await updateMetaMeta()
+var meta = metameta.get()[model]
+meta.campos = metameta.get().campos[model]
+
+const app = express.Router()
+
+app.get('/api/processos', (req, res)=>{
+    if (!req.session.valid) return res.sendStatus(403)
+    res.send(processos.get())
+})
+
+app.get('/api/processos/:tag', (req, res)=>{
+    if (!req.session.valid) return res.sendStatus(403)
+    res.send(
+        processos.get().filter(processo=>processo.Tag==req.params.tag)
+        .map((processo=>{
+            processo.campos = metadados.get().find(dado=>dado.model==='processo' && dado.idModel===processo.id)
+            processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
+            processo.etapa.campos = metadados.get().find(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id)
+            processo.log = []
+            processo.log[0] = log.get().filter(mensagem=>mensagem.idProcesso === processo.id).find(mensagem=>!mensagem.prev)
+            return processo
+        })
+    )
+)})
+
+app.get('/api/processos/:tag/:id', (req, res)=>{
+    if (!req.session.valid) return res.sendStatus(403)
+    let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
+    if (!processo) return req.sendStatus(404)
+    processo.campos = metadados.get().find(dado=>dado.model==='processo' && dado.idModel===processo.id)
+    processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
+    processo.etapa.campos = metadados.get().find(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id)
+    let log_processo = log.get().filter(mensagem=>mensagem.idProcesso === processo.id)
+    processo.log = [log_processo.find(mensagem=>!mensagem.prev)]
+    let next = ()=>processo.log.at(-1).next
+    while (next())processo.log.push(log_processo.find(mensagem=>mensagem.id===next()))
+    res.send(processo)
+})
+
+
+app.post('/api/processos/:tag', async (req, res)=>{
+    let idUsuario = req.session.usuarioId
+    if (!req.session.valid) return res.sendStatus(403)
+    let campos_processo =  meta.campos[req.params.tag]
+    let primeira_etapa_tag = meta[req.params.tag].etapas[0].Tag
+    let campos_etapa = metameta.get().campos.etapa[primeira_etapa_tag]
+    let campos_list = [...campos_etapa, ...campos_processo]
+    let campos_list_names = [...campos_list.map(campo=>campo.campoMeta)]
+    let missing_fields = []
+    let invalid_fields = []
+    for (let campo_name of campos_list_names) {
+        if (!(campo_name in req.body)) {
+            missing_fields.push(campo_name)
+        } else {
+            let campo = campos_list.find(campo=>campo.campoMeta===campo_name) 
+            console.error(campo_name + ': ', campo)
+            if (campo.hasDict)
+                if (!campo.opcoes.includes(req.body[campo_name]))
+                    invalid_fields.push(campo_name)
+        }
+    }
+    if (missing_fields.length > 0 || invalid_fields > 0) {
+        console.error('missing', missing_fields)
+        console.error('invalid', missing_fields)
+        return res.status(400).send('missing ' + missing_fields + ', \ninvalid fields: ' + invalid_fields)
+    }
+    let undo_stuff = []
+    let undo_stuff_id = 0;
+    try {
+        let {id: idProcesso, Tag: tagProcesso} = await prisma.processo.create({
+            data: {
+                Tag: req.params.tag,
+                idUsuario
+            },
+        })
+        undo_stuff.push({id: ++undo_stuff_id, model: 'processo',key_value:[['id', idProcesso]], action: 'delete'})
+        let metadado_templace = {model: 'processo', idModel: idProcesso}
+        await prisma.metadado.createMany({
+            data: Object.keys(meta.campos[tagProcesso]).map(campo=>({...metadado_templace, campo, valor: ''}))
+        })
+        undo_stuff.push({id: ++undo_stuff_id, model: 'metadado', key_value: [['model', 'processo'],['idModel', idProcesso]], action: 'deleteMany'})
+    
+        let {id: idEtapa, Tag: tagEtapa} = await prisma.etapa.create({
+            data: {
+                idProcesso,
+                Tag: meta[tagProcesso].etapas.find(etapa=>!etapa.prev).Tag
+            }
+        })
+        let processo = await prisma.processo.update({
+            where: {id: idProcesso},
+            data: {idEtapaAtual: idEtapa},
+        })
+        undo_stuff.push({id: ++undo_stuff_id, model: 'etapa',key_value:[['id', idEtapa]], action: 'delete'})
+    
+        metadado_templace = {model: 'etapa', idModel: idEtapa}
+        await prisma.metadado.createMany({
+            data: Object.keys(metameta.get().campos.etapa[tagEtapa]).map(campo=>({...metadado_templace, campo, valor: ''}))
+        })
+        undo_stuff.push({id: ++undo_stuff_id, model: 'metadado', key_value: [['model', 'etapa'],['idModel', idEtapa]], action: 'deleteMany'})
+        
+        let {id: idLog} = await prisma.log.create({
+            data: {
+                titulo: req.body.mensagem.titulo,
+                descr: req.body.mensagem.descr,
+                Tag: meta[tagProcesso].mensagemTag,
+                idEtapa,
+                idProcesso,
+                idUsuario
+            }
+        })
+        undo_stuff.push({id: ++undo_stuff_id, model: 'log', 'key_value': [['id', idLog]], action: 'delete'})
+        await Promise.all([
+            updateProcessos(), updateEtapas(), updateMetadados(), updateLog()
+        ])
+        res.send(processo);
+    } catch (e) {
+        console.error('some unexpected error occurred: ', e)
+        while (undo_stuff.length > 0) {
+            for (let op of undo_stuff) {
+                console.error("undoing", op, '\n')
+                await prisma[op.model][op.action]({
+                    where: Object.fromEntries(op.key_value)
+                })
+                .then(()=>undo_stuff=undo_stuff.filter(({id})=>id!=op.id))
+                .then(()=>resetAutoIncrement(op.model))
+                .catch(console.error)
+            }
+        }
+        res.sendStatus(500);
+    }
+})
+
+app.put('/api/processos/:tag/:id', async (req, res)=>{
+    if (!req.session.valid) return res.sendStatus(403)
+    try {
+        let key_value = Object.entries(req.body)
+        for (let [campo, valor] of key_value)
+            if (meta[req.params.tag].includes(campo)) 
+                await prisma.metadado.updateMany({
+                    where:{
+                        model: 'processo',
+                        idModel: parseInt(req.params.id),
+                        campo,
+                        valor
+                    }
+                })
+        res.sendStatus(200);
+    } catch (e) {
+        console.error(e)
+        res.sendStatus(500);
+    }
+})
+
+app.delete('/api/processos/:tag/:id', async (req, res) =>{
+    if (!req.session.valid) return res.sendStatus(403)
+    let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
+    let etapas = await prisma.etapa.findMany({where:{idProcesso:processo.id}})
+    try {
+        let not_done_yet = true;
+        while (not_done_yet)
+        await prisma.$transaction([
+            prisma.processo.deleteMany({where:{id: processo.id}}),
+            prisma.etapa.deleteMany({where:{idProcesso: processo.id}}),
+            prisma.metadado.deleteMany({where:{model: 'processo', idModel: processo.id}}),
+            ...etapas.map(etapa=>prisma.metadado.deleteMany({where:{model: 'etapa', idModel: etapa.id}})),
+            prisma.log.deleteMany({where:{idProcesso: processo.id}}),
+        ]).then(()=>not_done_yet=false)
+        await Promise.all([
+            resetAutoIncrement('processo'),
+            resetAutoIncrement('metadado'),
+            resetAutoIncrement('etapa'),
+            resetAutoIncrement('log')
+        ]).catch(console.error)
+        await Promise.all([
+            updateProcessos(),
+            updateMetadados(),
+            updateEtapas(),
+            updateLog(),
+        ])
+        res.sendStatus(200)
+    } catch {
+        console.error("Ouch")
+        res.sendStatus(500)
+    }
+})
+
+export default app
+
+async function resetAutoIncrement(model) {
+    switch (model) {
+        case 'processo':
+                await prisma.$executeRawUnsafe(`alter table processo modify id INT;`)
+                await prisma.$executeRawUnsafe(`alter table processo modify id INT auto_increment;`)
+            break;
+        case 'etapa':
+                await prisma.$executeRawUnsafe(`alter table etapa modify id INT;`)
+                await prisma.$executeRawUnsafe(`alter table etapa modify id INT auto_increment;`)
+            break;
+        case 'metadado':
+                await prisma.$executeRawUnsafe(`alter table metadado modify id INT;`)
+                await prisma.$executeRawUnsafe(`alter table metadado modify id INT auto_increment;`)
+            break;
+        case 'log':
+                await prisma.$executeRawUnsafe(`alter table log modify id INT;`)
+                await prisma.$executeRawUnsafe(`alter table log modify id INT auto_increment;`)
+            break;
+        default: console.error("Unknown model")
+    }
+}

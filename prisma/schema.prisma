@@ -92,8 +92,6 @@ model Usuario {
   chamados  Chamado[]
   mensagems Mensagem[]
   metadados MetadadoUsuario[]
-  processos Processo[]
-  registros Log[]
   Filial    Filial            @relation(fields: [filialId], references: [id])
   filialId  Int               @default(1)
 }
@@ -133,10 +131,8 @@ model Processo {
   id            Int       @id @default(autoincrement())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  registro      Log[]
-  idEtapaAtual  Int
+  idEtapaAtual  Int?
   Tag           String    @db.VarChar(30)
-  usuario       Usuario   @relation(fields: [idUsuario], references: [id])
   idUsuario     Int
   //metadados   Metadado[]
 }
@@ -145,14 +141,13 @@ model Log {
   id            Int       @id @default(autoincrement())
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  usuario       Usuario   @relation(fields: [idUsuario], references: [id])
   idUsuario     Int
   titulo        String    @db.VarChar(255)
   descr         String    @db.VarChar(1000)
-  processo      Processo  @relation(fields: [idProcesso], references: [id]) 
   idProcesso    Int
-  etapa         Etapa     @relation(fields: [idEtapa], references: [id])
   idEtapa       Int
+  next          Int?
+  prev          Int?
   Tag           String    @db.VarChar(30)
   //metadados   Metadado[]
 }
@@ -163,7 +158,6 @@ model Etapa {
   prev          Int?
   next          Int?
   idProcesso    Int 
-  registros     Log[]
   //metadados   Metadado[]
 }
 
@@ -177,27 +171,23 @@ model Metadado {
 
 model ProcessoMeta {
   Tag           String     @unique @db.VarChar(30)
-  processoId    Int
-  Etapas        EtapaMeta[]
   mensagemTag   String
   //campos      CampoMeta[]
 }
 
 model EtapaMeta {
   id            Int        @id @default(autoincrement())
-  Tag           String     @unique @db.VarChar(30)
+  Tag           String     @db.VarChar(30)
   //multiplo      Boolean Não há razão para esse campo: se dept é null, claramente é uma etapa de múltiplos departamentos
   complexo      Boolean
   dept          Int?
-  depts         EtapaMetaListDept[]
+  prev          Int?
   next          Int?
-  processo      ProcessoMeta @relation(fields: [processoTag], references: [Tag])
   processoTag   String       @db.VarChar(30)
   //campos      CampoMeta[]
 }
 model EtapaMetaListDept {
   id            Int       @id @default(autoincrement())
-  etapa         EtapaMeta @relation(fields: [idEtapa], references: [id])
   idEtapa       Int
   dept          Int
   //campos      CampoMeta[]
@@ -210,17 +200,16 @@ model MensagemMeta {
 
 model CampoMeta {
   id            Int       @id @default(autoincrement())
+  campoMeta     String    @db.VarChar(30)
   model         String    @db.VarChar(30)
   tagModel      String    @db.VarChar(30)
   tipo          String    @db.VarChar(30)
   hasDict       Boolean
-  opcoes        CampoMetaOpcao[]
   notifica      Boolean
 }
 
 model CampoMetaOpcao {
   id            Int        @id @default(autoincrement())
-  campoMeta     CampoMeta  @relation(fields: [idCampoMeta], references: [id])
   idCampoMeta   Int
   opcao         String     @db.VarChar(30)
 }
