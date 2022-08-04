@@ -1,18 +1,170 @@
 import express from 'express'
 import memory from '../memory.js'
+import { invalidateFieldsAndReject, invalidateFields, resetAutoIncrement } from './utils.js'
 
 const {
     variables: {
+        usuarios,
+        etapas,
+        processos,
+        log,
+        metadados,
+        metameta,
+        prisma
     },
     updaters: {
+        updateEtapas,
+        updateProcessos,
+        updateLog,
+        updateMetadados,
+        updateMetaMeta
     }
 } = memory
 
+const model = 'etapa'
+await updateMetaMeta()
+var meta = metameta.get()[model]
+var untagged_meta = Object.entries(meta).map(etapa=>({Tag: etapa[0], ...etapa[1]}))
+meta.campos = metameta.get().campos[model]
+
 const app = express.Router()
 
-app.get('/api/etapas/:tag')
-app.get('/api/etapas/:tag/:id')
-app.post('/api/etapas/:tag')
-app.put('/api/etapas/:tag/:id')
+app.get('/api/processos/:tagProcesso/:idProcesso/etapas', async (req, res)=>{
+    try {
+        res.send(
+            etapas.get().filter(etapa=>etapa.idProcesso===parseInt(req.params.idProcesso))
+            .map(etapa=>({...etapa, campos:metadados.get().filter(dado=>dado.model==='etapa'&&dado.idModel===etapa.id)}))
+        )
+    } catch {
+        res.sendStatus(400)
+    }
+})
+app.get('/api/processos/:tagProcesso/:idProcesso/etapas')
+app.get('/api/processos/:tagProcesso/:idProcesso/etapas/:tag')
+app.get('/api/processos/:tagProcesso/:idProcesso/etapas/:tag/:id')
+app.post('/api/processos/:tagProcesso/:idProcesso/etapas/:id_etapaMeta', async (req, res)=>{
+    /**Lista de passos de manipulações do BD que devem ser desfeitos em alguma falha */
+    let undo_stuff = []
+    let idud = 0
+    try {
+        /**O processo que está indo a uma nova etapa */
+        let processo = processos.get().find(processo=>processo.id===parseInt(req.params.idProcesso))
+        if (processo.Tag != req.params.tagProcesso) return res.sendStatus(400)
+        let meta_processo = metameta.get().processo[processo.Tag]
+        /**Valida os params do request */
+        if (!meta_processo || !processo) return res.sendStatus(400)
+
+        let etapa_atual = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
+        let meta_etapa = meta[etapa_atual.Tag]
+        
+        let id_params = parseInt(req.params.id_etapaMeta)
+        let meta_etapa_next_from_req = untagged_meta.find(etapa=>etapa.id===id_params)
+        let meta_etapa_next_from_meta = meta_processo.etapas.find(etapa=>etapa.id===meta_etapa.next)
+        
+        let meta_etapa_next;
+        if (meta_etapa_next_from_meta?.id === id_params)
+            meta_etapa_next = meta_etapa_next_from_meta
+        else if (meta_etapa.complex &&meta_etapa_next_from_req?.id === meta_etapa.id)
+            meta_etapa_next = meta_etapa_next_from_req
+        else return res.sendStatus(400)
+        
+        let campos = meta.campos[meta_etapa_next.Tag]
+        if (!campos) return res.sendStatus(500)
+        let message = invalidateFieldsAndReject(campos, req.body)
+        if (message) return res.status(400).send(message)
+
+        let etapa_next = await prisma.etapa.create({
+            data: {
+                idProcesso: processo.id,
+                Tag: meta_etapa_next.Tag,
+                prev: etapa_atual.id,
+            }
+        })
+        undo_stuff = {id: ++idud, model: 'etapa', where: [['id', etapa_next.id]], action: 'delete'}
+
+        await prisma.etapa.update({
+            where: {
+                id: etapa_atual.id
+            },
+            data: {
+                next: etapa_next.id
+            }
+        })
+        undo_stuff = {id: ++idud, model: 'etapa', where: [['id', etapa_atual.id]], data: {next: null}, action: 'update'}
+        
+        await prisma.metadado.createMany({
+            data: campos.map(option=>({
+                model: 'etapa',
+                idModel: etapa_next.id,
+                campo: option.campoMeta,
+                valor: req.body[option.campoMeta].toString()
+            }))
+        })
+        undo_stuff = {id: ++idud, model: 'metadado', where: [['idModel', etapa_next.id],['model', 'etapa']], action: 'deleteMany'}
+
+        await prisma.processo.update({
+            where: {
+                id: processo.id
+            },
+            data: {
+                idEtapaAtual: etapa_next.id
+            }
+        })
+        undo_stuff = {id: ++idud, model: 'processo', where: [['id', processo.id]], data: {idEtapaAtual: processo.idEtapaAtual}, action: 'update'}
+
+        await Promise.all([
+            updateEtapas(),
+            updateMetadados(),
+            updateProcessos(),
+        ])
+        res.send(etapas.get().find(etapa=>etapa.id===etapa_next.id))
+    } catch (e) {
+        console.error('some unexpected error occurred: ', e)
+        while (undo_stuff.length > 0) {
+            for (let op of undo_stuff) {
+                console.error("undoing", op, '\n')
+                await prisma[op.model][op.action]({
+                    where: Object.fromEntries(op.where),
+                    data: op.data
+                })
+                .then(()=>undo_stuff=undo_stuff.filter(({id})=>id!=op.id))
+                .then(()=>resetAutoIncrement(op.model, prisma))
+                .catch(console.error)
+            }
+        }
+        res.sendStatus(500);
+    }
+})
+app.put('/api/processos/:tagProcesso/:idProcesso/etapas/:tag/:id', async (req, res)=>{
+    if (!req.session.valid) return res.sendStatus(403)
+    let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id))
+    if (!etapa || etapa.Tag !== req.params.tag) return res.sendStatus(400)
+    let campos = meta.campos[etapa.Tag]
+    if (!campos) return res.sendStatus(500)
+    
+    if (invalidateFields(campos, req.body)) return res.sendStatus(400)
+    
+    try {
+        let key_value = Object.entries(req.body)
+        for (let [campo, valor] of key_value)
+            if (meta.campos[req.params.tag].includes(campo)) 
+                await prisma.metadado.updateMany({
+                    where:{
+                        model: 'etapa',
+                        idModel: parseInt(req.params.id),
+                        campo
+                    },
+                    data: {
+                        valor: valor.toString()
+                    }
+                })
+        res.sendStatus(200);
+    } catch (e) {
+        console.error(e)
+        res.sendStatus(500);
+    }
+})
+app.post('/api/processos/:tagProcesso/:idProcesso/etapas/:id/mensagem')
+app.put('/api/processos/:tagProcesso/:idProcesso/etapas/:tag/:id/mensagem/:id_msg')
 
 export default app
