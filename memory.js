@@ -22,11 +22,11 @@ export default {
       filiais:{
           get: ()=>Array.isArray(filiais) ? [...filiais] : []
       },
-      metameta:{get:()=>JSON.parse(JSON.stringify(metameta))},
-      processos:{get:()=>JSON.parse(JSON.stringify(processos))},
-      etapas:{get:()=>JSON.parse(JSON.stringify(etapas))},
-      metadados:{get:()=>JSON.parse(JSON.stringify(metadados))},
-      log:{get:()=>JSON.parse(JSON.stringify(log))},
+      metameta:{get:/**@return {MetaMeta}*/()=>JSON.parse(JSON.stringify(metameta))},
+      processos:{get:/**@return {import('@prisma/client').Processo[]}*/()=>JSON.parse(JSON.stringify(processos))},
+      etapas:{get:/**@return {import('@prisma/client').Etapa[]}*/()=>JSON.parse(JSON.stringify(etapas))},
+      metadados:{get:/**@return {import('@prisma/client').Metadado[]}*/()=>JSON.parse(JSON.stringify(metadados))},
+      log:{get:/**@return {import('@prisma/client').Log[]}*/()=>JSON.parse(JSON.stringify(log))},
       prisma
   },
   updaters: {
@@ -90,27 +90,33 @@ var departamentos = "vazio"
 /** @type {string | import('@prisma/client').Filial[]} */
 var filiais = "vazio"
 /** 
- * @type {string | {{
+ * @typedef {{
  *    processo: import('@prisma/client').ProcessoMeta[], 
  *    etapa: import('@prisma/client').EtapaMeta[], 
  *    log: import('@prisma/client').MensagemMeta[], 
  *    campos: import('@prisma/client').CampoMeta[]
- *    }}
- * } 
+ *    }
+ * } MetaMeta
+ * 
+ * @type {MetaMeta}
  * */
 var metameta = "vazio"
+/**@type {import('@prisma/client').Processo} */
 var processos = "vazio"
 async function updateProcessos () {
   processos = await getModelData('processo');
 }
+/**@type {import('@prisma/client').Etapa} */
 var etapas = "vazio"
 async function updateEtapas () {
   etapas = await getModelData('etapa');
 }
+/**@type {import('@prisma/client').Log} */
 var log = "vazio"
 async function updateLog () {
   log = await getModelData('log');
 }
+/**@type {import('@prisma/client').Metadado} */
 var metadados = "vazio"
 async function updateMetadados () {
   metadados = await getModelData('metadado');
