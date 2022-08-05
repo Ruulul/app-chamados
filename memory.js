@@ -328,12 +328,16 @@ async function getEtapasMeta () {
 
   for (let etapa of etapas) {
     if (etapa.dept) {
-      etapa.dept = await prisma.departamento.findUnique({where: {id: etapa.dept}});
+      let dept = await prisma.departamento.findUnique({where: {id: etapa.dept}});
+      if (dept) dept.email = await prisma.metadado.findFirst({where: {model: 'departamento', idModel: dept.id, campo: 'email'}})
+      etapa.dept = dept
     }
     else {
       etapa.depts = await prisma.etapaMetaListDept.findMany({where: {idEtapa: etapa.id}});
       for (let i in etapa.depts) {
-         etapa.depts[i] = await prisma.departamento.findUnique({where: {id: etapa.depts[i].dept}});
+        let dept = await prisma.departamento.findUnique({where: {id: etapa.depts[i].dept}});
+        if (dept) dept.email = await prisma.metadado.findFirst({where: {model: 'departamento', idModel: dept.id, campo: 'email'}})
+        etapa.depts[i] = dept
       }
     }
   }
@@ -347,7 +351,6 @@ async function getLogMeta () {
 }
 
 async function getModelData (model) {
-  console.error("Getting model of", model)
   let data = await prisma[model].findMany();
   return data;
 }

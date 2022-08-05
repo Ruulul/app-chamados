@@ -11,17 +11,17 @@ const {
 
 const app = express.Router()
 
-app.get('/api/meta/:model', (req, res)=>{
+app.get('/api/:filial/meta/:model', (req, res)=>{
     res.send(metaFromModel(req.params.model))
 })
-app.get('/api/meta/:model/campos', (req, res)=>{
+app.get('/api/:filial/meta/:model/campos', (req, res)=>{
     res.send(metaCamposFromModel(req.params.model))
 })
 
-app.get('/api/meta/:model/:tag', (req, res)=>{
+app.get('/api/:filial/meta/:model/:tag', (req, res)=>{
     res.send(metaFromModel(req.params.model)[req.params.tag])
 })
-app.get('/api/meta/:model/:tag/campos', (req, res)=>{
+app.get('/api/:filial/meta/:model/:tag/campos', (req, res)=>{
     res.send(metaCamposFromModel(req.params.model)[req.params.tag])
 })
 export default app

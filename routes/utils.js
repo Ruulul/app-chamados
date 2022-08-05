@@ -1,17 +1,43 @@
 /**
  * 
+ * @param {{
+ * id: any, 
+ * model: string, 
+ * where: [][], 
+ * action: ('delete' | 'deleteMany' | 'update' | 'updateMany' | 'create' | 'createMany'), 
+ * data?: Object
+ * }[]} undo_stuff 
+ * @param {*} prisma 
+ */
+export async function undoStuff(undo_stuff, prisma) {
+    while (undo_stuff.length > 0) {
+        for (let op of undo_stuff) {
+            console.error("undoing", op, '\n')
+            await prisma[op.model][op.action]({
+                where: Object.fromEntries(op.where),
+                data: op.data
+            })
+            .then(()=>undo_stuff=undo_stuff.filter(({id})=>id!=op.id))
+            .then(()=>resetAutoIncrement(op.model, prisma))
+            .catch(console.error)
+        }
+    }
+}
+
+/**
+ * 
  * @param {import('@prisma/client').CampoMeta[]} campos_list 
- * @returns {undefined | {missing: string[], invalid: string[]}}
+ * @returns {undefined | string}
  */
 export function invalidateFieldsAndReject(campos_list, body) {
     let invalidation = invalidateFields(campos_list, body)
     if (invalidation) {
         let message = 
         `
-        Invalid Request.
-        Missing/Invalid fields.
-        Missing: ${invalidation.missing}
-        Invalid: ${invalidation.invalid}
+        Invalid Request.<br>
+        Missing/Invalid fields.<br>
+        Missing: ${invalidation.missing}<br>
+        Invalid: ${invalidation.invalid}<br>
         `
         return message
     }

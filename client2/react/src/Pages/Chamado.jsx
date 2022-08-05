@@ -575,7 +575,7 @@ const Mensagem = (props) => {
                       Não pudemos exibir o arquivo.
                     </div>
                   </object>
-                  <a href={anexo?.data} target='_blank'><Typography>Abrir arquivo</Typography></a>
+                  <a href={anexo} target='_blank'><Typography>Abrir arquivo</Typography></a>
                 </>
             : <Typography>Carregando...</Typography>
       }

@@ -1,6 +1,6 @@
 import express from 'express'
 import memory from '../memory.js'
-import { invalidateFields, resetAutoIncrement } from './utils.js'
+import { invalidateFields, resetAutoIncrement, undoStuff } from './utils.js'
 const {
     variables: {
         usuarios,
@@ -27,18 +27,18 @@ meta.campos = metameta.get().campos[model]
 
 const app = express.Router()
 
-app.get('/api/processos', (req, res)=>{
+app.get('/api/:filial/processos', (req, res)=>{
     let user = usuarios.get()[req.session.usuarioId]
     if (!req.session.valid || user.cargo != 'admin') return res.sendStatus(403)
     res.send(processos.get())
 })
 
-app.get('/api/processos/:tag', (req, res)=>{
+app.get('/api/:filial/processos/:tag', (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     res.send(
         processos.get().filter(processo=>processo.Tag==req.params.tag)
         .map((processo=>{
-            processo.campos = metadados.get().find(dado=>dado.model==='processo' && dado.idModel===processo.id)
+            processo.campos = metadados.get().filter(dado=>dado.model==='processo' && dado.idModel===processo.id)
             processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
             processo.etapa.campos = metadados.get().filter(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id).map(dado=>[dado.campo, dado.valor])
             processo.log = []
@@ -48,13 +48,13 @@ app.get('/api/processos/:tag', (req, res)=>{
     )
 )})
 
-app.get('/api/processos/:tag/:id', (req, res)=>{
+app.get('/api/:filial/processos/:tag/:id', (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
     if (!processo) return res.sendStatus(404)
-    processo.campos = metadados.get().find(dado=>dado.model==='processo' && dado.idModel===processo.id)
+    processo.campos = metadados.get().filter(dado=>dado.model==='processo' && dado.idModel===processo.id)
     processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
-    processo.etapa.campos = metadados.get().find(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id)
+    processo.etapa.campos = metadados.get().filter(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id)
     let log_processo = log.get().filter(mensagem=>mensagem.idProcesso === processo.id)
     processo.log = [log_processo.find(mensagem=>!mensagem.prev)]
     let next = ()=>processo.log.at(-1).next
@@ -63,7 +63,7 @@ app.get('/api/processos/:tag/:id', (req, res)=>{
 })
 
 
-app.post('/api/processos/:tag', async (req, res)=>{
+app.post('/api/:filial/processos/:tag', async (req, res)=>{
     let idUsuario = req.session.usuarioId
     if (!req.session.valid) return res.sendStatus(403)
 
@@ -71,14 +71,19 @@ app.post('/api/processos/:tag', async (req, res)=>{
     let primeira_etapa_tag = meta[req.params.tag].etapas[0].Tag
     let campos_etapa = metameta.get().campos.etapa[primeira_etapa_tag]
     let campos_list = [...campos_etapa, ...campos_processo]
+
+    let meta_etapa1 = meta[req.params.tag].etapas.find(etapa=>!etapa.prev)
     let invalidation = invalidateFields(campos_list, req.body)
-    if (invalidation) {
+    if (invalidation || 
+        !('mensagem' in req.body) || 
+        !('dept' in req.body) || 
+        !(meta_etapa1.dept || metameta.get().etapa[meta_etapa1.Tag].depts.map(dept=>dept.id).includes(req.body.dept))) {
         let message = 
         `
-        Invalid Request.
-        Missing/Invalid fields.
-        Missing: ${invalidation.missing}
-        Invalid: ${invalidation.invalid}
+        Invalid Request.<br>
+        Missing/Invalid fields.<br>
+        Missing: ${invalidation?.missing}<br>
+        Invalid: ${invalidation?.invalid}<br>
         `
         return res.status(400).send(message)
     }
@@ -97,14 +102,15 @@ app.post('/api/processos/:tag', async (req, res)=>{
         undo_stuff.push({id: ++undo_stuff_id, model: 'processo',where:[['id', idProcesso]], action: 'delete'})
         let metadado_templace = {model: 'processo', idModel: idProcesso}
         await prisma.metadado.createMany({
-            data: Object.keys(meta.campos[tagProcesso]).map(campo=>({...metadado_templace, campo, valor: ''}))
+            data: meta.campos[tagProcesso].map(({campoMeta})=>({...metadado_templace, campo: campoMeta, valor: req.body[campoMeta].toString()}))
         })
         undo_stuff.push({id: ++undo_stuff_id, model: 'metadado', where: [['model', 'processo'],['idModel', idProcesso]], action: 'deleteMany'})
     
         let {id: idEtapa, Tag: tagEtapa} = await prisma.etapa.create({
             data: {
                 idProcesso,
-                Tag: meta[tagProcesso].etapas.find(etapa=>!etapa.prev).Tag
+                Tag: meta_etapa1.Tag,
+                dept: meta_etapa1.dept || parseInt(req.body.dept)
             }
         })
         let processo = await prisma.processo.update({
@@ -144,23 +150,12 @@ app.post('/api/processos/:tag', async (req, res)=>{
         res.send(processo);
     } catch (e) {
         console.error('some unexpected error occurred: ', e)
-        while (undo_stuff.length > 0) {
-            for (let op of undo_stuff) {
-                console.error("undoing", op, '\n')
-                await prisma[op.model][op.action]({
-                    where: Object.fromEntries(op.where),
-                    data: op.data
-                })
-                .then(()=>undo_stuff=undo_stuff.filter(({id})=>id!=op.id))
-                .then(()=>resetAutoIncrement(op.model, prisma))
-                .catch(console.error)
-            }
-        }
+        await undoStuff(undo_stuff, prisma)
         res.sendStatus(500);
     }
 })
 
-app.put('/api/processos/:tag/:id', async (req, res)=>{
+app.put('/api/:filial/processos/:tag/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     try {
         let key_value = Object.entries(req.body)
@@ -186,6 +181,7 @@ app.put('/api/processos/:tag/:id', async (req, res)=>{
 app.delete('/api/processos/:tag/:id', async (req, res) =>{
     if (!req.session.valid || usuarios.get()[req.session.usuarioId].cargo != 'admin') return res.sendStatus(403)
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
+    if (!processo) return res.sendStatus(200)
     let etapas = await prisma.etapa.findMany({where:{idProcesso:processo.id}})
     try {
         let not_done_yet = true;
