@@ -158,6 +158,7 @@ model Etapa {
   prev          Int?
   next          Int?
   idProcesso    Int 
+  dept          Int?
   //metadados   Metadado[]
 }
 
