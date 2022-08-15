@@ -67,6 +67,12 @@ export function invalidateFields(campos_list, body) {
     return thing
 }
 
+//TODO
+export function authorize(req, level) {
+    _ = req;
+    _ = level;
+    return true;
+}
 
 export async function resetAutoIncrement(model, prisma) {
     switch (model) {

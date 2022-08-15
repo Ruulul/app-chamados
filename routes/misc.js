@@ -85,7 +85,6 @@ app.get('/api/:codfilial/:model/:tag/:id/:campo', async (req, res) => {
   if (!request_field) return res.sendStatus(400);
   let fields_meta = metameta.get().campos[model][tag];
   let field_meta = fields_meta.find(field=>field.campoMeta==campo);
-  console.error(field_meta)
   switch (field_meta.tipo) {
     case 'number':
     case 'email':
@@ -96,12 +95,12 @@ app.get('/api/:codfilial/:model/:tag/:id/:campo', async (req, res) => {
     case 'anexo':
       try {
         let files = []
-        for (let file of metadados.get().filter(metadado=>metadado.campo===campo&&metadado.model===model&&metadado.idModel===id).map(anexo=>anexo.valor)) {
-          let data_raw = await fs_promises.readFile(path.resolve('files/', file))
+        for (let file of metadados.get().filter(metadado=>metadado.campo===campo&&metadado.model===model&&metadado.idModel===id)) {
+          let data_raw = await fs_promises.readFile(path.resolve('files/', file.valor))
           let buffer_from_raw = Buffer.from(data_raw)
           let mime = await fileTypeFromBuffer(buffer_from_raw)
           let url_base64 = `data:${mime};base64,` + buffer_from_raw.toString('base64')
-          files.push(url_base64)
+          files.push({ id: file.id, filename: file.valor, data: url_base64 })
         }
         res.send(files)
       } catch (e) {

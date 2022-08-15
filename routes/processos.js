@@ -29,32 +29,22 @@ const app = express.Router()
 
 app.get('/api/:filial/processos', (req, res)=>{
     let user = usuarios.get()[req.session.usuarioId]
-    if (!req.session.valid || user.cargo != 'admin') return res.sendStatus(403)
-    res.send(processos.get())
+    if (!req.session.valid) return res.sendStatus(403)
+    if (user.cargo === 'admin' || user.tipo === 'suporte') //TODO: atendente do departamento
+        res.send(processos.get().map(addCamposProcesso))
+    else res.send(processos.get().filter(processo=>processo.idUsuario===user.id).map(addCamposProcesso))
 })
 
 app.get('/api/:filial/processos/:tag', (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
-    res.send(
-        processos.get().filter(processo=>processo.Tag==req.params.tag)
-        .map((processo=>{
-            processo.campos = metadados.get().filter(dado=>dado.model==='processo' && dado.idModel===processo.id)
-            processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
-            processo.etapa.campos = metadados.get().filter(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id).map(dado=>[dado.campo, dado.valor])
-            processo.log = []
-            processo.log[0] = log.get().filter(mensagem=>mensagem.idProcesso === processo.id).find(mensagem=>!mensagem.prev)
-            return processo
-        })
-    )
-)})
+    res.send(processos.get().filter(processo=>processo.Tag==req.params.tag).map(addCamposProcesso))
+})
 
 app.get('/api/:filial/processos/:tag/:id', (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
     if (!processo) return res.sendStatus(404)
-    processo.campos = metadados.get().filter(dado=>dado.model==='processo' && dado.idModel===processo.id)
-    processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
-    processo.etapa.campos = metadados.get().filter(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id)
+    processo = addCamposProcesso(processo);
     let log_processo = log.get().filter(mensagem=>mensagem.idProcesso === processo.id)
     processo.log = [log_processo.find(mensagem=>!mensagem.prev)]
     let next = ()=>processo.log.at(-1).next
@@ -67,12 +57,14 @@ app.post('/api/:filial/processos/:tag', async (req, res)=>{
     let idUsuario = req.session.usuarioId
     if (!req.session.valid) return res.sendStatus(403)
 
-    let campos_processo =  meta.campos[req.params.tag]
-    let primeira_etapa_tag = meta[req.params.tag].etapas[0].Tag
+    let campos_processo =  metameta.get().campos.processo[req.params.tag]
+    let primeira_etapa_tag = metameta.get().processo[req.params.tag]?.etapas[0].Tag
     let campos_etapa = metameta.get().campos.etapa[primeira_etapa_tag]
+    if ([campos_processo, primeira_etapa_tag, campos_etapa].includes(undefined)) return res.sendStatus(400)
     let campos_list = [...campos_etapa, ...campos_processo]
 
     let meta_etapa1 = meta[req.params.tag].etapas.find(etapa=>!etapa.prev)
+    console.error(meta_etapa1)
     let invalidation = invalidateFields(campos_list, req.body)
     if (invalidation || 
         !('mensagem' in req.body) || 
@@ -213,3 +205,17 @@ app.delete('/api/processos/:tag/:id', async (req, res) =>{
 })
 
 export default app
+
+/**
+ * 
+ * @param {import('@prisma/client').Processo} processo 
+ * @returns 
+ */
+function addCamposProcesso (processo) {
+    processo.campos = metadados.get().filter(dado=>dado.model==='processo' && dado.idModel===processo.id)
+    processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
+    processo.etapa.campos = metadados.get().filter(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id).map(dado=>[dado.campo, dado.valor])
+    processo.log = []
+    processo.log[0] = log.get().filter(mensagem=>mensagem.idProcesso === processo.id).find(mensagem=>!mensagem.prev)
+    return processo
+}

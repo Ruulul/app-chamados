@@ -1,6 +1,6 @@
 import express from 'express'
 import memory from '../memory.js'
-import { invalidateFieldsAndReject, invalidateFields, resetAutoIncrement, undoStuff } from './utils.js'
+import { invalidateFieldsAndReject, invalidateFields, undoStuff } from './utils.js'
 
 const {
     variables: {
@@ -125,21 +125,11 @@ app.post('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:id_etapaMeta',
         res.send(etapas.get().find(etapa=>etapa.id===etapa_next.id))
     } catch (e) {
         console.error('some unexpected error occurred: ', e)
-        while (undo_stuff.length > 0) {
-            for (let op of undo_stuff) {
-                console.error("undoing", op, '\n')
-                await prisma[op.model][op.action]({
-                    where: Object.fromEntries(op.where),
-                    data: op.data
-                })
-                .then(()=>undo_stuff=undo_stuff.filter(({id})=>id!=op.id))
-                .then(()=>resetAutoIncrement(op.model, prisma))
-                .catch(console.error)
-            }
-        }
+        undoStuff(undo_stuff, prisma)
         res.sendStatus(500);
     }
 })
+
 app.put('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:tag/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id))
