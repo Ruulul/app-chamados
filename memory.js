@@ -1,5 +1,6 @@
 import prisma_pkg from '@prisma/client'
 import { createInterface } from 'readline'
+import { resetAutoIncrement } from './routes/utils.js'
 const { PrismaClient } = prisma_pkg
 const prisma = new PrismaClient()
 export default {
@@ -352,5 +353,6 @@ async function getLogMeta () {
 
 async function getModelData (model) {
   let data = await prisma[model].findMany();
+  resetAutoIncrement(model, prisma);
   return data;
 }

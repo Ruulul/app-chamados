@@ -1,5 +1,6 @@
 import express from 'express'
 import memory from '../memory.js'
+import { deleteCampo, getCampo } from './misc.js'
 import { invalidateFields, resetAutoIncrement, undoStuff } from './utils.js'
 const {
     variables: {
@@ -27,7 +28,7 @@ meta.campos = metameta.get().campos[model]
 
 const app = express.Router()
 
-app.get('/api/:filial/processos', (req, res)=>{
+app.get('/api/:filial/processo', (req, res)=>{
     let user = usuarios.get()[req.session.usuarioId]
     if (!req.session.valid) return res.sendStatus(403)
     if (user.cargo === 'admin' || user.tipo === 'suporte') //TODO: atendente do departamento
@@ -35,12 +36,12 @@ app.get('/api/:filial/processos', (req, res)=>{
     else res.send(processos.get().filter(processo=>processo.idUsuario===user.id).map(addCamposProcesso))
 })
 
-app.get('/api/:filial/processos/:tag', (req, res)=>{
+app.get('/api/:filial/processo/:tag', (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     res.send(processos.get().filter(processo=>processo.Tag==req.params.tag).map(addCamposProcesso))
 })
 
-app.get('/api/:filial/processos/:tag/:id', (req, res)=>{
+app.get('/api/:filial/processo/:tag/:id', (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
     if (!processo) return res.sendStatus(404)
@@ -53,7 +54,7 @@ app.get('/api/:filial/processos/:tag/:id', (req, res)=>{
 })
 
 
-app.post('/api/:filial/processos/:tag', async (req, res)=>{
+app.post('/api/:filial/processo/:tag', async (req, res)=>{
     let idUsuario = req.session.usuarioId
     if (!req.session.valid) return res.sendStatus(403)
 
@@ -147,7 +148,7 @@ app.post('/api/:filial/processos/:tag', async (req, res)=>{
     }
 })
 
-app.put('/api/:filial/processos/:tag/:id', async (req, res)=>{
+app.put('/api/:filial/processo/:tag/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     try {
         let key_value = Object.entries(req.body)
@@ -170,12 +171,51 @@ app.put('/api/:filial/processos/:tag/:id', async (req, res)=>{
     }
 })
 
-app.delete('/api/processos/:tag/:id', async (req, res) =>{
+app.delete('/api/processo/:tag/:id', async (req, res) =>{
     if (!req.session.valid || usuarios.get()[req.session.usuarioId].cargo != 'admin') return res.sendStatus(403)
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
     if (!processo) return res.sendStatus(200)
     let etapas = await prisma.etapa.findMany({where:{idProcesso:processo.id}})
+    let anexos_processo = await getCampo({ model: 'processo', idModel: processo.id, tag: processo.Tag, campo: 'anexo'})
+    if (anexos_processo instanceof Error) {
+        if (anexos_processo.message !== "Sem campo requisitado")
+        return res.sendStatus(400)
+    }
+    else anexos_processo = anexos_processo.map(({id})=>({id, model: 'processo', idModel: processo.id, tag: processo.Tag, campo: 'anexo'}))
+    let anexos_etapa = []
+    let anexos_log = []
+    for (let etapa of etapas) {
+        let inner_anexos = await getCampo({ model: 'etapa', idModel: etapa.id, tag: etapa.Tag, campo: 'anexo' })
+        if (inner_anexos instanceof Error)
+            if (inner_anexos.message === "Sem campo requisitado") continue
+            else {
+                console.error(inner_anexos)
+                continue
+            }
+        anexos_etapa = anexos_etapa.concat(inner_anexos).map(({id})=>({id, model: 'etapa', idModel: etapa.id, tag: etapa.Tag, campo: 'anexo'}))
+        let logs = log.get().filter(log=>log.idEtapa===etapa.id)
+        for (let log of logs) {
+            let inner_anexos = await getCampo({ model: 'log', idModel: log.id, tag: log.Tag, campo: 'anexo' })
+            if (inner_anexos instanceof Error)
+                if (inner_anexos.message === "Sem campo requisitado") continue
+                else {
+                    console.error(inner_anexos)
+                    continue
+                }
+            anexos_log = anexos_log.concat(inner_anexos).map(({id})=>({id, model: 'log', idModel: log.id, tag: log.Tag, campo: 'anexo'}))
+        }
+    }
+    let anexos = []
+    for (let array of [anexos_processo, anexos_etapa, anexos_log])
+        if (Array.isArray(array)) anexos = anexos.concat(array)
     try {
+        while (anexos.length > 0) {
+            for (let anexo of anexos) {
+                let return_value = await deleteCampo(anexo)
+                if (return_value instanceof Error) continue
+                anexos = anexos.filter(anex=>anex.id !== anexo.id)
+            }
+        }
         let not_done_yet = true;
         while (not_done_yet)
         await prisma.$transaction([

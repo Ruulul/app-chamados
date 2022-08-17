@@ -29,7 +29,7 @@ meta.campos = metameta.get().campos[model]
 
 const app = express.Router()
 
-app.get('/api/processos/:tagProcesso/:idProcesso/etapas', async (req, res)=>{
+app.get('/api/processo/:tagProcesso/:idProcesso/etapa', async (req, res)=>{
     try {
         res.send(
             etapas.get().filter(etapa=>etapa.idProcesso===parseInt(req.params.idProcesso))
@@ -42,10 +42,30 @@ app.get('/api/processos/:tagProcesso/:idProcesso/etapas', async (req, res)=>{
         res.sendStatus(400)
     }
 })
-app.get('/api/processos/:tagProcesso/:idProcesso/etapas')
-app.get('/api/processos/:tagProcesso/:idProcesso/etapas/:tag')
-app.get('/api/processos/:tagProcesso/:idProcesso/etapas/:tag/:id')
-app.post('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:id_etapaMeta', async (req, res)=>{
+app.get('/api/processo/:tagProcesso/:idProcesso/etapa')
+app.get('/api/processo/:tagProcesso/:idProcesso/etapa/:tag')
+
+async function getEtapa(req, res) {
+    let { tag, tagProcesso, idProcesso, id } = req.params
+    let etapa = (tagProcesso && idProcesso)
+    ? etapas.get().find(etapa=>
+        etapa.Tag===tag&&
+        etapa.id===parseInt(id)&&
+        etapa.idProcesso===parseInt(idProcesso)&&
+        processos.get().find(processo=>processo.id===parseInt(idProcesso)).Tag===tagProcesso)
+    : etapas.get().find(etapa=>etapa.Tag===tag&&etapa.id===parseInt(id))
+    if (!etapa) return res.sendStatus(400)
+    etapa.campos = metadados.get().filter(data=>
+        data.model==='etapa'&&
+        data.idModel===etapa.id
+        )
+    etapa.log = log.get().filter(log=>log.idEtapa===etapa.id)
+    console.error("etapa: ", etapa)
+    res.send(etapa)
+}
+app.get('/api/:filial/etapa/:tag/:id', getEtapa)
+app.get('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id', getEtapa)
+app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', async (req, res)=>{
     /**Lista de passos de manipulações do BD que devem ser desfeitos em alguma falha */
     let undo_stuff = []
     let idud = 0
@@ -130,7 +150,7 @@ app.post('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:id_etapaMeta',
     }
 })
 
-app.put('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:tag/:id', async (req, res)=>{
+app.put('/api/:filial/etapa/:tag/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id))
     if (!etapa || etapa.Tag !== req.params.tag) return res.sendStatus(400)
@@ -163,7 +183,7 @@ app.put('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:tag/:id', async
     }
 })
 
-app.post('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:tag/:id/mensagem', async (req, res)=>{
+app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     if (!('titulo' in req.body && 'descr' in req.body)) return res.sendStatus(400)
     let user = usuarios.get()[req.session.usuarioId]
@@ -209,7 +229,7 @@ app.post('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:tag/:id/mensag
         res.sendStatus(500)
     }
 })
-app.put('/api/:filial/processos/:tagProcesso/:idProcesso/etapas/:tag/:id/mensagem/:id_msg', (req, res)=>{
+app.put('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem/:id_msg', (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     if (!('titulo' in req.body && 'descr' in req.body)) return res.sendStatus(400)
     let user = usuarios.get()[req.session.usuarioId]
