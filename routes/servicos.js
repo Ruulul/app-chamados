@@ -246,7 +246,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
         chamados_filtrados = chamados_filtrados.filter(chamado=>chamado[tipo].toString()==filtro)
       }
     if (user?.cargo != "admin" && user?.tipo != "suporte") chamados_filtrados = chamados_filtrados.filter(chamado => chamado.autorId == uid || chamado.usuarioId == uid)
-    res.send({page: chamados_filtrados.slice((page - 1) * limit, page * limit), pages: Math.ceil(chamados_filtrados.length / limit), count: chamados_filtrados.length})
+    res.send({page: chamados_filtrados.sort((a, b)=>b.id - a.id).slice((page - 1) * limit, page * limit), pages: Math.ceil(chamados_filtrados.length / limit), count: chamados_filtrados.length})
   });
   
   app.get('/api/:codfilial/servico/:id', (req, res) => {

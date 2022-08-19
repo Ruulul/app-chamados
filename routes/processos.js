@@ -179,6 +179,7 @@ app.delete('/api/processo/:tag/:id', async (req, res) =>{
     let anexos_processo = await getCampo({ model: 'processo', idModel: processo.id, tag: processo.Tag, campo: 'anexo'})
     if (anexos_processo instanceof Error) {
         if (anexos_processo.message !== "Sem campo requisitado")
+        console.error(anexos_processo)
         return res.sendStatus(400)
     }
     else anexos_processo = anexos_processo.map(({id})=>({id, model: 'processo', idModel: processo.id, tag: processo.Tag, campo: 'anexo'}))

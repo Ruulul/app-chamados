@@ -235,7 +235,7 @@ export async function putCampo({model, tag, idModel, campo, id}, body) {
       let tipo = field_meta.tipo === 'email' ? 'string' : field_meta.tipo;
       try {
         let valor = JSON.parse(body);
-        if (typeof valor !== tipo) return res.sendStatus(400);
+        if (typeof valor !== tipo) return new Error("Campo deve ser do tipo adequado")
         await prisma.metadado.update({where: {id}, data: {valor}});
         await updateMetadados();
         return
@@ -248,7 +248,7 @@ export async function putCampo({model, tag, idModel, campo, id}, body) {
      * Isso possui a desvantagem de não podermos manter de quando é o último arquivo, algo que pode ser relevante.
      */
     case "anexo":
-      if (!('data' in body && body.data.includes('base64,'))) return res.sendStatus(400)
+      if (!('data' in body && body.data.includes('base64,'))) return new Error("Campo deve ser do tipo adequado")
       try {
         fs.writeFile(
           path.resolve('files/', requested_field.valor), 
@@ -271,9 +271,9 @@ export async function deleteCampo({model, tag, idModel, campo, id}) {
   id = parseInt(id)
   idModel = parseInt(idModel)
   let fields_meta = metameta.get().campos[model][tag];
-  if (!fields_meta) return res.sendStatus(400)
+  if (!fields_meta) return new Error("Sem meta info do modelo")
   let field_meta = fields_meta.find(field=>field.campoMeta==campo);
-  if (!field_meta) return res.sendStatus(400)
+  if (!field_meta) return new Error("Sem meta info do campo")
   let requested_field = metadados.get()
     .find(metadado=>
       metadado.model===model&&
