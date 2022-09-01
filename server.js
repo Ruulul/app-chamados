@@ -43,7 +43,7 @@ import misc_router from './routes/misc.js'
 
 const store = new PrismaSessionStore(
   prisma, {
-  checkPeriod: 10 * 60 * 1000,
+  checkPeriod: 2 * 60 * 60 * 1000,
   dbRecordIdIsSessionId: true,
   dbRecordIdFunction: undefined,
 });

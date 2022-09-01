@@ -75,6 +75,7 @@ export function authorize(req, level) {
 }
 
 export async function resetAutoIncrement(model, prisma) {
+    return
     switch (model) {
         case 'processo':
                 await prisma.$executeRawUnsafe(`alter table processo modify id INT;`)

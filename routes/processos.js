@@ -5,6 +5,7 @@ import { invalidateFields, resetAutoIncrement, undoStuff } from './utils.js'
 const {
     variables: {
         usuarios,
+        departamentos,
         processos,
         etapas,
         metadados,
@@ -28,17 +29,32 @@ meta.campos = metameta.get().campos[model]
 
 const app = express.Router()
 
+/**
+ * 
+ * @param {import('@prisma/client').Processo} processo 
+ * @param {import('@prisma/client').Usuario} user 
+ * @returns 
+ */
+function filterProcessos (processo, user) {
+    let etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
+    let dept = departamentos.get().find(dept=>dept.id===etapa.dept)?.departamento
+    if (user.dept.includes(dept))
+        return true
+    return false
+}
+
 app.get('/api/:filial/processo', (req, res)=>{
     let user = usuarios.get()[req.session.usuarioId]
     if (!req.session.valid) return res.sendStatus(403)
     if (user.cargo === 'admin' || user.tipo === 'suporte') //TODO: atendente do departamento
-        res.send(processos.get().map(addCamposProcesso))
-    else res.send(processos.get().filter(processo=>processo.idUsuario===user.id).map(addCamposProcesso))
+        res.send(processos.get().filter(processo=>filterProcessos(processo, user)||processo.idUsuario==user.id).map(addCamposProcesso))
+    else res.send(processos.get().filter(processo=>processo.idUsuario==user.id).map(addCamposProcesso))
 })
 
 app.get('/api/:filial/processo/:tag', (req, res)=>{
+    let user = usuarios.get()[req.session.usuarioId]
     if (!req.session.valid) return res.sendStatus(403)
-    res.send(processos.get().filter(processo=>processo.Tag==req.params.tag).map(addCamposProcesso))
+    res.send(processos.get().filter(processo=>processo.Tag==req.params.tag&&(filterProcessos(processo, user)||processo.idUsuario==user.id)).map(addCamposProcesso))
 })
 
 app.get('/api/:filial/processo/:tag/:id', (req, res)=>{
@@ -178,9 +194,10 @@ app.delete('/api/processo/:tag/:id', async (req, res) =>{
     let etapas = await prisma.etapa.findMany({where:{idProcesso:processo.id}})
     let anexos_processo = await getCampo({ model: 'processo', idModel: processo.id, tag: processo.Tag, campo: 'anexo'})
     if (anexos_processo instanceof Error) {
-        if (anexos_processo.message !== "Sem campo requisitado")
-        console.error(anexos_processo)
-        return res.sendStatus(400)
+        if (anexos_processo.message !== "Sem campo requisitado") {
+            console.error(anexos_processo)
+            return res.sendStatus(400)
+        }
     }
     else anexos_processo = anexos_processo.map(({id})=>({id, model: 'processo', idModel: processo.id, tag: processo.Tag, campo: 'anexo'}))
     let anexos_etapa = []
@@ -193,7 +210,8 @@ app.delete('/api/processo/:tag/:id', async (req, res) =>{
                 console.error(inner_anexos)
                 continue
             }
-        anexos_etapa = anexos_etapa.concat(inner_anexos).map(({id})=>({id, model: 'etapa', idModel: etapa.id, tag: etapa.Tag, campo: 'anexo'}))
+            inner_anexos = inner_anexos.map(({id})=>({id, model: 'etapa', idModel: etapa.id, tag: etapa.Tag, campo: 'anexo'}))
+        anexos_etapa = anexos_etapa.concat(inner_anexos)
         let logs = log.get().filter(log=>log.idEtapa===etapa.id)
         for (let log of logs) {
             let inner_anexos = await getCampo({ model: 'log', idModel: log.id, tag: log.Tag, campo: 'anexo' })
@@ -203,7 +221,8 @@ app.delete('/api/processo/:tag/:id', async (req, res) =>{
                     console.error(inner_anexos)
                     continue
                 }
-            anexos_log = anexos_log.concat(inner_anexos).map(({id})=>({id, model: 'log', idModel: log.id, tag: log.Tag, campo: 'anexo'}))
+            inner_anexos = inner_anexos.map(({id})=>({id, model: 'log', idModel: log.id, tag: log.Tag, campo: 'anexo'}))
+            anexos_log = anexos_log.concat(inner_anexos)
         }
     }
     let anexos = []
@@ -213,7 +232,10 @@ app.delete('/api/processo/:tag/:id', async (req, res) =>{
         while (anexos.length > 0) {
             for (let anexo of anexos) {
                 let return_value = await deleteCampo(anexo)
-                if (return_value instanceof Error) continue
+                if (return_value instanceof Error) {
+                    console.error(`for anexo ${anexo}, \n`, return_value);
+                    continue
+                }
                 anexos = anexos.filter(anex=>anex.id !== anexo.id)
             }
         }

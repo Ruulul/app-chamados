@@ -90,7 +90,7 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', a
         else if (meta_etapa.complex && meta_etapa_next_from_req?.id === meta_etapa.id)
             meta_etapa_next = meta_etapa_next_from_req
         else return res.sendStatus(400)
-        if (!(meta_etapa_next.dept || metameta.get().etapa[meta_etapa_next.Tag].depts.map(dept=>dept.id).includes(req.body.dept)))
+        if (!(meta_etapa_next.dept || metameta.get().etapa[meta_etapa_next.Tag].depts?.map(dept=>dept.id).includes(req.body.dept)))
             return res.sendStatus(400)
         let campos = meta.campos[meta_etapa_next.Tag]
         if (!campos) return res.sendStatus(500)
@@ -206,7 +206,7 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem
                 idProcesso: processo.id,
                 idUsuario: user.id,
                 Tag: metameta.get().processo[processo.Tag].mensagemTag,
-                prev: last_msg.id
+                prev: last_msg.id,
             }
         })
         undo_stuff.push({id: ++idud, model: 'log', where: [['id', msg.id]], action: 'delete'})
