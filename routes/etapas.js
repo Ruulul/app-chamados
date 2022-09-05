@@ -167,12 +167,25 @@ app.put('/api/:filial/etapa/:tag/:id', async (req, res)=>{
                     where:{
                         model: 'etapa',
                         idModel: parseInt(req.params.id),
-                        campo
+                        campo,
                     },
                     data: {
-                        valor: valor.toString()
+                        valor: valor.toString(),
                     }
                 }))
+        
+        let time_data = ['inicio_em', 'fim_em', 'pausa_em']
+        if (time_data.reduce((p, c)=>p+req.body.includes(c) ? 1 : 0, 0) > 0) 
+            for (let data of time_data)
+                if (req.body.includes(data)) 
+                    await prisma.metadado.create({
+                        data: {
+                            campo: data,
+                            valor: req.body[data],
+                            model: 'etapa',
+                            idModel: parseInt(req.params.id),
+                        }
+                    });
         await updateMetadados()
         await updateEtapas()
         await updateProcessos()
@@ -222,7 +235,7 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem
         undo_stuff.push({id: ++idud, model: 'log', where: [['id', last_msg.id]], action: 'update', data: {next:null}})
 
         await updateLog()
-        res.sendStatus(200)
+        res.send(log.get().find(log=>log.id===msg.id))
     } catch (e) {
         console.error(e)
         await undoStuff(undo_stuff, prisma)
