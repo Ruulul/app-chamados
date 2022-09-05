@@ -81,12 +81,11 @@ app.post('/api/:filial/processo/:tag', async (req, res)=>{
     let campos_list = [...campos_etapa, ...campos_processo]
 
     let meta_etapa1 = meta[req.params.tag].etapas.find(etapa=>!etapa.prev)
-    console.error(meta_etapa1)
     let invalidation = invalidateFields(campos_list, req.body)
     if (invalidation || 
         !('mensagem' in req.body) || 
         !('dept' in req.body) || 
-        !(meta_etapa1.dept || metameta.get().etapa[meta_etapa1.Tag].depts.map(dept=>dept.id).includes(req.body.dept))) {
+        !(meta_etapa1.dept || metameta.get().etapa.find(etapa=>etapa.id===meta_etapa1.id)?.depts?.map(dept=>dept.id).includes(req.body.dept))) {
         let message = 
         `
         Invalid Request.<br>
@@ -275,7 +274,7 @@ export default app
  * @returns 
  */
 function addCamposProcesso (processo) {
-    processo.campos = metadados.get().filter(dado=>dado.model==='processo' && dado.idModel===processo.id)
+    processo.campos = metadados.get().filter(dado=>dado.model==='processo' && dado.idModel===processo.id).map(dado=>[dado.campo, dado.valor])
     processo.etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
     processo.etapa.campos = metadados.get().filter(dado=>dado.model==='etapa' && dado.idModel===processo.etapa.id).map(dado=>[dado.campo, dado.valor])
     processo.log = []

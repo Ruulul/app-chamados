@@ -291,7 +291,8 @@ async function getMetaMeta () {
       for (let tag of [...new Set(Object.values(thing[kind]).map(being=>being.Tag))]) {
         thing.campos[kind][tag] = await getCamposMeta(kind, tag)
       }
-      thing[kind] = assemblyByTag(thing[kind])
+      if (kind != 'etapa')
+        thing[kind] = assemblyByTag(thing[kind])
   }
   return thing
 }

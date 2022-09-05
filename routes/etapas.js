@@ -60,7 +60,6 @@ async function getEtapa(req, res) {
         data.idModel===etapa.id
         )
     etapa.log = log.get().filter(log=>log.idEtapa===etapa.id)
-    console.error("etapa: ", etapa)
     res.send(etapa)
 }
 app.get('/api/:filial/etapa/:tag/:id', getEtapa)
@@ -72,16 +71,27 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', a
     try {
         /**O processo que está indo a uma nova etapa */
         let processo = processos.get().find(processo=>processo.id===parseInt(req.params.idProcesso))
-        if (processo.Tag != req.params.tagProcesso) return res.sendStatus(400)
+        if (processo.Tag != req.params.tagProcesso) {
+            console.error("Tag incompatível")
+            return res.sendStatus(400)
+        }
         let meta_processo = metameta.get().processo[processo.Tag]
         /**Valida os params do request */
-        if (!meta_processo || !processo) return res.sendStatus(400)
-
+        if (!meta_processo || !processo) {
+            console.error("Sem meta informações do processo ou sem processo")
+            return res.sendStatus(400)
+        }
         let etapa_atual = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
-        let meta_etapa = meta[etapa_atual.Tag]
+        let meta_etapa;
+        for (let _meta_etapa of meta_processo.etapas) {
+            if (_meta_etapa.Tag === etapa_atual.Tag) {
+                meta_etapa = _meta_etapa;
+                break;
+            }
+        }
         
         let id_params = parseInt(req.params.id_etapaMeta)
-        let meta_etapa_next_from_req = untagged_meta.find(etapa=>etapa.id===id_params)
+        let meta_etapa_next_from_req = meta.find(etapa=>etapa.id===id_params)
         let meta_etapa_next_from_meta = meta_processo.etapas.find(etapa=>etapa.id===meta_etapa.next)
         
         let meta_etapa_next;
@@ -89,11 +99,22 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', a
             meta_etapa_next = meta_etapa_next_from_meta
         else if (meta_etapa.complex && meta_etapa_next_from_req?.id === meta_etapa.id)
             meta_etapa_next = meta_etapa_next_from_req
-        else return res.sendStatus(400)
-        if (!(meta_etapa_next.dept || metameta.get().etapa[meta_etapa_next.Tag].depts?.map(dept=>dept.id).includes(req.body.dept)))
+        else {
+            console.error("Sem meta_etapa_next encontrada")
             return res.sendStatus(400)
+        }
+        if (!meta_etapa_next.dept && !metameta.get().etapa.find(etapa=>etapa.id===meta_etapa_next.id)?.depts?.map(dept=>dept.id).includes(req.body.dept)) {
+            console.error("Sem departamento válido");
+            console.error({meta_etapa_next});
+            console.error(untagged_meta.find(meta=>meta.id===meta_etapa_next.id));
+            console.error(req.body);
+            return res.sendStatus(400)
+        }
         let campos = meta.campos[meta_etapa_next.Tag]
-        if (!campos) return res.sendStatus(500)
+        if (!campos) {
+            console.error("Sem informação de campos para a Tag de meta_etapa_next", meta_etapa_next)
+            return res.sendStatus(500)
+        }
         let message = invalidateFieldsAndReject(campos, req.body)
         if (message) return res.status(400).send(message)
 
@@ -175,9 +196,9 @@ app.put('/api/:filial/etapa/:tag/:id', async (req, res)=>{
                 }))
         
         let time_data = ['inicio_em', 'fim_em', 'pausa_em']
-        if (time_data.reduce((p, c)=>p+req.body.includes(c) ? 1 : 0, 0) > 0) 
+        if (time_data.reduce((p, c)=>p+Object.keys(req.body).includes(c) ? 1 : 0, 0) > 0) 
             for (let data of time_data)
-                if (req.body.includes(data)) 
+                if (Object.keys(req.body).includes(data)) 
                     await prisma.metadado.create({
                         data: {
                             campo: data,
