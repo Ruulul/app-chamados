@@ -59,11 +59,21 @@ async function getEtapa(req, res) {
         data.model==='etapa'&&
         data.idModel===etapa.id
         )
-    etapa.log = log.get().filter(log=>log.idEtapa===etapa.id)
+    etapa.log = log.get().filter(log=>log.idEtapa===etapa.id).sort((a, b)=>b.id - a.id)
+    etapa.campos = metadados.get().filter(data=>
+        data.model==='etapa'&&
+        data.idModel===etapa.id)
+    res.send(etapa)
+}
+async function getEtapaSimples(req, res) {
+    let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id))
+    if (!etapa) return res.sendStatus(400)
+    etapa.log = log.get().filter(log=>log.idEtapa===etapa.id).sort((a, b)=>b.id - a.id)
     res.send(etapa)
 }
 app.get('/api/:filial/etapa/:tag/:id', getEtapa)
 app.get('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id', getEtapa)
+app.get('/api/:filial/etapa/:id', getEtapaSimples)
 app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', async (req, res)=>{
     /**Lista de passos de manipulações do BD que devem ser desfeitos em alguma falha */
     let undo_stuff = []

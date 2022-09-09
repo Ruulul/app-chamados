@@ -6,7 +6,8 @@ const {
         filiais,
         usuarios,
         departamentos,
-        prisma
+        prisma,
+        metadados,
     },
     updaters: {
         updateDepartamentos
@@ -14,6 +15,13 @@ const {
 } = memory
 
 const app = express.Router()
+
+app.get('/api/:codfilial/departamentos/:id', (req, res)=>{
+  let dept = departamentos.get().find(dept=>dept.id===parseInt(req.params.id))
+  if (!dept) return res.sendStatus(400)
+  dept.campos = Object.fromEntries(metadados.get().filter(data=>data.model==='departamento'&&data.idModel===dept.id).map(data=>[data.campo, data.valor]))
+  res.send(dept)
+})
 
 app.get('/api/:codfilial/departamentos/', (req, res)=>{
     let { usuarioId : uid } = req.session
