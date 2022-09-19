@@ -14,7 +14,7 @@ let {
 
 const app = express.Router()
 
-app.get('/api/:codfilial/usuarios/all', (req, res)=>{
+app.get('/api/:codfilial/usuarios', (req, res)=>{
     let {valid, usuarioId : uid} = req.session
     let user = usuarios.get()[uid]
     valid ? 
@@ -38,11 +38,11 @@ app.get('/api/:codfilial/usuarios/all', (req, res)=>{
     : res.send("Não autorizado")
   })
   
-  app.post('/api/:codfilial/novo/usuario', (req, res) => {
+  app.post('/api/:codfilial/usuarios', (req, res) => {
     req.session.valid && usuarios.get()[req.session.usuarioId].cargo == "admin" ? prisma.usuario.findMany({
       where: {
         email: req.body.email
-      }
+      },
     }).then(async (usuario) => {
       if (usuario.length !== 0) {
         res.status(302).send("Email já registrado")
@@ -52,6 +52,7 @@ app.get('/api/:codfilial/usuarios/all', (req, res)=>{
       return req.body
     }, (err) => { res.status(500).send("Erro acessando o banco de dados") })
       .then(async (data) => {
+        if(!data) return
         let user = await prisma.usuario.create({
           data: {
             email: data.email,
@@ -114,7 +115,7 @@ app.get('/api/:codfilial/usuarios/all', (req, res)=>{
       : res.send("Não autorizado")
   });
   
-  app.get('/api/:codfilial/usuario/:id', (req, res) => {
+  app.get('/api/:codfilial/usuarios/:id', (req, res) => {
     req.session.valid && typeof (parseInt(req.params.id)) === "number" ?
       res.send(usuarios.get().find(usuario => usuario?.id == req.params.id))
     : res.send("Não autorizado")
