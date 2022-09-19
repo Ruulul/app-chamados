@@ -282,19 +282,25 @@ export async function deleteCampo({model, tag, idModel, campo, id}) {
       metadado.id===id
     )
   if (!requested_field) return new Error("Sem campo de mensagem")
-  if (field_meta.tipo !== 'anexo') return new Error("Apenas campos múltiplos podem ser deletados")
-  try {
-    await Promise.all([
-      fs_promises.unlink(path.resolve('files/', requested_field.valor)),
-      prisma.metadado.delete({where:{id}})
-        .then(()=>Promise.all([
-          resetAutoIncrement('metadado', prisma),
-          updateMetadados()
-        ]))
-    ])
-    return
-  } catch (e) {
-    return e
+  //if (field_meta.tipo !== 'anexo') return new Error("Apenas campos múltiplos podem ser deletados")
+  switch (field_meta.tipo) {
+    case 'anexo':
+      try {
+        await Promise.all([
+          fs_promises.unlink(path.resolve('files/', requested_field.valor)),
+          prisma.metadado.delete({where:{id}})
+            .then(()=>Promise.all([
+              resetAutoIncrement('metadado', prisma),
+              updateMetadados()
+            ]))
+        ])
+        return
+      } catch (e) {
+        return e
+      }
+    default:
+      await prisma.metadado.delete({where:{id}})
+      updateMetadados();
   }
 }
   
