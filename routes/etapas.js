@@ -1,5 +1,6 @@
 import express from 'express'
 import memory from '../memory.js'
+import { deleteCampo } from './misc.js'
 import { invalidateFieldsAndReject, invalidateFields, undoStuff } from './utils.js'
 
 const {
@@ -250,21 +251,22 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem
                 idProcesso: processo.id,
                 idUsuario: user.id,
                 Tag: metameta.get().processo[processo.Tag].mensagemTag,
-                prev: last_msg.id,
+                prev: last_msg?.id || null,
             }
         })
         undo_stuff.push({id: ++idud, model: 'log', where: [['id', msg.id]], action: 'delete'})
 
-        await prisma.log.update({
-            where: {
-                id: last_msg.id
-            },
-            data: {
-                next: msg.id
-            }
-        })
-        undo_stuff.push({id: ++idud, model: 'log', where: [['id', last_msg.id]], action: 'update', data: {next:null}})
-
+        if (last_msg) {
+            await prisma.log.update({
+                where: {
+                    id: last_msg.id
+                },
+                data: {
+                    next: msg.id
+                }
+            })
+            undo_stuff.push({id: ++idud, model: 'log', where: [['id', last_msg.id]], action: 'update', data: {next:null}})
+        }
         await updateLog()
         res.send(log.get().find(log=>log.id===msg.id))
     } catch (e) {
@@ -283,6 +285,26 @@ app.put('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem/
     let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id) && etapa.Tag===req.params.tag)
     if (!etapa) return res.sendStatus(400)
     if (!(processo.idUsuario===user.id)&&!(user.cargo==='admin'||user.tipo==='suporte')) return res.sendStatus(403)
+})
+
+app.delete('/api/:filial/mensagem/:id', async (req, res)=>{
+    if (!req.session.valid) return res.sendStatus(403);
+    let msg = log.get().find(log=>log.id===parseInt(req.params.id));
+    if (msg.idUsuario != req.session.usuarioId) return res.sendStatus(403);
+    let dados = metadados.get().filter(data=>data.model='log'&&data.idModel===msg.id);
+    let undo_stuff = [];
+    let idd = 0;
+    try {
+        await Promise.all(dados.map(dado=>deleteCampo({model: 'log', tag: msg.Tag, campo: dado.campo, id: dado.id}).then(undo_stuff.push({id: ++idd, model: 'metadado', where: [[]], action: 'create', data: dado}))))
+        let undo = await prisma.log.delete({where:{id: msg.id}})
+        undo_stuff.push({id: ++idd, model: 'log', where: [[]], action: 'create', data: undo})
+        await updateLog()
+        res.sendStatus(200)
+    } catch (e) {
+        console.error(e)
+        await undoStuff(undo_stuff, prisma);
+        res.sendStatus(500)
+    }
 })
 
 export default app
