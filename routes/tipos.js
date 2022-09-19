@@ -5,8 +5,9 @@ let {
     variables: {
         usuarios,
         filiais,
-        tipos
-    }
+        tipos,
+        prisma,
+    },
 } = memory
 
 const app = express.Router()
@@ -17,14 +18,32 @@ app.get('/api/:codfilial/tipos', (req, res)=>{
       res.send(tipos.get().filter(t=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==t.filialId))
     : res.send("Não autorizado")
   })
-  app.post('/api/:codfilial/tipos/novo', (req, res) => {
-    res.send("Não implementado")
+  app.post('/api/:codfilial/tipos/', async (req, res) => {
+    if (!req.session.valid) return res.send("Não autorizado")
+    await prisma.tipo.create({
+      data: {
+        tipo: body.tipo,
+        filialId: filiais.get().find(f=>f.codigo===req.params.codfilial).id,
+      }
+    })
+    res.sendStatus(200);
   })
-  app.post('/api/:codfilial/tipos/editar/:id', (req, res)=>{
-    res.send("Não implementado")
+  app.put('/api/:codfilial/tipos/:id', async (req, res)=>{
+    if (!req.session.valid) return res.send("Não autorizado")
+    await prisma.tipo.update({
+      where: {
+        id: parseInt(req.params.id),
+      },
+      data: {
+        tipo: body.tipo,
+      }
+    })
   })
-  app.get('/api/:codfilial/tipos/excluir/:id', (req, res)=>{
-    res.send("Não implementado")
+  app.delete('/api/:codfilial/tipos/:id', async (req, res)=>{
+    if (!req.session.valid) return res.send("Não autorizado")
+    await prisma.tipo.delete({
+      where: parseInt(req.params.id)
+    })
   })
   
 export default app
