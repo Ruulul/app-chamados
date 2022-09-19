@@ -38,7 +38,7 @@ const app = express.Router()
 function filterProcessos (processo, user) {
     let etapa = etapas.get().find(etapa=>etapa.id===processo.idEtapaAtual)
     let dept = departamentos.get().find(dept=>dept.id===etapa.dept)?.departamento
-    if (user.dept.includes(dept))
+    if (user.dept.includes(dept) || user.cargo === 'admin')
         return true
     return false
 }
@@ -46,7 +46,7 @@ function filterProcessos (processo, user) {
 app.get('/api/:filial/processo', (req, res)=>{
     let user = usuarios.get()[req.session.usuarioId]
     if (!req.session.valid) return res.sendStatus(403)
-    if (user.cargo === 'admin' || user.tipo === 'suporte') //TODO: atendente do departamento
+    if (user.cargo === 'admin' || user.tipo === 'suporte')
         res.send(processos.get().filter(processo=>filterProcessos(processo, user)||processo.idUsuario==user.id).map(addCamposProcesso))
     else res.send(processos.get().filter(processo=>processo.idUsuario==user.id).map(addCamposProcesso))
 })
@@ -63,9 +63,7 @@ app.get('/api/:filial/processo/:tag/:id', (req, res)=>{
     if (!processo) return res.sendStatus(404)
     processo = addCamposProcesso(processo);
     let log_processo = log.get().filter(mensagem=>mensagem.idProcesso === processo.id)
-    processo.log = [log_processo.find(mensagem=>!mensagem.prev)]
-    let next = ()=>processo.log.at(-1).next
-    while (next())processo.log.push(log_processo.find(mensagem=>mensagem.id===next()))
+    processo.log = log_processo
     res.send(processo)
 })
 
