@@ -24,7 +24,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let { codfilial } = req.params
     let chamado_criado;
     req.session.valid && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==codfilial) ?
-      (console.log("Salvando novo serviço"),
+      (//console.log("Salvando novo serviço"),
         servico.chat[servico.chat.length] = { autorId: 3, mensagem: "Seu chamado será atendido dentro de " + ["uma semana", "3 dias", "um dia", "algumas horas"][servico.prioridade - 1] },
   
         chamado_criado = await prisma.chamado.create({
@@ -63,33 +63,33 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let user = usuarios.get()[uid]
     let usuarioId, suporteId, autorId;
     let chamado = chamados.get().find(chamado=>chamado.id === parseInt(id));
-    console.log("Salvando arquivo no chamado ", id);
+    //console.log("Salvando arquivo no chamado ", id);
     try {
       usuarioId = chamado.usuarioId;
       suporteId = chamado.suporteId;
       autorId = chamado.autorId;
     }
     catch (e) {
-      console.log("Erro em obter campos do chamado: ", chamado);
+      //console.log("Erro em obter campos do chamado: ", chamado);
     }
-    console.log(Object.keys(req.body), filename)
+    //console.log(Object.keys(req.body), filename)
     req.session.valid && 
     (user.tipo === 'suporte' || user.cargo==='admin' || [usuarioId, suporteId, autorId].map(a=>a?a.toString():undefined).includes(uid.toString())) ? (
-      console.log("Salvando arquivo no serviço"),
+      //console.log("Salvando arquivo no serviço"),
       req.body.data ? 
-        (console.log("Iniciando a escrita"),
+        (//console.log("Iniciando a escrita"),
           fs.writeFile(
             path.resolve(`files/`, filename),
             req.body.data.split('base64,')[1],
             'base64',
             (error) => {
               if (error) {
-                console.log(error)
-                console.log({ error })
+                //console.log(error)
+                //console.log({ error })
                 res.send({ error })
                 return
               }
-              console.log(`Arquivo ${filename} salvo com sucesso`)
+              //console.log(`Arquivo ${filename} salvo com sucesso`)
               prisma.metadadoChamado.updateMany({
                 where: {
                   chamadoId: parseInt(req.params.id),
@@ -100,7 +100,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                 }
               })
                 .then(async data => {
-                  console.log(`${data.count} registro alterado`)
+                  //console.log(`${data.count} registro alterado`)
                   if (data.count == 0)
                     await prisma.metadadoChamado.create({
                       data: {
@@ -113,17 +113,17 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                         }
                       }
                     }).then(() => {
-                      console.log("Registro raiz criado")
+                      //console.log("Registro raiz criado")
                       res.send()
                       updateChamados()
                     })
-                      .catch(() => { console.log("Erro na criação do registro raiz"); res.status(500).send() })
+                      .catch(() => res.sendStatus(500))//{ //console.log("Erro na criação do registro raiz"); res.status(500).send() })
                   else
                     res.send()
                   updateChamados()
                 })
                 .catch(error => {
-                  console.log(error)
+                  //console.log(error)
                   res.send({ error })
                 })
             }
@@ -172,12 +172,12 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
         || user.cargo == "admin")
         && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined
     } catch (e) {
-      console.log(e)
+      //console.log(e)
       valuidpdate = false
     }
-    console.log("Edição é " + (valuidpdate ? "válida" : "inválida"))
+    //console.log("Edição é " + (valuidpdate ? "válida" : "inválida"))
     req.session.valid && valuidpdate ? (async () => {
-      console.log("Atualizando serviço " + novo_servico.id)
+      //console.log("Atualizando serviço " + novo_servico.id)
       if (novo_servico.chat) {
         novo_servico.chat.forEach((element) => {delete element.chamadoId;delete element.metadados})
         chamado_atualizado = await prisma.chamado.update({
@@ -198,11 +198,11 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
           include: {
             chat: true
           }
-        }).catch((e) => console.log("Erro na atualização do chamado.\n", e))
+        }).catch(console.error)//) => //console.log("Erro na atualização do chamado.\n", e))
       }
-      console.log("Atualizando metadados...")
+      //console.log("Atualizando metadados...")
       for (let {nome, valor} of metadados){
-        console.log(`${nome} para ${valor}`)
+        //console.log(`${nome} para ${valor}`)
         if (chamados.get().find(chamado=>chamado.id==novo_servico.id)[nome])
           await prisma.metadadoChamado.updateMany({
             where: {
@@ -212,9 +212,9 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
             data: {
               valor
             }
-          }).catch((e) => console.log("Erro na atualização dos metadados do chamado. \n", e))
+          }).catch(console.error)//(e) => //console.log("Erro na atualização dos metadados do chamado. \n", e))
         else {
-          console.log(`Criando campo ${nome}...`)
+          //console.log(`Criando campo ${nome}...`)
           await prisma.metadadoChamado.create({
             data:{
               nome, valor,
@@ -224,7 +224,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
         }
       }
       await updateChamados()
-      console.log("Chamado atualizado")
+      //console.log("Chamado atualizado")
       res.status(200).send(chamados.get().find(chamado=>chamado.id===chamado_atualizado.id))
     })() : res.send("Não autorizado")
   });
@@ -269,44 +269,33 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
     let usuarioId, suporteId, autorId;
     let mensagem = chamados.get().reduce((pv, cv)=>[...pv, ...cv.chat], []).find(mensagem=>mensagem.id==id);
     let chamado = chamados.get().find(chamado=>chamado.id==mensagem.chamadoId);
-    console.log("Salvando arquivo na mensagem ", id);
+    //console.log("Salvando arquivo na mensagem ", id);
     try {
       usuarioId = chamado.usuarioId;
       suporteId = chamado.suporteId;
       autorId = chamado.autorId;
     }
     catch (e) {
-      console.log("Erro em obter campos do chamado: ", chamado);
+      //console.log("Erro em obter campos do chamado: ", chamado);
     }
-    console.log(Object.keys(req.body), filename)
-    console.log({
-      uid,
-      usuarioId,
-      suporteId,
-      autorId
-    })
-    console.log({
-      user,
-      chamado,
-      mensagem
-    })
+    //console.log(Object.keys(req.body), filename)
     req.session.valid && 
     (user.tipo === 'suporte' || user.cargo==='admin' || [usuarioId, suporteId, autorId].map(a=>a?a.toString():undefined).includes(uid.toString())) ? (
-      console.log("Salvando arquivo em mensagem"),
+      //console.log("Salvando arquivo em mensagem"),
       req.body.data ? 
-        (console.log("Iniciando a escrita"),
+        (//console.log("Iniciando a escrita"),
           fs.writeFile(
             path.resolve(`files/`, filename),
             req.body.data.split('base64,')[1],
             'base64',
             (error) => {
               if (error) {
-                console.log(error)
-                console.log({ error })
+                //console.log(error)
+                //console.log({ error })
                 res.send({ error })
                 return
               }
-              console.log(`Arquivo ${filename} salvo com sucesso`)
+              //console.log(`Arquivo ${filename} salvo com sucesso`)
               prisma.metadadoMensagem.updateMany({
                 where: {
                   mensagemId: parseInt(req.params.id),
@@ -317,7 +306,7 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                 }
               })
                 .then(async data => {
-                  console.log(`${data.count} registro alterado`)
+                  //console.log(`${data.count} registro alterado`)
                   if (data.count == 0)
                     await prisma.metadadoMensagem.create({
                       data: {
@@ -330,17 +319,15 @@ app.post('/api/:codfilial/novo/servico', async (req, res) => {
                         }
                       }
                     }).then(() => {
-                      console.log("Registro raiz criado")
                       res.send()
                       updateChamados()
                     })
-                      .catch((e) => { console.log("Erro na criação do registro raiz\n", e); res.status(500).send() })
+                      .catch((e) => res.sendStatus(500))
                   else
                     res.send()
                   updateChamados()
                 })
                 .catch(error => {
-                  console.log(error)
                   res.send({ error })
                 })
             }

@@ -76,6 +76,8 @@ app.get('/api/:filial/etapa/:tag/:id', getEtapa)
 app.get('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id', getEtapa)
 app.get('/api/:filial/etapa/:id', getEtapaSimples)
 app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', async (req, res)=>{
+    let user = usuarios.get()[req.session.usuarioId]
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando ir para a próxima etapa (${req.params.id_etapaMeta}) no processo ${req.params.idProcesso}`)
     /**Lista de passos de manipulações do BD que devem ser desfeitos em alguma falha */
     let undo_stuff = []
     let idud = 0
@@ -174,6 +176,9 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', a
             updateMetadados(),
             updateProcessos(),
         ])
+        
+        console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) levou o processo ${req.params.idProcesso} para a etapa ${req.params.id_etapaMeta}`)
+        
         res.send(etapas.get().find(etapa=>etapa.id===etapa_next.id))
     } catch (e) {
         console.error('some unexpected error occurred: ', e)
@@ -184,6 +189,10 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:id_etapaMeta', a
 
 app.put('/api/:filial/etapa/:tag/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
+    
+    let user = usuarios.get()[req.session.usuarioId]
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando editar a etapa ${req.params.id}: ${req.body}`)
+    
     let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id))
     if (!etapa || etapa.Tag !== req.params.tag) return res.sendStatus(400)
     console.error("etapa válida")
@@ -218,6 +227,7 @@ app.put('/api/:filial/etapa/:tag/:id', async (req, res)=>{
                             idModel: parseInt(req.params.id),
                         }
                     });
+        console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) editou a etapa ${req.params.id} com sucesso`)
         await updateMetadados()
         await updateEtapas()
         await updateProcessos()
@@ -232,6 +242,8 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem
     if (!req.session.valid) return res.sendStatus(403)
     if (!('titulo' in req.body && 'descr' in req.body)) return res.sendStatus(400)
     let user = usuarios.get()[req.session.usuarioId]
+
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando adicionar uma mensagem à etapa ${req.params.id}: ${req.body}`)
 
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.idProcesso) && processo.Tag===req.params.tagProcesso)
     if (!processo) return res.sendStatus(400)
@@ -267,6 +279,7 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem
             })
             undo_stuff.push({id: ++idud, model: 'log', where: [['id', last_msg.id]], action: 'update', data: {next:null}})
         }
+        console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) adicionou com sucesso uma mensagem à etapa ${req.params.id}`)
         await updateLog()
         res.send(log.get().find(log=>log.id===msg.id))
     } catch (e) {
@@ -285,10 +298,16 @@ app.put('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem/
     let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id) && etapa.Tag===req.params.tag)
     if (!etapa) return res.sendStatus(400)
     if (!(processo.idUsuario===user.id)&&!(user.cargo==='admin'||user.tipo==='suporte')) return res.sendStatus(403)
+
+    // TODO: Edição de mensagem
 })
 
 app.delete('/api/:filial/mensagem/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403);
+
+    let user = usuarios.get()[req.session.usuarioId]
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando deletar a mensagem ${req.params.id}`)
+    
     let msg = log.get().find(log=>log.id===parseInt(req.params.id));
     if (msg.idUsuario != req.session.usuarioId) return res.sendStatus(403);
     let dados = metadados.get().filter(data=>data.model='log'&&data.idModel===msg.id);
@@ -298,6 +317,7 @@ app.delete('/api/:filial/mensagem/:id', async (req, res)=>{
         await Promise.all(dados.map(dado=>deleteCampo({model: 'log', tag: msg.Tag, campo: dado.campo, id: dado.id}).then(undo_stuff.push({id: ++idd, model: 'metadado', where: [[]], action: 'create', data: dado}))))
         let undo = await prisma.log.delete({where:{id: msg.id}})
         undo_stuff.push({id: ++idd, model: 'log', where: [[]], action: 'create', data: undo})
+        console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) deletou com sucesso a mensagem ${req.params.id}`)
         await updateLog()
         res.sendStatus(200)
     } catch (e) {

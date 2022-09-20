@@ -70,7 +70,7 @@ app.get('/api/:codfilial/files/:filename', (req, res) => {
             .catch(err=>res.status(500).send(err))
         })
       } catch (e) {
-        console.log("Erro na leitura de arquivo. \n")
+        //console.log("Erro na leitura de arquivo. \n")
         return res.status(500).send()
       }
     })()
@@ -84,16 +84,28 @@ app.get('/api/:codfilial/:model/:tag/:idModel/campo/:campo', async (req, res) =>
 })
 
 app.post('/api/:codfilial/:model/:tag/:idModel/campo/:campo', async (req, res) => {
+  let user = usuarios.get()[req.session.usuarioId]
+  if (!user) return res.sendStatus(400)
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando adicionar um campo de ${req.params.campo} ao ${req.params.model} ${req.params.idModel}`)
   if ((await postCampo(req.params, req.body)) instanceof Error) return res.sendStatus(400)
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) adicionou com um campo de ${req.params.campo} ao ${req.params.model} ${req.params.idModel}`)
   res.sendStatus(200)
 })
 
 app.put('/api/:codfilial/:model/:tag/:idModel/campo/:campo/:id', async (req, res) => {
+  let user = usuarios.get()[req.session.usuarioId]
+  if (!user) return res.sendStatus(400)
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando editar o campo ${req.params.id} de ${req.params.campo} no ${req.params.model} ${req.params.idModel}`)
   if ((await putCampo(req.params)) instanceof Error) return res.sendStatus(400)
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está editou com sucesso o campo ${req.params.id} de ${req.params.campo} no ${req.params.model} ${req.params.idModel}`)
   res.sendStatus(200)
 })
 app.delete('/api/:codfilial/:model/:tag/:idModel/campo/:campo/:id', async (req, res) => {
+  let user = usuarios.get()[req.session.usuarioId]
+  if (!user) return res.sendStatus(400)
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando deletar o campo ${req.params.id} de ${req.params.campo} no ${req.params.model} ${req.params.idModel}`)
   if ((await deleteCampo(req.params)) instanceof Error) return res.sendStatus(400)
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está deletou com sucesso o campo ${req.params.id} de ${req.params.campo} no ${req.params.model} ${req.params.idModel}`)
   res.sendStatus(200)
 })
 
@@ -121,7 +133,7 @@ export async function getCampo({model, tag, idModel, campo}) {
         }
         return files
       } catch (e) {
-        console.log("Erro na leitura de arquivo. \n", e)
+        //console.log("Erro na leitura de arquivo. \n", e)
         return e;
       }
     default:

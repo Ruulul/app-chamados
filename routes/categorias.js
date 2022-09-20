@@ -16,7 +16,7 @@ let {
 const app = express.Router()
 
 app.get('/api/:codfilial/categorias/:tipo/', (req, res) => {
-    console.log(req.params)
+    //console.log(req.params)
     req.session.valid && filiais.get().filter(filial=>usuarios.get()[uid]?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
       res.send(categorias.get().filter(c=>filiais.get().find(f=>f.codigo==req.params.codfilial).id==c.filialId && c.tipo == req.params.tipo))
       : res.send("Não autorizado")
@@ -31,6 +31,9 @@ app.post('/api/:codfilial/categorias/', async (req, res) => {
   let sub = req.body
   let { usuarioId : uid } = req.session
   let user = usuarios.get()[uid]
+  
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando criar uma categoria`)
+  
   req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined
     user.tipo == "suporte" && sub.tipo && sub.newCategoria ?
       prisma.categoria.create({
@@ -42,6 +45,7 @@ app.post('/api/:codfilial/categorias/', async (req, res) => {
       })
         .then(async (r) => {
           updateCategorias()
+          console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) criou uma categoria com sucesso`)
           res.status(200).send("OK" + r)
         })
         .catch(error => res.status(505).send({ error }))
@@ -53,6 +57,9 @@ app.post('/api/:codfilial/categorias/', async (req, res) => {
     let sub = req.body
     let { usuarioId : uid } = req.session
     let user = usuarios.get()[uid]
+
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando editar a categoria ${req.params.id}`)
+
     req.session.valid && user && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
       user.tipo == "suporte" ?
         prisma.categoria.update({
@@ -66,9 +73,10 @@ app.post('/api/:codfilial/categorias/', async (req, res) => {
         })
           .then(async (r) => {
             await updateCategorias()
+            console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) editou a categoria com sucesso para ${sub.tipo} - ${sub.categoria}`)
             res.status(200).send("OK" + JSON.stringify(r))
           })
-          .catch(error => { console.log(error); res.status(505).send() }) : res.send("Não autorizado")
+          .catch(error => res.sendStatus(505)) : res.send("Não autorizado") //console.log(error); res.status(505).send() }) : res.send("Não autorizado")
       : res.send("Não autorizado")
     updateCategorias()
   });
@@ -77,6 +85,9 @@ app.post('/api/:codfilial/categorias/', async (req, res) => {
     let cat = req.body
     let { usuarioId : uid } = req.session
     let user = usuarios.get()[uid]
+
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando deletar a categoria ${req.params.id}`)
+    
     req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ?
       user.tipo == "suporte" ?
         prisma.categoria.delete({
@@ -86,9 +97,10 @@ app.post('/api/:codfilial/categorias/', async (req, res) => {
         })
           .then(async (r) => {
             await updateCategorias();
+            console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) deletou a categoria ${req.params.id} com sucesso`)
             res.status(200).send("OK" + r)
           })
-          .catch(error => { console.log(error); res.status(505).send() }) : res.send("Não autorizado")
+          .catch(error => res.sendStatus(505)) : res.send("Não autorizado") //console.log(error); res.status(505).send() }) : res.send("Não autorizado")
       : res.send("Não autorizado")
   });
   

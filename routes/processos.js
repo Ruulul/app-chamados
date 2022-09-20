@@ -70,6 +70,11 @@ app.get('/api/:filial/processo/:tag/:id', (req, res)=>{
 
 app.post('/api/:filial/processo/:tag', async (req, res)=>{
     let idUsuario = req.session.usuarioId
+
+    let user = usuarios.get()[idUsuario]
+    
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando iniciar um processo de ${req.params.tag}`)
+
     if (!req.session.valid) return res.sendStatus(403)
 
     let campos_processo =  metameta.get().campos.processo[req.params.tag]
@@ -150,6 +155,9 @@ app.post('/api/:filial/processo/:tag', async (req, res)=>{
             }
         })
         undo_stuff.push({id: ++undo_stuff_id, model: 'log', where: [['id', idLog]], action: 'delete'})
+        
+        console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) iniciou com sucesso o processo de ${tagProcesso} ${req.body.mensagem.titulo} com id ${idProcesso}`)
+        
         await Promise.all([
             updateProcessos(), updateEtapas(), updateMetadados(), updateLog()
         ])
@@ -163,6 +171,10 @@ app.post('/api/:filial/processo/:tag', async (req, res)=>{
 
 app.put('/api/:filial/processo/:tag/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
+
+    let user = usuarios.get()[req.session.usuarioId]
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando editar o processo ${req.params.id} de ${req.params.tag}`)
+
     try {
         let key_value = Object.entries(req.body)
         for (let [campo, valor] of key_value)
@@ -177,6 +189,7 @@ app.put('/api/:filial/processo/:tag/:id', async (req, res)=>{
                         valor: valor.toString()
                     }
                 })
+        console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) editou com sucesso o processo ${req.params.id} de ${req.params.tag}`)
         res.sendStatus(200);
     } catch (e) {
         console.error(e)
@@ -185,7 +198,9 @@ app.put('/api/:filial/processo/:tag/:id', async (req, res)=>{
 })
 
 app.delete('/api/processo/:tag/:id', async (req, res) =>{
-    if (!req.session.valid || usuarios.get()[req.session.usuarioId].cargo != 'admin') return res.sendStatus(403)
+    let user = usuarios.get()[req.session.usuarioId]
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando deletar o processo ${req.params.id} de ${req.params.tag}`)
+    if (!req.session.valid || user.cargo != 'admin') return res.sendStatus(403)
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.id))
     if (!processo) return res.sendStatus(200)
     let etapas = await prisma.etapa.findMany({where:{idProcesso:processo.id}})
@@ -245,6 +260,7 @@ app.delete('/api/processo/:tag/:id', async (req, res) =>{
             ...etapas.map(etapa=>prisma.metadado.deleteMany({where:{model: 'etapa', idModel: etapa.id}})),
             prisma.log.deleteMany({where:{idProcesso: processo.id}}),
         ]).then(()=>not_done_yet=false)
+        console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) deletou com sucesso o processo ${req.params.id} de ${req.params.tag}`)
         await Promise.all([
             resetAutoIncrement('processo', prisma),
             resetAutoIncrement('metadado', prisma),

@@ -80,9 +80,9 @@ app.post('/api/:codfilial/perfil/icone/editar', (req, res)=>{
   let filename = `ProfileIcon${uid}`
   let file, file_split_on_base64, filebin, file_ext
   req.session.valid && filiais.get().filter(filial=>user?.filiais?.includes(filial.id.toString())).find(f=>f.codigo==req.params.codfilial) !== undefined ? (
-    console.log("Salvando arquivo no serviço"),
+    //console.log("Salvando arquivo no serviço"),
     req.body.data ? 
-      (console.log("Iniciando a escrita"),
+      (//console.log("Iniciando a escrita"),
         file = req.body.data,
         file_split_on_base64 = file.split(';base64,'),
         filebin = file_split_on_base64[1],
@@ -93,12 +93,12 @@ app.post('/api/:codfilial/perfil/icone/editar', (req, res)=>{
           'base64',
           (error) => {
             if (error) {
-              console.log(error)
-              console.log({ error })
+              //console.log(error)
+              //console.log({ error })
               res.send({ error })
               return
             }
-            console.log(`Arquivo ${filename+file_ext} salvo com sucesso`)
+            //console.log(`Arquivo ${filename+file_ext} salvo com sucesso`)
             prisma.metadadoUsuario.updateMany({
               where: {
                 usuarioId: uid,
@@ -109,7 +109,7 @@ app.post('/api/:codfilial/perfil/icone/editar', (req, res)=>{
               }
             })
               .then(async data => {
-                console.log(`${data.count} registro alterado`)
+                //console.log(`${data.count} registro alterado`)
                 if (data.count == 0)
                   await prisma.metadadoUsuario.create({
                     data: {
@@ -122,17 +122,17 @@ app.post('/api/:codfilial/perfil/icone/editar', (req, res)=>{
                       }
                     }
                   }).then(() => {
-                    console.log("Registro raiz criado")
+                    //console.log("Registro raiz criado")
                     res.send()
                     updateUsuarios()
                   })
-                    .catch(() => { console.log("Erro na criação do registro raiz"); res.status(500).send() })
+                    .catch(() => res.sendStatus(500)) //console.log("Erro na criação do registro raiz"); res.status(500).send() })
                 else
                   res.send()
                 updateUsuarios()
               })
               .catch(error => {
-                console.log(error)
+                //console.log(error)
                 res.send({ error })
               })
           }
@@ -164,7 +164,7 @@ app.post('/api/:codfilial/login', async (req, res) => {
     }
     req.session.save((e) => { res.send(JSON.stringify({ "status": 200, "error": e })) })
   }).catch((err) => {
-    console.log(err)
+    //console.log(err)
     res.send(JSON.stringify({ "status": 500, "error": "Erro no login" }))
     return false
   })
@@ -236,7 +236,7 @@ app.post('/api/:codfilial/alterasenha', async (req, res) => {
     }
     req.session.save((e) => { res.send(JSON.stringify({ "status": 200, "error": e })) })
   }).catch((err) => {
-    console.log(err)
+    //console.log(err)
     res.send(JSON.stringify({ "status": 500, "error": "Erro no login" }))
     return false
   })
@@ -244,7 +244,8 @@ app.post('/api/:codfilial/alterasenha', async (req, res) => {
 
 app.post('/api/:codfilial/resetasenha', async (req, res) => {
   let user = usuarios.get()[req.session.usuarioId];
-
+  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando resetar a senha para o email ${req.body.email}`);
+  
   if (user && user.cargo == 'admin')
     await prisma.usuario.update({
       where: {
@@ -253,7 +254,9 @@ app.post('/api/:codfilial/resetasenha', async (req, res) => {
       data: {
         senha: '',
       }
-    }).catch(console.error)
+    })
+    .then(()=>console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) resetou a senha para o email ${req.body.email}`))
+    .catch(console.error)
   res.sendStatus(200);
 })
 
@@ -262,10 +265,10 @@ app.post('/api/:codfilial/logout', async (req, res) => {
     (err) => { 
       if (!err) { 
         res.status(200).send("Logout com sucesso"); 
-        console.log("Logout com sucesso") 
+        //console.log("Logout com sucesso") 
       } else { 
         res.status(500).send("Algum erro ocorreu."); 
-        console.log("Algum erro ocorreu.") 
+        //console.log("Algum erro ocorreu.") 
       } 
     }
   )*/
@@ -274,7 +277,7 @@ app.post('/api/:codfilial/logout', async (req, res) => {
     req.session.save()
     res.status(200).send("OK")
   } catch (e) {
-    console.log("Falha em logout. \n" + e)
+    //console.log("Falha em logout. \n" + e)
     res.status(500).send("Error")
   }
 })
