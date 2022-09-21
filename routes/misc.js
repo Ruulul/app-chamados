@@ -163,7 +163,7 @@ export async function postCampo({model, tag, idModel, campo}, body) {
       metadado.idModel===idModel
     )
   if (requested_field && field_meta.tipo !== 'anexo') {
-    return new Error(`Espaço já preenchido: ${requested_field}`)
+    return new Error(`Espaço já preenchido: ${JSON.stringify(requested_field)}`)
   }
   switch (field_meta.tipo) {
     case 'email':

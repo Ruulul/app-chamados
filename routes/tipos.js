@@ -20,7 +20,7 @@ app.get('/api/:codfilial/tipos', (req, res)=>{
   })
   app.post('/api/:codfilial/tipos/', async (req, res) => {
     let user = usuarios.get()[req.session.usuarioId]
-    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando criar um tipo: ${req.body}`)
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando criar um tipo: ${JSON.stringify(req.body)}`)
     if (!req.session.valid) return res.send("Não autorizado")
     await prisma.tipo.create({
       data: {
@@ -28,7 +28,7 @@ app.get('/api/:codfilial/tipos', (req, res)=>{
         filialId: filiais.get().find(f=>f.codigo===req.params.codfilial).id,
       }
     })
-    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) criou com sucesso o tipo ${body.tipo}`)
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) criou com sucesso o tipo ${JSON.stringify(body.tipo)}`)
     res.sendStatus(200);
   })
   app.put('/api/:codfilial/tipos/:id', async (req, res)=>{

@@ -191,7 +191,7 @@ app.put('/api/:filial/etapa/:tag/:id', async (req, res)=>{
     if (!req.session.valid) return res.sendStatus(403)
     
     let user = usuarios.get()[req.session.usuarioId]
-    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando editar a etapa ${req.params.id}: ${req.body}`)
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando editar a etapa ${req.params.id}: ${JSON.stringify(req.body)}`)
     
     let etapa = etapas.get().find(etapa=>etapa.id===parseInt(req.params.id))
     if (!etapa || etapa.Tag !== req.params.tag) return res.sendStatus(400)
@@ -243,7 +243,7 @@ app.post('/api/:filial/processo/:tagProcesso/:idProcesso/etapa/:tag/:id/mensagem
     if (!('titulo' in req.body && 'descr' in req.body)) return res.sendStatus(400)
     let user = usuarios.get()[req.session.usuarioId]
 
-    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando adicionar uma mensagem à etapa ${req.params.id}: ${req.body}`)
+    console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando adicionar uma mensagem à etapa ${req.params.id}: ${JSON.stringify(req.body)}`)
 
     let processo = processos.get().find(processo=>processo.id===parseInt(req.params.idProcesso) && processo.Tag===req.params.tagProcesso)
     if (!processo) return res.sendStatus(400)
