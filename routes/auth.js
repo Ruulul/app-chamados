@@ -1,5 +1,8 @@
 import express from 'express'
 import bcrypt from 'bcrypt'
+import crypto from 'crypto'
+import nodemailer from 'nodemailer'
+import pug from 'pug'
 import fs from 'fs'
 import path from 'path'
 import memory from '../memory.js'
@@ -8,14 +11,30 @@ let {
     variables: {
         prisma,
         usuarios,
-        filiais
+        metadados,
+        filiais,
     },
     updaters: {
-        updateUsuarios
+        updateUsuarios,
+        updateMetadados,
     }
 } = memory
 
 const app = express.Router()
+
+const transporter = nodemailer.createTransport({
+  service: 'smtp',
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
+transporter.verify()
+  .then(success=>console.error("Email: setup done!\n", success))
+  .catch(error=>console.error("Email: Something went wrong!\n", error))
+//const reset_password_email = pug.compileFile('./email_templates/reset_password.pug')
 
 app.get('/api/:codfilial/perfil', async (req, res) => {
   req.session.valid ?
@@ -242,21 +261,90 @@ app.post('/api/:codfilial/alterasenha', async (req, res) => {
   })
 })
 
+let reset_password_token_field = 'reset-password-token'
 app.post('/api/:codfilial/resetasenha', async (req, res) => {
-  let user = usuarios.get()[req.session.usuarioId];
-  console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) está tentando resetar a senha para o email ${req.body.email}`);
+  let action_user = usuarios.get()[req.session.usuarioId];
+  let email = req.body.email;
+  if (!email) return res.sendStatus(400);
+  if (!!action_user?.id) console.log(`${Date.now()} (${Date()}) - User ${action_user.nome} (id ${req.session.usuarioId}) está tentando resetar a senha para o email ${email}`);
   
-  if (user && user.cargo == 'admin')
-    await prisma.usuario.update({
+  let target_user = usuarios.get().find(user=>user?.email===email);
+  if (!target_user) return res.sendStatus(400);
+
+  let token = metadados.get().find(dado=>dado.model==='usuario'&&dado.idModel===target_user.id&&dado.campo===reset_password_token_field);
+  if (!token) token = await makeNewToken(target_user) 
+  else if (Date.now().toString() > token.valor.split('-')[0]) {
+    await prisma.metadado.deleteMany({
       where: {
-        email: req.body.email
-      },
-      data: {
-        senha: '',
+        model: 'usuario',
+        idModel: target_user.id,
+        campo: reset_password_token_field,
       }
-    })
-    .then(()=>console.log(`${Date.now()} (${Date()}) - User ${user.nome} (id ${req.session.usuarioId}) resetou a senha para o email ${req.body.email}`))
-    .catch(console.error)
+    });
+    await updateMetadados();
+    token = await makeNewToken(target_user);
+  }
+  let reset_link = process.env.BASE_URL + '/alterasenha?token=' + token.valor.split('-')[1];
+
+  let options = {
+    from: process.env.EMAIL,
+    to: target_user.email,
+    subject: 'Link de recuperação de senha',
+    //html: reset_password_email({nome: target_user.nome, link: reset_link}),
+    text: `
+    link para recuperar a senha: ${reset_link}
+    `
+  }
+
+  await transporter.sendMail(options)
+    .then(info=>console.log(`${Date.now()} (${Date()}) - Link de resetar a senha enviado com sucesso para ${target_user.nome} (${target_user.id}): ${info.response}`))
+    .catch( err=>console.error(`Something wrong happened: `, err));
+  
+  res.sendStatus(200);
+
+  async function makeNewToken(target_user) {
+    let token_value = crypto.randomBytes(32).toString('hex');
+    let token = await prisma.metadado.create({
+      data:{
+        campo: reset_password_token_field, 
+        model: 'usuario', 
+        idModel: target_user.id, 
+        valor: (Date.now() + 1000 * 60 * 60 * 2 /** 2 horas de validade */) + '-' + token_value,
+      }
+    });
+    await updateMetadados();
+    return token;
+  }
+})
+
+app.post('/api/:codfilial/alterasenha/:email/:token', async (req, res) => {
+  let action_user = usuarios.get()[req.session.usuarioId];
+  let email = req.params.email;
+  let target_user = usuarios.get().find(user=>user.email===email);
+  if (!(target_user && email)) return res.sendStatus(400);
+  if (!!action_user.id) console.log(`${Date.now()} (${Date()}) - User ${action_user.nome} (id ${req.session.usuarioId}) está tentando resetar a senha para o email ${email}`);
+  else console.log(`${Date.now()} (${Date()}) - user ${target_user.nome} (${target_user.id}) está tendo o email resetado`);
+  
+
+  let token = metadados.get().find(dado=>dado.model==='usuario'&&dado.idModel===target_user.id&&dado.campo===reset_password_token_field&&dado.valor.split('-')[1]===req.params.token);
+  if (!token) return res.sendStatus(400);
+
+  if (Date.now().toString() > token.valor.split('-')[0]) return res.sendStatus(400);
+
+  let nova_senha = await bcrypt.hash(req.body.senha, 12);
+  await prisma.usuario.update({
+    where: {
+      id: target_user.id,
+    },
+    data: {
+      senha: nova_senha,
+    }
+  });
+
+  await updateUsuarios();
+
+  console.log(`${Date.now()} (${Date()}) - User ${target_user.nome} (id ${target_user.id}) alterou a senha`);
+
   res.sendStatus(200);
 })
 
